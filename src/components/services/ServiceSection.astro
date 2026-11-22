@@ -1,0 +1,246 @@
+---
+/**
+ * One anchored service on /ypiresies/: number, plate icon, the owner's title (h2), description,
+ * usual jobs, a crop-marked image and the quote button that pre-selects this service.
+ * `treatment` and `imageSide` vary from section to section so the page keeps a rhythm.
+ */
+import Icon from '../Icon.astro';
+import PlateIcon from '../PlateIcon.astro';
+import Photo from '../Photo.astro';
+import { portfolio, quoteHref, type Service } from '~/data/site';
+import { servicesText } from '~/i18n/pages/services';
+import { t } from '~/i18n/ui';
+import { capsEl } from '~/lib/text';
+
+export type ServiceTreatment = 'paper' | 'sheet' | 'ink';
+
+interface Props {
+  service: Service;
+  /** 1-based position, shown as 01–09. */
+  number: number;
+  treatment: ServiceTreatment;
+  imageSide: 'left' | 'right';
+}
+
+const { service, number, treatment, imageSide } = Astro.props;
+const text = servicesText.el;
+const copy = service.text.el;
+const titleId = `${service.slug}-title`;
+// Services carry no stand-in flag: take it from the portfolio entry that uses the same photo, so a
+// real photo marked `standIn: false` there drops the label here too. A photo with no portfolio
+// entry has no known provenance, so it stays labelled.
+const standIn = portfolio.find((p) => p.image === service.image)?.standIn ?? true;
+
+// Rendered image width per treatment. The frame is 4:3 on phones; from 768px it is 4:3 (sheet),
+// 1:1 (ink) or 4:5 (paper), and a landscape photo cropped into a taller frame is drawn wider.
+const sizes: Record<ServiceTreatment, string> = {
+  sheet: '(min-width: 1024px) min(30vw, 460px), (min-width: 768px) 42vw, calc(100vw - 5rem)',
+  ink: '(min-width: 1024px) min(40vw, 610px), (min-width: 768px) 56vw, calc(100vw - 5rem)',
+  paper: '(min-width: 1024px) min(50vw, 770px), (min-width: 768px) 70vw, calc(100vw - 5rem)',
+};
+---
+
+<section
+  id={service.slug}
+  aria-labelledby={titleId}
+  class:list={[
+    'svc',
+    'plate-hover',
+    `svc--${treatment}`,
+    `svc--img-${imageSide}`,
+    { 'on-ink': treatment === 'ink' },
+  ]}
+>
+  <div class="svc-head">
+    <div class="svc-marker">
+      <span class="svc-num" aria-hidden="true">
+        {String(number).padStart(2, '0')}
+      </span>
+      <PlateIcon name={service.icon} size={48} />
+    </div>
+    <h2 id={titleId} class="h2 svc-title">
+      {copy.title}
+    </h2>
+  </div>
+
+  <div class="svc-fig crop-frame">
+    <div class="svc-media media">
+      <Photo image={service.image} alt={copy.imageAlt} sizes={sizes[treatment]} />
+      {standIn && <span class="svc-standin">{t('standInLabel')}</span>}
+    </div>
+  </div>
+
+  <div class="svc-body">
+    <p class="svc-desc">{copy.description}</p>
+    <h3 class="label svc-products-heading">{capsEl(text.productsHeading)}</h3>
+    <ul class="svc-products">
+      {copy.products.map((product) => (
+        <li>{product}</li>
+      ))}
+    </ul>
+    <a href={quoteHref(service.slug)} class="btn btn-primary svc-cta" aria-describedby={titleId}>
+      <span>{text.serviceQuoteCta}</span>
+      <Icon name="arrow-right" size={20} />
+    </a>
+  </div>
+</section>
+
+<style>
+  @layer components {
+    .svc {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas: 'head' 'fig' 'body';
+      row-gap: 2.25rem;
+      padding-block: clamp(2.75rem, 1.5rem + 4vw, 5rem);
+    }
+    .svc + .svc {
+      margin-top: clamp(1rem, 2vw, 2rem);
+    }
+    .svc--paper {
+      border-top: 1px solid var(--color-line);
+    }
+    .svc--sheet {
+      background-color: var(--color-paper-2);
+      padding-inline: clamp(1.25rem, 4vw, 3.5rem);
+    }
+    .svc--ink {
+      padding-inline: clamp(1.25rem, 4vw, 3.5rem);
+    }
+
+    .svc-head {
+      grid-area: head;
+    }
+    .svc-marker {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+    .svc-num {
+      font-family: var(--font-display);
+      font-size: clamp(3rem, 2rem + 3.5vw, 5.25rem);
+      font-weight: 860;
+      line-height: 0.82;
+      letter-spacing: -0.045em;
+      font-variant-numeric: tabular-nums;
+      /* An offset plate behind the numeral, a different ink per treatment. */
+      text-shadow: 0.06em 0.05em 0 var(--svc-plate);
+    }
+    .svc--paper {
+      --svc-plate: var(--color-cyan);
+    }
+    .svc--sheet {
+      --svc-plate: var(--color-yellow);
+    }
+    .svc--ink {
+      --svc-plate: var(--color-magenta);
+    }
+    .svc-title {
+      max-width: 22ch;
+      overflow-wrap: break-word;
+      hyphens: auto;
+    }
+
+    /* Room around the image so the crop marks (20px outside the frame) never overflow. */
+    .svc-fig {
+      grid-area: fig;
+      align-self: start;
+      margin-inline: 1.5rem;
+    }
+    .svc-media {
+      aspect-ratio: 4 / 3;
+    }
+    /* Stand-in chip, as on /erga/: inside the image frame, so it never overflows. */
+    .svc-standin {
+      position: absolute;
+      top: 0.75rem;
+      left: 0.75rem;
+      z-index: 1;
+      padding: 0.3rem 0.55rem;
+      background-color: var(--color-yellow);
+      color: var(--color-key);
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      font-weight: 720;
+      line-height: 1.2;
+    }
+    .svc-media :global(picture) {
+      display: block;
+      height: 100%;
+    }
+
+    .svc-body {
+      grid-area: body;
+    }
+    .svc-desc {
+      max-width: 52ch;
+    }
+    .svc-products-heading {
+      margin-top: 2.25rem;
+      margin-bottom: 0.75rem;
+    }
+    .svc-products {
+      max-width: 44ch;
+      border-bottom: 1px solid var(--color-line);
+    }
+    .svc-products > li {
+      display: flex;
+      align-items: baseline;
+      gap: 0.75rem;
+      padding-block: 0.625rem;
+      border-top: 1px solid var(--color-line);
+    }
+    .svc-products > li::before {
+      content: '';
+      flex: none;
+      width: 0.5rem;
+      height: 0.5rem;
+      background-color: var(--svc-plate);
+      outline: 1px solid currentColor;
+      outline-offset: -1px;
+      transform: translateY(-0.1em);
+    }
+    .svc--ink .svc-products,
+    .svc--ink .svc-products > li {
+      border-color: var(--color-ink-line);
+    }
+    .svc-cta {
+      margin-top: 2.25rem;
+      white-space: normal;
+      text-align: left;
+    }
+
+    @media (min-width: 48rem) {
+      /* The title runs across the section; text and image share the row below. */
+      .svc {
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+        grid-template-areas:
+          'head head'
+          'body fig';
+        column-gap: clamp(2rem, 4vw, 4.5rem);
+        row-gap: clamp(2rem, 1.5rem + 1.5vw, 3rem);
+      }
+      .svc--img-left {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+        grid-template-areas:
+          'head head'
+          'fig body';
+      }
+      .svc-fig {
+        margin-inline: 0;
+      }
+      .svc--paper .svc-media {
+        aspect-ratio: 4 / 5;
+      }
+      .svc--ink .svc-media {
+        aspect-ratio: 1 / 1;
+      }
+      /* Image on the right sits a little lower than the text: staggered, like a laid-out page. */
+      .svc--img-right .svc-fig {
+        margin-top: clamp(1rem, 2vw, 2.5rem);
+      }
+    }
+  }
+</style>

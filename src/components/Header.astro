@@ -1,0 +1,278 @@
+---
+import Logo from './Logo.astro';
+import Icon from './Icon.astro';
+import { nav, routes, site } from '~/data/site';
+import { t, type Locale } from '~/i18n/ui';
+import { telHref } from '~/lib/links';
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const path = Astro.url.pathname;
+const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
+---
+
+<header class="site-header" data-header>
+  <div class="wrap flex h-full items-center justify-between gap-6">
+    <a href={routes.home} class="site-header-logo" aria-label={t('homeLinkLabel', locale)}>
+      <Logo variant="compact" id="header-logo" class="h-9 w-auto lg:h-10" />
+    </a>
+
+    <nav aria-label={t('navLabel', locale)} class="hidden lg:block">
+      <ul class="flex items-center gap-7 xl:gap-9">
+        {nav.map((item) => (
+          <li>
+            <a
+              href={item.href}
+              class="link-draw nav-link"
+              aria-current={isCurrent(item.href) ? 'page' : undefined}
+            >
+              {item.label[locale]}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+
+    <div class="flex items-center gap-2 sm:gap-3">
+      <a
+        href={telHref(site.contact.phone)}
+        class="btn btn-secondary header-phone hidden xl:inline-flex"
+      >
+        <Icon name="phone" size={18} />
+        <span>
+          <span class="sr-only">{t('callUs', locale)}: </span>
+          {site.contact.phoneDisplay}
+        </span>
+      </a>
+      <a
+        href={telHref(site.contact.phone)}
+        class="icon-btn xl:hidden"
+        aria-label={`${t('callUs', locale)}: ${site.contact.phoneDisplay}`}
+      >
+        <Icon name="phone" size={22} />
+      </a>
+      <a href={routes.quote} class="btn btn-primary hidden lg:inline-flex">
+        {t('requestQuote', locale)}
+      </a>
+      <button
+        type="button"
+        class="menu-btn lg:hidden"
+        aria-haspopup="dialog"
+        aria-expanded="false"
+        aria-controls="site-menu"
+        data-menu-open
+      >
+        <Icon name="menu" size={22} />
+        <span>{t('menuOpen', locale)}</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<dialog id="site-menu" class="site-menu" aria-label={t('menuDialogLabel', locale)} data-menu>
+  <div class="wrap flex min-h-full flex-col">
+    <div class="flex h-(--header-h) items-center justify-between">
+      <a href={routes.home} aria-label={t('homeLinkLabel', locale)}>
+        <Logo variant="compact" id="menu-logo" class="h-9 w-auto" />
+      </a>
+      <button type="button" class="menu-btn" data-menu-close>
+        <Icon name="close" size={22} />
+        <span>{t('menuClose', locale)}</span>
+      </button>
+    </div>
+    <nav aria-label={t('navLabel', locale)} class="flex-1 py-8">
+      <ul class="flex flex-col">
+        {nav.map((item, i) => (
+          <li>
+            <a
+              href={item.href}
+              class="menu-link"
+              aria-current={isCurrent(item.href) ? 'page' : undefined}
+            >
+              <span class="label menu-link-num" aria-hidden="true">
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <span>{item.label[locale]}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+    <div class="flex flex-col gap-3 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+      <a href={routes.quote} class="btn btn-primary btn-block">
+        {t('requestQuote', locale)}
+      </a>
+      <a href={telHref(site.contact.phone)} class="btn btn-secondary btn-block">
+        <Icon name="phone" size={18} />
+        <span>
+          {t('callUs', locale)}: {site.contact.phoneDisplay}
+        </span>
+      </a>
+      <div class="mt-3 flex gap-2">
+        <a href={site.social.facebook} class="icon-btn" aria-label={t('facebookLabel', locale)}>
+          <Icon name="facebook" size={22} />
+        </a>
+        <a href={site.social.instagram} class="icon-btn" aria-label={t('instagramLabel', locale)}>
+          <Icon name="instagram" size={22} />
+        </a>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<style>
+  @layer components {
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      height: var(--header-h);
+      background-color: var(--color-paper);
+      border-bottom: 1px solid transparent;
+      transition: border-color var(--dur-base) linear;
+    }
+    .site-header[data-scrolled] {
+      border-bottom-color: var(--color-line);
+    }
+    .site-header-logo {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+    }
+    .nav-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 2.75rem;
+      font-family: var(--font-display);
+      font-weight: 650;
+      font-size: 1rem;
+    }
+    .header-phone {
+      min-height: 2.75rem;
+      padding-inline: 1rem;
+      font-variant-numeric: tabular-nums;
+    }
+    :global(.icon-btn) {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.75rem;
+      height: 2.75rem;
+      border: 2px solid currentColor;
+      transition:
+        background-color var(--dur-fast) linear,
+        color var(--dur-fast) linear;
+    }
+    :global(.icon-btn:hover) {
+      background-color: var(--color-key);
+      color: var(--color-paper);
+    }
+    :global(.on-ink .icon-btn:hover) {
+      background-color: var(--color-paper);
+      color: var(--color-key);
+    }
+    .menu-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-height: 2.75rem;
+      padding-inline: 0.875rem;
+      border: 2px solid var(--color-key);
+      background: var(--color-key);
+      color: var(--color-paper);
+      font-family: var(--font-display);
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .site-menu {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      max-width: none;
+      height: 100dvh;
+      max-height: none;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background-color: var(--color-paper);
+      background-image: var(--grain);
+      color: var(--color-key);
+      overflow-y: auto;
+    }
+    .site-menu::backdrop {
+      background: var(--color-paper);
+    }
+    .site-menu[open] {
+      animation: menu-in var(--dur-slow) var(--ease-out);
+    }
+    .menu-link {
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+      padding-block: 0.75rem;
+      border-bottom: 1px solid var(--color-line);
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 1.2rem + 4vw, 3rem);
+      font-weight: 820;
+      letter-spacing: -0.025em;
+      line-height: 1.1;
+      text-decoration: none;
+    }
+    .menu-link[aria-current='page'] > span:last-child {
+      text-decoration: underline;
+      text-decoration-thickness: 3px;
+      text-underline-offset: 0.18em;
+    }
+    .menu-link-num {
+      min-width: 2.25rem;
+    }
+    @keyframes menu-in {
+      from {
+        clip-path: inset(0 0 100% 0);
+      }
+      to {
+        clip-path: inset(0 0 0 0);
+      }
+    }
+  }
+</style>
+
+<script>
+  const header = document.querySelector<HTMLElement>('[data-header]');
+  const menu = document.querySelector<HTMLDialogElement>('[data-menu]');
+  const openBtn = document.querySelector<HTMLButtonElement>('[data-menu-open]');
+  const closeBtn = document.querySelector<HTMLButtonElement>('[data-menu-close]');
+
+  // Hairline under the header once the page has scrolled.
+  if (header) {
+    const sentinel = document.createElement('div');
+    sentinel.setAttribute('aria-hidden', 'true');
+    sentinel.style.cssText = 'position:absolute;top:0;left:0;width:1px;height:8px;';
+    document.body.prepend(sentinel);
+    new IntersectionObserver(([entry]) => {
+      header.toggleAttribute('data-scrolled', !entry?.isIntersecting);
+    }).observe(sentinel);
+  }
+
+  // Full-screen menu: native modal <dialog> traps focus, closes on Esc and makes the page inert.
+  if (menu && openBtn && closeBtn) {
+    const close = () => menu.close();
+    openBtn.addEventListener('click', () => {
+      menu.showModal();
+      openBtn.setAttribute('aria-expanded', 'true');
+    });
+    closeBtn.addEventListener('click', close);
+    menu.addEventListener('close', () => {
+      openBtn.setAttribute('aria-expanded', 'false');
+      openBtn.focus();
+    });
+    menu.querySelectorAll('a').forEach((a) => a.addEventListener('click', close));
+    // Leaving the mobile layout closes the menu.
+    matchMedia('(min-width: 64rem)').addEventListener('change', (e) => {
+      if (e.matches && menu.open) close();
+    });
+  }
+</script>

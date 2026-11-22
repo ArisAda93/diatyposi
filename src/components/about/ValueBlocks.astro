@@ -1,0 +1,142 @@
+---
+/**
+ * The owner's four values as four plate-coloured blocks: cyan and yellow fills with key text,
+ * magenta only as a graphic band and halftone (never behind text), and a solid ink block.
+ */
+import RegMark from '../RegMark.astro';
+import { ownerCopy } from '~/data/site';
+import { aboutText } from '~/i18n/pages/about';
+import { capsEl } from '~/lib/text';
+
+const text = aboutText.el;
+const plates = ['c', 'm', 'y', 'k'] as const;
+const blocks = ownerCopy.el.values.map((value, i) => ({
+  value,
+  note: text.valueNotes[value],
+  plate: plates[i] ?? 'k',
+}));
+---
+
+<section class="section values" aria-labelledby="values-title">
+  <div class="wrap">
+    <div class="grid-12 gap-y-6">
+      <p class="label col-span-12 lg:col-span-3">{capsEl(text.valuesLabel)}</p>
+      <h2 id="values-title" class="h2 col-span-12 max-w-[20ch] lg:col-span-9">
+        {text.valuesTitle}
+      </h2>
+    </div>
+
+    <ul class="values-grid">
+      {blocks.map((b) => (
+        <li class:list={['value', `value-${b.plate}`, { 'on-ink': b.plate === 'k' }]}>
+          <div class="value-top" aria-hidden="true">
+            <span class="value-plate">{b.plate.toUpperCase()}</span>
+            <RegMark size={22} />
+          </div>
+          <div>
+            <h3 class="h3 value-title">{b.value}</h3>
+            <p class="value-note">{b.note}</p>
+          </div>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<style>
+  @layer components {
+    .values-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--grid-gap);
+      margin-top: clamp(2.5rem, 1.5rem + 3vw, 4.5rem);
+    }
+    .value {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 2.5rem;
+      min-height: 17rem;
+      padding: clamp(1.25rem, 1rem + 1vw, 2rem);
+      overflow: hidden;
+      color: var(--color-key);
+    }
+    .value-c {
+      background-color: var(--color-cyan);
+    }
+    .value-y {
+      background-color: var(--color-yellow);
+    }
+    .value-k {
+      background-color: var(--color-ink);
+      color: var(--color-paper);
+    }
+    /* Magenta stays a graphic: a solid band on the left edge and a halftone field behind the
+       plate letter. The text sits on paper. */
+    .value-m {
+      background-color: var(--color-paper-2);
+      border-left: 0.75rem solid var(--color-magenta);
+    }
+    .value-m::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 60%;
+      height: 45%;
+      color: var(--color-magenta);
+      background-image: radial-gradient(circle at center, currentColor 0 2px, transparent 2.6px);
+      background-size: 9px 9px;
+      -webkit-mask-image: linear-gradient(225deg, #000 10%, transparent 75%);
+      mask-image: linear-gradient(225deg, #000 10%, transparent 75%);
+      pointer-events: none;
+    }
+    .value-top {
+      position: relative;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+    .value-plate {
+      font-family: var(--font-display);
+      font-size: clamp(3.5rem, 2.5rem + 3vw, 5.5rem);
+      font-weight: 860;
+      line-height: 0.8;
+      letter-spacing: -0.04em;
+    }
+    .value-title {
+      position: relative;
+    }
+    .value-note {
+      position: relative;
+      margin-top: 0.75rem;
+      max-width: 34ch;
+    }
+
+    @media (min-width: 40rem) {
+      .values-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (min-width: 64rem) {
+      .values-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        align-items: start;
+      }
+      .value {
+        min-height: 22rem;
+      }
+      /* Staggered like four plates laid on the table, not a row of identical cards. */
+      .value-m {
+        margin-top: 3rem;
+      }
+      .value-y {
+        margin-top: 1.5rem;
+      }
+      .value-k {
+        margin-top: 4.5rem;
+      }
+    }
+  }
+</style>

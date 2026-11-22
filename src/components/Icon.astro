@@ -1,0 +1,42 @@
+---
+/**
+ * Inline SVG icon. Decorative by default (aria-hidden); pass `label` for a meaningful icon.
+ */
+import { icons, type IconName } from './icons';
+
+interface Props {
+  name: IconName;
+  size?: number | string;
+  label?: string;
+  class?: string;
+  strokeWidth?: number;
+}
+
+const { name, size = 24, label, class: className, strokeWidth } = Astro.props;
+const def = icons[name];
+const sw = strokeWidth ?? (def.viewBox === '0 0 32 32' ? 2 : 1.75);
+const paint =
+  def.kind === 'stroke'
+    ? {
+        fill: 'none',
+        stroke: 'currentColor',
+        'stroke-width': sw,
+        'stroke-linecap': 'square' as const,
+        'stroke-linejoin': 'miter' as const,
+      }
+    : { fill: 'currentColor' };
+---
+
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox={def.viewBox}
+  width={size}
+  height={size}
+  class={className}
+  role={label ? 'img' : undefined}
+  aria-label={label}
+  aria-hidden={label ? undefined : 'true'}
+  focusable="false"
+  {...paint}
+  set:html={def.body}
+/>

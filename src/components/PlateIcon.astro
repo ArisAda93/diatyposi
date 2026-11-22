@@ -1,0 +1,41 @@
+---
+/**
+ * A service icon printed as four plates (Y, M, C, K). At rest the plates sit in register and read
+ * as one key-black icon; when an ancestor with `.plate-hover` is hovered or focused, the plates
+ * split by a few pixels and snap back (CSS in global.css). Always decorative.
+ */
+import { icons, type IconName } from './icons';
+
+interface Props {
+  name: IconName;
+  size?: number | string;
+  class?: string;
+}
+
+const { name, size = 48, class: className } = Astro.props;
+const def = icons[name];
+const sw = def.viewBox === '0 0 32 32' ? 2 : 1.75;
+const plates = ['p-y', 'p-m', 'p-c', 'p-k'] as const;
+const dim = typeof size === 'number' ? `${size}px` : size;
+---
+
+<span
+  class:list={['plate-icon', className]}
+  style={`width:${dim};height:${dim}`}
+  aria-hidden="true"
+>
+  {plates.map((p) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox={def.viewBox}
+      class={p}
+      fill={def.kind === 'stroke' ? 'none' : 'currentColor'}
+      stroke={def.kind === 'stroke' ? 'currentColor' : undefined}
+      stroke-width={def.kind === 'stroke' ? sw : undefined}
+      stroke-linecap="square"
+      stroke-linejoin="miter"
+      focusable="false"
+      set:html={def.body}
+    />
+  ))}
+</span>

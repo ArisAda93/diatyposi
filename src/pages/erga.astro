@@ -1,0 +1,32 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import PageHeader from '~/components/PageHeader.astro';
+import WorkGallery from '~/components/portfolio/WorkGallery.astro';
+import { portfolio } from '~/data/site';
+import { workText } from '~/i18n/pages/work';
+
+const text = workText.el;
+const hasStandIns = portfolio.some((item) => item.standIn);
+---
+
+<BaseLayout title={text.metaTitle} description={text.metaDescription}>
+  <PageHeader label={text.headerLabel} title={text.headerTitle} intro={text.headerIntro}>
+    {hasStandIns && <p class="muted mt-5 max-w-[58ch] text-small">{text.standInNote}</p>}
+  </PageHeader>
+
+  <section class="wrap work-section" aria-labelledby="work-heading">
+    <h2 id="work-heading" class="sr-only">
+      {text.headerLabel}
+    </h2>
+    <WorkGallery />
+  </section>
+</BaseLayout>
+
+<style>
+  @layer components {
+    .work-section {
+      padding-top: clamp(2rem, 1rem + 3vw, 4rem);
+      padding-bottom: var(--section-y);
+    }
+  }
+</style>

@@ -1,0 +1,599 @@
+@import 'tailwindcss';
+
+/* ------------------------------------------------------------------------------------------ */
+/* Fonts: self-hosted, greek + latin subsets, variable weight                                  */
+/* ------------------------------------------------------------------------------------------ */
+
+@font-face {
+  font-family: 'Commissioner';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('/fonts/commissioner-greek-wght-normal.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Commissioner';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('/fonts/commissioner-latin-wght-normal.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('/fonts/inter-greek-wght-normal.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('/fonts/inter-latin-wght-normal.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Comfortaa';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 700;
+  src: url('/fonts/comfortaa-greek-wght-normal.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Comfortaa';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 700;
+  src: url('/fonts/comfortaa-latin-wght-normal.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ------------------------------------------------------------------------------------------ */
+/* Design tokens — defined once                                                                */
+/* ------------------------------------------------------------------------------------------ */
+
+@theme {
+  /* Inks, sampled from the logo */
+  --color-cyan: #00aeef;
+  --color-magenta: #ed008c;
+  --color-yellow: #fff100;
+  --color-key: #221f20;
+  --color-red: #c03529;
+
+  /* Paper and ink neutrals */
+  --color-paper: #fafaf7;
+  --color-paper-2: #f1efe8;
+  --color-line: #dcd9cf;
+  --color-muted: #5a5650;
+  --color-ink: #161514;
+  --color-ink-2: #23211f;
+  --color-ink-line: #3a3733;
+  --color-ink-muted: #aba79e;
+
+  /* Type */
+  --font-display: 'Commissioner', 'Arial Black', system-ui, sans-serif;
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-voice: 'Comfortaa', 'Inter', system-ui, sans-serif;
+
+  --text-display-xl: clamp(2.6rem, 1.05rem + 6.9vw, 7.25rem);
+  --text-display-xl--line-height: 0.95;
+  --text-display-l: clamp(2.25rem, 1.3rem + 4.2vw, 5.25rem);
+  --text-display-l--line-height: 1;
+  --text-h2: clamp(1.9rem, 1.25rem + 2.6vw, 3.5rem);
+  --text-h2--line-height: 1.05;
+  --text-h3: clamp(1.25rem, 1.1rem + 0.6vw, 1.75rem);
+  --text-h3--line-height: 1.2;
+  --text-lead: clamp(1.125rem, 1.02rem + 0.45vw, 1.375rem);
+  --text-lead--line-height: 1.55;
+  --text-body: 1.0625rem;
+  --text-body--line-height: 1.65;
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.5;
+  --text-label: clamp(0.75rem, 0.72rem + 0.12vw, 0.8125rem);
+  --text-label--line-height: 1.2;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-snap: cubic-bezier(0.3, 1.5, 0.5, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* Breakpoints (Tailwind defaults plus a wide one) */
+  --breakpoint-3xl: 120rem;
+}
+
+:root {
+  --wrap: 90rem; /* 1440px */
+  --gutter: clamp(1rem, 4vw, 3rem);
+  --grid-gap: clamp(1rem, 2vw, 2rem);
+  --section-y: clamp(4.5rem, 2.5rem + 8vw, 10rem);
+  --header-h: 4.5rem;
+
+  --dur-fast: 140ms;
+  --dur-base: 240ms;
+  --dur-slow: 480ms;
+
+  --focus: var(--color-key);
+  --plate-shift: 4px;
+
+  /* Faint paper grain (SVG noise tile) */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.13 0 0 0 0 0.12 0 0 0 0 0.11 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.09'/%3E%3C/svg%3E");
+}
+
+/* ------------------------------------------------------------------------------------------ */
+/* Base                                                                                        */
+/* ------------------------------------------------------------------------------------------ */
+
+@layer base {
+  html {
+    background-color: var(--color-paper);
+    color: var(--color-key);
+    scroll-padding-top: calc(var(--header-h) + 1.5rem);
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  /* Keep focused elements clear of the mobile call/Viber bar (FloatingContact, below 48rem). */
+  @media (max-width: 47.99rem) {
+    html {
+      scroll-padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+    }
+  }
+
+  body {
+    min-height: 100dvh;
+    overflow-x: clip;
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    background-color: var(--color-paper);
+    background-image: var(--grain);
+    background-size: 160px 160px;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'kern' 1;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background: var(--color-yellow);
+    color: var(--color-key);
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+  }
+
+  .on-ink {
+    --focus: var(--color-yellow);
+    background-color: var(--color-ink);
+    color: var(--color-paper);
+  }
+
+  .on-ink ::selection {
+    background: var(--color-yellow);
+    color: var(--color-key);
+  }
+
+  img,
+  svg,
+  video {
+    display: block;
+    max-width: 100%;
+  }
+
+  img {
+    height: auto;
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+}
+
+/* ------------------------------------------------------------------------------------------ */
+/* Components (the shared system)                                                              */
+/* ------------------------------------------------------------------------------------------ */
+
+@layer components {
+  .wrap {
+    width: 100%;
+    max-width: calc(var(--wrap) + 2 * var(--gutter));
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  .grid-12 {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: var(--grid-gap);
+  }
+
+  .section {
+    padding-block: var(--section-y);
+  }
+
+  /* Type */
+  .display-xl {
+    font-family: var(--font-display);
+    font-size: var(--text-display-xl);
+    line-height: var(--text-display-xl--line-height);
+    font-weight: 850;
+    letter-spacing: -0.035em;
+  }
+  .display-l {
+    font-family: var(--font-display);
+    font-size: var(--text-display-l);
+    line-height: var(--text-display-l--line-height);
+    font-weight: 820;
+    letter-spacing: -0.03em;
+  }
+  .h2 {
+    font-family: var(--font-display);
+    font-size: var(--text-h2);
+    line-height: var(--text-h2--line-height);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+  }
+  .h3 {
+    font-family: var(--font-display);
+    font-size: var(--text-h3);
+    line-height: var(--text-h3--line-height);
+    font-weight: 750;
+    letter-spacing: -0.015em;
+  }
+  .lead {
+    font-size: var(--text-lead);
+    line-height: var(--text-lead--line-height);
+  }
+  /* Spaced capitals in the logo's red, after “ΔΙΑΦΗΜΙΣΗ – ΕΚΤΥΠΩΣΕΙΣ”. Write the text in capitals. */
+  .label {
+    font-family: var(--font-display);
+    font-size: var(--text-label);
+    line-height: var(--text-label--line-height);
+    font-weight: 750;
+    letter-spacing: 0.24em;
+    color: var(--color-red);
+  }
+  .on-ink .label {
+    color: var(--color-ink-muted);
+  }
+  .voice {
+    font-family: var(--font-voice);
+    font-weight: 330;
+    letter-spacing: 0;
+  }
+  .muted {
+    color: var(--color-muted);
+  }
+  .on-ink .muted {
+    color: var(--color-ink-muted);
+  }
+
+  /* Buttons: square, key-black; on hover the C/M/Y plates slide out, on press they snap back. */
+  .btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    min-height: 3rem;
+    padding: 0.75rem 1.5rem;
+    border: 2px solid var(--color-key);
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 720;
+    line-height: 1.2;
+    letter-spacing: 0;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      transform var(--dur-base) var(--ease-out),
+      box-shadow var(--dur-base) var(--ease-out),
+      background-color var(--dur-fast) linear,
+      color var(--dur-fast) linear;
+  }
+  .btn svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex: none;
+  }
+  .btn:hover {
+    transform: translate(-2px, -2px);
+    box-shadow:
+      2px 2px 0 var(--color-cyan),
+      4px 4px 0 var(--color-magenta),
+      6px 6px 0 var(--color-yellow);
+  }
+  .btn:active {
+    transform: translate(0, 0);
+    box-shadow: 0 0 0 transparent;
+    transition-duration: 60ms;
+  }
+  .btn-primary {
+    background-color: var(--color-key);
+    color: var(--color-paper);
+  }
+  .btn-secondary {
+    background-color: transparent;
+    color: var(--color-key);
+  }
+  .btn-secondary:hover {
+    background-color: var(--color-paper);
+  }
+  .on-ink .btn {
+    border-color: var(--color-paper);
+  }
+  .on-ink .btn-primary {
+    background-color: var(--color-paper);
+    color: var(--color-key);
+  }
+  .on-ink .btn-secondary {
+    color: var(--color-paper);
+  }
+  .on-ink .btn-secondary:hover {
+    background-color: var(--color-ink);
+  }
+  .btn-block {
+    width: 100%;
+  }
+
+  /* Text link with an underline that draws in */
+  .link {
+    text-decoration: none;
+    background-image: linear-gradient(currentColor, currentColor);
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 100% 1px;
+    transition: background-size var(--dur-base) var(--ease-out);
+    padding-bottom: 2px;
+  }
+  .link:hover {
+    background-size: 100% 2px;
+  }
+  .link-draw {
+    text-decoration: none;
+    background-image: linear-gradient(currentColor, currentColor);
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 0 2px;
+    transition: background-size var(--dur-base) var(--ease-out);
+    padding-bottom: 2px;
+  }
+  .link-draw:hover,
+  .link-draw[aria-current='page'] {
+    background-size: 100% 2px;
+  }
+
+  /* Crop marks around a box, like the trim marks on a press sheet. */
+  .crop-frame {
+    --m: 14px; /* mark length */
+    --g: 6px; /* gap between mark and trim */
+    --o: calc(var(--m) + var(--g));
+    --c: var(--color-key);
+    position: relative;
+  }
+  .crop-frame::before {
+    content: '';
+    position: absolute;
+    inset: calc(var(--o) * -1);
+    pointer-events: none;
+    background:
+      linear-gradient(var(--c), var(--c)) left 0 top var(--o) / var(--m) 1px no-repeat,
+      linear-gradient(var(--c), var(--c)) left var(--o) top 0 / 1px var(--m) no-repeat,
+      linear-gradient(var(--c), var(--c)) right 0 top var(--o) / var(--m) 1px no-repeat,
+      linear-gradient(var(--c), var(--c)) right var(--o) top 0 / 1px var(--m) no-repeat,
+      linear-gradient(var(--c), var(--c)) left 0 bottom var(--o) / var(--m) 1px no-repeat,
+      linear-gradient(var(--c), var(--c)) left var(--o) bottom 0 / 1px var(--m) no-repeat,
+      linear-gradient(var(--c), var(--c)) right 0 bottom var(--o) / var(--m) 1px no-repeat,
+      linear-gradient(var(--c), var(--c)) right var(--o) bottom 0 / 1px var(--m) no-repeat;
+  }
+  .on-ink .crop-frame,
+  .crop-frame.on-ink {
+    --c: var(--color-ink-muted);
+  }
+
+  /* Halftone dots in the current text colour. */
+  .halftone {
+    --dot: 1.3px;
+    --pitch: 9px;
+    background-image: radial-gradient(
+      circle at center,
+      currentColor 0 var(--dot),
+      transparent calc(var(--dot) + 0.6px)
+    );
+    background-size: var(--pitch) var(--pitch);
+  }
+
+  /* A media frame: image fills, zooms slightly on hover of a linked parent. */
+  .media {
+    position: relative;
+    overflow: hidden;
+    background-color: var(--color-paper-2);
+  }
+  .media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--dur-slow) var(--ease-out);
+  }
+  a:hover .media img,
+  button:hover .media img,
+  .media:hover img {
+    transform: scale(1.03);
+  }
+
+  /* Halftone wash that sweeps across an image on hover (print reveal). */
+  .media-halftone::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    color: var(--color-key);
+    background-image: radial-gradient(circle at center, currentColor 0 1.1px, transparent 1.7px);
+    background-size: 7px 7px;
+    mix-blend-mode: multiply;
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+    transition:
+      clip-path var(--dur-slow) var(--ease-out),
+      opacity var(--dur-slow) var(--ease-out);
+    pointer-events: none;
+  }
+  a:hover .media-halftone::after,
+  button:hover .media-halftone::after {
+    opacity: 0.18;
+    clip-path: inset(0 0 0 0);
+  }
+
+  /* Linked card: lifts 2px. */
+  .card-lift {
+    transition:
+      transform var(--dur-base) var(--ease-out),
+      box-shadow var(--dur-base) var(--ease-out);
+  }
+  .card-lift:hover {
+    transform: translateY(-2px);
+  }
+
+  /* Plate-separated icon: four stacked copies; on hover of the parent they split, then register. */
+  .plate-icon {
+    position: relative;
+    display: inline-grid;
+    isolation: isolate;
+  }
+  .plate-icon > svg {
+    grid-area: 1 / 1;
+    width: 100%;
+    height: 100%;
+    mix-blend-mode: multiply;
+  }
+  .plate-icon > .p-c {
+    color: var(--color-cyan);
+  }
+  .plate-icon > .p-m {
+    color: var(--color-magenta);
+  }
+  .plate-icon > .p-y {
+    color: var(--color-yellow);
+  }
+  .plate-icon > .p-k {
+    color: currentColor;
+    mix-blend-mode: normal;
+  }
+  .on-ink .plate-icon > svg {
+    mix-blend-mode: screen;
+  }
+  .on-ink .plate-icon > .p-k {
+    mix-blend-mode: normal;
+  }
+  .plate-hover:hover .plate-icon > .p-c,
+  .plate-hover:focus-visible .plate-icon > .p-c {
+    animation: plate-c 620ms var(--ease-snap) both;
+  }
+  .plate-hover:hover .plate-icon > .p-m,
+  .plate-hover:focus-visible .plate-icon > .p-m {
+    animation: plate-m 620ms var(--ease-snap) both;
+  }
+  .plate-hover:hover .plate-icon > .p-y,
+  .plate-hover:focus-visible .plate-icon > .p-y {
+    animation: plate-y 620ms var(--ease-snap) both;
+  }
+  .plate-hover:hover .plate-icon > .p-k,
+  .plate-hover:focus-visible .plate-icon > .p-k {
+    animation: plate-k 620ms var(--ease-snap) both;
+  }
+}
+
+@keyframes plate-c {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  35% {
+    transform: translate(calc(var(--plate-shift) * -1), calc(var(--plate-shift) * -0.6));
+  }
+}
+@keyframes plate-m {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  35% {
+    transform: translate(var(--plate-shift), calc(var(--plate-shift) * -0.4));
+  }
+}
+@keyframes plate-y {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  35% {
+    transform: translate(calc(var(--plate-shift) * -0.3), var(--plate-shift));
+  }
+}
+@keyframes plate-k {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  30%,
+  45% {
+    opacity: 0.15;
+  }
+}
+
+/* ------------------------------------------------------------------------------------------ */
+/* Reduced motion: everything rests, nothing stays hidden                                      */
+/* ------------------------------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .btn:hover,
+  .card-lift:hover {
+    transform: none;
+  }
+  a:hover .media img,
+  button:hover .media img,
+  .media:hover img {
+    transform: none;
+  }
+}

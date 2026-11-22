@@ -1,0 +1,175 @@
+---
+/**
+ * Home work teaser: the featured portfolio items in an editorial, staggered layout of different
+ * sizes. Each tile links to /erga/; stand-in images carry a visible label.
+ */
+import Icon from '~/components/Icon.astro';
+import Photo from '~/components/Photo.astro';
+import { portfolio, routes, serviceBySlug } from '~/data/site';
+import { homeText } from '~/i18n/pages/home';
+import { t } from '~/i18n/ui';
+import { capsEl } from '~/lib/text';
+
+const copy = homeText.el.work;
+const featured = portfolio.filter((item) => item.featured);
+
+/** Rendered width per position (see the grid below): 7, 4, 4 and 5 of 12 columns on desktop. */
+const sizes = [
+  '(min-width: 96rem) 826px, (min-width: 64rem) 54vw, (min-width: 48rem) 46vw, 92vw',
+  '(min-width: 96rem) 460px, (min-width: 64rem) 30vw, (min-width: 48rem) 46vw, 76vw',
+  '(min-width: 96rem) 460px, (min-width: 64rem) 30vw, (min-width: 48rem) 46vw, 76vw',
+  '(min-width: 96rem) 580px, (min-width: 64rem) 37vw, (min-width: 48rem) 46vw, 92vw',
+];
+---
+
+<section class="section work" aria-labelledby="work-title">
+  <div class="wrap">
+    <div class="work-head">
+      <div>
+        <p class="label mb-5">{capsEl(copy.label)}</p>
+        <h2 id="work-title" class="h2">
+          {copy.heading}
+        </h2>
+      </div>
+      <a href={routes.work} class="link work-all">
+        <span>{copy.allLink}</span>
+        <Icon name="arrow-right" size={20} />
+      </a>
+    </div>
+
+    <ul class="work-grid" role="list">
+      {featured.map((item, i) => {
+        const category = serviceBySlug(item.service)?.text.el.short;
+        return (
+          <li class={`work-item work-pos-${i % 4}`}>
+            <a href={routes.work} class="work-link">
+              <div class="media media-halftone work-media">
+                <Photo image={item.image} alt={item.text.el.alt} sizes={sizes[i % 4] ?? '92vw'} />
+                {item.standIn && <span class="work-chip">{t('standInLabel')}</span>}
+              </div>
+              <div class="work-cap">
+                {category && <p class="label">{capsEl(category)}</p>}
+                <h3 class="h3">{item.text.el.title}</h3>
+              </div>
+            </a>
+          </li>
+        );
+      })}
+    </ul>
+  </div>
+</section>
+
+<style>
+  @layer components {
+    .work-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 1.5rem 3rem;
+      margin-bottom: clamp(2.5rem, 5vw, 4.5rem);
+    }
+    .work-all {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-height: 2.75rem;
+      font-family: var(--font-display);
+      font-weight: 700;
+    }
+
+    .work-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: clamp(2.5rem, 5vw, 4rem) var(--grid-gap);
+    }
+    .work-link {
+      display: block;
+      text-decoration: none;
+    }
+    .work-media {
+      aspect-ratio: var(--ar, 4 / 3);
+    }
+    .work-media :global(img) {
+      position: absolute;
+      inset: 0;
+    }
+    .work-chip {
+      position: absolute;
+      top: 0.75rem;
+      left: 0.75rem;
+      z-index: 1;
+      padding: 0.3rem 0.6rem;
+      border: 1px solid var(--color-key);
+      background-color: var(--color-paper);
+      color: var(--color-key);
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    .work-cap {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      padding-top: 1rem;
+    }
+    .work-link:hover .h3 {
+      text-decoration: underline;
+      text-decoration-thickness: 2px;
+      text-underline-offset: 0.18em;
+    }
+
+    .work-pos-0 {
+      --ar: 4 / 3;
+    }
+    .work-pos-1 {
+      --ar: 1 / 1;
+      width: 82%;
+      margin-left: auto;
+    }
+    .work-pos-2 {
+      --ar: 4 / 5;
+      width: 82%;
+    }
+    .work-pos-3 {
+      --ar: 4 / 3;
+    }
+
+    @media (min-width: 48rem) {
+      .work-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .work-pos-1,
+      .work-pos-2 {
+        width: auto;
+        margin-left: 0;
+      }
+      .work-pos-1,
+      .work-pos-3 {
+        margin-top: clamp(3rem, 8vw, 6rem);
+      }
+    }
+
+    @media (min-width: 64rem) {
+      .work-grid {
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+      }
+      .work-pos-0 {
+        grid-column: 1 / span 7;
+      }
+      .work-pos-1 {
+        grid-column: 9 / span 4;
+        align-self: end;
+        margin-top: 0;
+      }
+      .work-pos-2 {
+        grid-column: 2 / span 4;
+      }
+      .work-pos-3 {
+        grid-column: 7 / span 5;
+        margin-top: clamp(4rem, 8vw, 8rem);
+      }
+    }
+  }
+</style>

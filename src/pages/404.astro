@@ -1,0 +1,146 @@
+---
+/**
+ * 404 “misprint”: a huge 404 printed as four C/M/Y/K plates, out of register. Hovering the
+ * numerals, or hovering/focusing the home button, snaps the plates into register (CSS only).
+ * With reduced motion the plates stay out of register and nothing moves.
+ */
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import Icon from '~/components/Icon.astro';
+import RegMark from '~/components/RegMark.astro';
+import ColorBar from '~/components/ColorBar.astro';
+import { routes } from '~/data/site';
+import { notfoundText } from '~/i18n/pages/notfound';
+import { capsEl } from '~/lib/text';
+
+const text = notfoundText.el;
+const plates = ['c', 'm', 'y', 'k'] as const;
+---
+
+<BaseLayout title={text.meta.title} description={text.meta.description} noindex>
+  <section class="np wrap" aria-labelledby="np-title">
+    <div class="np-sheet" aria-hidden="true">
+      <div class="np-art crop-frame">
+        {plates.map((plate) => (
+          <span class={`np-plate np-plate-${plate}`}>404</span>
+        ))}
+      </div>
+      <div class="np-foot">
+        <RegMark size={22} />
+        <ColorBar tints={4} />
+        <span class="label np-slug">{capsEl(text.slug)}</span>
+      </div>
+    </div>
+
+    <div class="np-text">
+      <p class="label">{capsEl(text.label)}</p>
+      <h1 id="np-title" class="display-l mt-6 max-w-[14ch]">
+        {text.title}
+      </h1>
+      <p class="lead muted mt-6 max-w-[40ch]">{text.body}</p>
+      <div class="np-actions">
+        <a href={routes.home} class="btn btn-primary np-home">
+          <Icon name="chevron-left" />
+          <span>{text.home}</span>
+        </a>
+        <a href={routes.services} class="np-secondary">
+          <span class="link">{text.services}</span>
+          <Icon name="arrow-right" size={20} />
+        </a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  @layer components {
+    .np {
+      display: grid;
+      gap: clamp(2.5rem, 1.5rem + 4vw, 4rem);
+      align-items: center;
+      padding-block: clamp(3rem, 2rem + 5vw, 7rem) var(--section-y);
+    }
+    @media (min-width: 64rem) {
+      .np {
+        grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+        column-gap: clamp(2.5rem, 1rem + 4vw, 6rem);
+      }
+    }
+
+    /* The proof sheet. Padding leaves room for the crop marks (20px outside the art box). */
+    .np-sheet {
+      container-type: inline-size;
+      padding: 1.25rem;
+    }
+    .np-art {
+      display: grid;
+      justify-items: start;
+      isolation: isolate;
+      padding: 0.04em 0.06em 0.02em;
+      font-family: var(--font-display);
+      font-size: clamp(5.5rem, 50cqi, 30rem);
+      font-weight: 900;
+      line-height: 0.9;
+      letter-spacing: -0.05em;
+      font-variant-numeric: tabular-nums;
+      user-select: none;
+    }
+    .np-plate {
+      grid-area: 1 / 1;
+      mix-blend-mode: multiply;
+    }
+    /* Out of register: each plate printed a little off. */
+    .np-plate-c {
+      color: var(--color-cyan);
+      transform: translate(-0.05em, -0.025em);
+    }
+    .np-plate-m {
+      color: var(--color-magenta);
+      transform: translate(0.045em, 0.018em);
+    }
+    .np-plate-y {
+      color: var(--color-yellow);
+      transform: translate(-0.018em, 0.05em);
+    }
+    .np-plate-k {
+      color: var(--color-key);
+      transform: translate(0.012em, -0.008em);
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .np-plate {
+        transition: transform 650ms var(--ease-snap);
+      }
+      .np-art:hover .np-plate,
+      .np:has(.np-home:hover) .np-plate,
+      .np:has(.np-home:focus-visible) .np-plate {
+        transform: translate(0, 0);
+      }
+    }
+
+    .np-foot {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem 1rem;
+      margin-top: 2.5rem;
+    }
+    .np-slug {
+      color: var(--color-muted);
+    }
+
+    .np-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1rem 1.75rem;
+      margin-top: 2.5rem;
+    }
+    .np-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-height: 2.75rem;
+      font-family: var(--font-display);
+      font-weight: 700;
+    }
+  }
+</style>

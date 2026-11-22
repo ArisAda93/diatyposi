@@ -1,0 +1,46 @@
+---
+/**
+ * Header block for inner pages: red spaced label, the page's single <h1>, optional intro.
+ * Extra content (chips, actions) goes in the default slot under the intro.
+ */
+import RegMark from './RegMark.astro';
+import ColorBar from './ColorBar.astro';
+import { capsEl } from '~/lib/text';
+
+interface Props {
+  /** Small label above the title; converted to accent-free capitals. */
+  label: string;
+  title: string;
+  intro?: string;
+  class?: string;
+}
+const { label, title, intro, class: className } = Astro.props;
+---
+
+<header class:list={['page-header', className]}>
+  <div class="wrap">
+    <div class="grid-12 items-end gap-y-8">
+      <div class="col-span-12 lg:col-span-9">
+        <p class="label mb-6">{capsEl(label)}</p>
+        <h1 class="display-l max-w-[18ch]">{title}</h1>
+        {intro && <p class="lead muted mt-8 max-w-[58ch]">{intro}</p>}
+        <slot />
+      </div>
+      <div class="col-span-12 hidden justify-end lg:col-span-3 lg:flex" aria-hidden="true">
+        <RegMark size={36} class="text-key" />
+      </div>
+    </div>
+    <div class="mt-14 flex items-center gap-4 lg:mt-20">
+      <ColorBar tints={3} />
+      <span class="h-px flex-1 bg-(--color-line)"></span>
+    </div>
+  </div>
+</header>
+
+<style>
+  @layer components {
+    .page-header {
+      padding-top: clamp(3rem, 2rem + 5vw, 7rem);
+    }
+  }
+</style>

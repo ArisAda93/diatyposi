@@ -1,0 +1,249 @@
+---
+/**
+ * Home hero: a press sheet with crop marks, the arches mark bleeding off its right edge, the
+ * owner's headline and the two main actions.
+ *
+ * Signature moment 1 (src/scripts/hero.ts): the CSS below describes the FINAL composed state.
+ * The out-of-register start is applied only while `html.hero-intro` (set before first paint by
+ * BaseLayout) or `.hero.is-playing` (set by the script) is present. The h1 is painted at first
+ * paint in its final place; the C/M/Y ghost copies (aria-hidden) carry the misregistration.
+ */
+import Logo from '~/components/Logo.astro';
+import Icon from '~/components/Icon.astro';
+import ColorBar from '~/components/ColorBar.astro';
+import RegMark from '~/components/RegMark.astro';
+import { ownerCopy, routes, site } from '~/data/site';
+import { t } from '~/i18n/ui';
+
+// Two lines, broken after “σας…”.
+const headline = ownerCopy.el.headline;
+const cut = headline.indexOf('… ');
+const lines = cut >= 0 ? [headline.slice(0, cut + 1), headline.slice(cut + 2)] : [headline];
+const ghosts = ['c', 'm', 'y'] as const;
+---
+
+<section class="hero" aria-labelledby="hero-title" data-hero>
+  <div class="wrap">
+    <div class="hero-sheet crop-frame">
+      <div class="hero-mark-wrap" aria-hidden="true">
+        <Logo variant="mark" id="hero-mark" />
+      </div>
+
+      <div class="hero-copy">
+        <p class="label hero-label">{site.descriptorCaps.el}</p>
+        <div class="hero-headline">
+          <h1 id="hero-title" class="display-xl hero-title hero-h1">
+            {lines.map((line, i) => (
+              <>
+                {i > 0 && ' '}
+                <span class="hero-line">{line}</span>
+              </>
+            ))}
+          </h1>
+          <div class="hero-ghosts" aria-hidden="true">
+            {ghosts.map((g) => (
+              <div class={`display-xl hero-title hero-ghost hero-ghost-${g}`} data-hero-ghost>
+                {lines.map((line) => (
+                  <span class="hero-line">{line}</span>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div class="hero-actions">
+          <a href={routes.quote} class="btn btn-primary">
+            <span>{t('requestQuote')}</span>
+            <Icon name="arrow-right" size={20} />
+          </a>
+          <a href={routes.services} class="btn btn-secondary">
+            {t('ourServices')}
+          </a>
+        </div>
+      </div>
+
+      <div class="hero-foot" aria-hidden="true">
+        <ColorBar tints={4} />
+        <span class="hero-foot-rule"></span>
+        <RegMark size={22} />
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { initHero } from '~/scripts/hero';
+
+  void initHero();
+</script>
+
+<style>
+  @layer components {
+    .hero {
+      --hero-y: clamp(1.25rem, 2.5vw, 2.5rem);
+      padding-block: var(--hero-y);
+      overflow: clip;
+    }
+
+    /* The press sheet. Crop marks come from .crop-frame, tightened to stay inside the gutter. */
+    .hero-sheet {
+      --sheet-pad: clamp(1.25rem, 3.2vw, 3rem);
+      --m: clamp(8px, 1.2vw, 16px);
+      --g: clamp(4px, 0.5vw, 7px);
+      display: grid;
+      gap: clamp(1.5rem, 3vw, 2.5rem);
+      padding: var(--sheet-pad);
+    }
+
+    /*
+     * Arches mark: bleeds past the right trim into the gutter and stops at the screen edge. While
+     * the intro moves the plates, anything outside the section is clipped by .hero.
+     */
+    .hero-mark-wrap {
+      position: relative;
+      z-index: 0;
+      margin-left: 16%;
+      margin-right: calc(4px - var(--sheet-pad) - var(--gutter));
+      pointer-events: none;
+    }
+    .hero-mark-wrap :global(svg) {
+      width: 100%;
+      height: auto;
+      overflow: visible;
+    }
+    .hero-mark-wrap :global(.logo-plate[data-plate='y']) {
+      --dx: 34px;
+      --dy: 24px;
+    }
+    .hero-mark-wrap :global(.logo-plate[data-plate='m']) {
+      --dx: -28px;
+      --dy: 18px;
+    }
+    .hero-mark-wrap :global(.logo-plate[data-plate='c']) {
+      --dx: -36px;
+      --dy: -20px;
+    }
+    .hero-mark-wrap :global(.logo-plate[data-plate='k']) {
+      --dx: 24px;
+      --dy: -26px;
+    }
+
+    .hero-copy {
+      position: relative;
+      z-index: 1;
+    }
+    .hero-label {
+      margin-bottom: clamp(1rem, 2vw, 1.75rem);
+    }
+    .hero-headline {
+      position: relative;
+    }
+    .hero .hero-title {
+      margin: 0;
+      font-size: clamp(2.5rem, 0.6rem + 6.6vw, 7.25rem);
+      text-wrap: balance;
+    }
+    .hero-h1 {
+      position: relative;
+      z-index: 1;
+      color: var(--color-key);
+    }
+    .hero-line {
+      display: block;
+    }
+
+    /* C/M/Y ghost copies of the headline, only shown during the intro. */
+    .hero-ghosts {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      display: none;
+      pointer-events: none;
+      user-select: none;
+    }
+    .hero .hero-ghost {
+      position: absolute;
+      inset: 0;
+      mix-blend-mode: multiply;
+      transform: translate(calc(var(--hl, 0) * var(--gx)), calc(var(--hl, 0) * var(--gy)));
+    }
+    .hero-ghost-c {
+      --gx: -0.06em;
+      --gy: -0.035em;
+      color: var(--color-cyan);
+    }
+    .hero-ghost-m {
+      --gx: 0.055em;
+      --gy: -0.015em;
+      color: var(--color-magenta);
+    }
+    .hero-ghost-y {
+      --gx: 0.02em;
+      --gy: 0.05em;
+      color: var(--color-yellow);
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: clamp(1.75rem, 3.5vw, 3rem);
+    }
+
+    .hero-foot {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      color: var(--color-key);
+    }
+    .hero-foot-rule {
+      flex: 1;
+      height: 1px;
+      background-color: var(--color-line);
+    }
+
+    /* Intro start state: pre-paint class from BaseLayout, then .is-playing from hero.ts. */
+    :global(html.hero-intro) .hero-mark-wrap :global(.logo-plate),
+    .hero.is-playing .hero-mark-wrap :global(.logo-plate) {
+      --reg: 1;
+      opacity: 0;
+      mix-blend-mode: multiply;
+      transform: translate(calc(var(--reg) * var(--dx)), calc(var(--reg) * var(--dy)));
+    }
+    /* At the snap the arches switch to the logo's knock-out stacking. */
+    .hero.is-playing.is-registered .hero-mark-wrap :global(.logo-plate) {
+      mix-blend-mode: normal;
+    }
+    :global(html.hero-intro) .hero-ghosts,
+    .hero.is-playing .hero-ghosts {
+      display: block;
+    }
+    :global(html.hero-intro) .hero-ghost,
+    .hero.is-playing .hero-ghost {
+      --hl: 1;
+    }
+
+    @media (min-width: 40rem) {
+      .hero-actions {
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+    }
+
+    @media (min-width: 64rem) {
+      .hero-sheet {
+        grid-template-rows: 1fr auto;
+        min-height: min(calc(100svh - var(--header-h) - 2 * var(--hero-y)), 62rem);
+      }
+      .hero-mark-wrap {
+        position: absolute;
+        top: clamp(2rem, 9%, 6rem);
+        right: max(-9%, calc(4px - var(--gutter)));
+        width: min(64%, calc((100svh - var(--header-h)) * 1.1));
+        margin: 0;
+      }
+      .hero-copy {
+        align-self: end;
+      }
+    }
+  }
+</style>

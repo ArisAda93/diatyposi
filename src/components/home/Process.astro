@@ -1,0 +1,218 @@
+---
+/**
+ * Home process (signature moment 2): a sticky poster (CSS position: sticky, no pinning) beside
+ * four steps. With JS and motion allowed, src/scripts/process.ts prints one plate per step
+ * (Y → M → C → K) and highlights the active step. Without JS or with reduced motion, all four
+ * plates are printed and the steps are static.
+ */
+import ProcessPoster from './ProcessPoster.astro';
+import { homeText } from '~/i18n/pages/home';
+import { capsEl } from '~/lib/text';
+
+const copy = homeText.el.process;
+const plates = [
+  { id: 'y', code: 'Y' },
+  { id: 'm', code: 'M' },
+  { id: 'c', code: 'C' },
+  { id: 'k', code: 'K' },
+] as const;
+---
+
+<section class="section process" aria-labelledby="process-title" data-process>
+  <div class="wrap">
+    <div class="process-head">
+      <p class="label mb-5">{capsEl(copy.label)}</p>
+      <h2 id="process-title" class="h2">
+        {copy.heading}
+      </h2>
+      <p class="lead muted mt-6 max-w-[46ch]">{copy.intro}</p>
+    </div>
+
+    <div class="process-grid">
+      <div class="process-poster" data-process-poster>
+        <div class="pp-frame">
+          <ProcessPoster />
+        </div>
+        <ol class="pp-readout" role="list" aria-hidden="true">
+          {plates.map((p) => (
+            <li class="pp-chip" data-pp-chip={p.id}>
+              <span class={`pp-sw pp-sw-${p.id}`} />
+              <span>{p.code}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      <ol class="steps" role="list">
+        {copy.steps.map((step, i) => (
+          <li class="step" data-step>
+            <div class="step-head" aria-hidden="true">
+              <span class="step-num">{String(i + 1).padStart(2, '0')}</span>
+              <span class={`pp-sw step-sw pp-sw-${plates[i]?.id ?? 'k'}`} />
+            </div>
+            <h3 class="h3 step-title">{step.title}</h3>
+            <p class="step-text muted">{step.text}</p>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { initProcess } from '~/scripts/process';
+
+  void initProcess();
+</script>
+
+<style>
+  @layer components {
+    .process {
+      background-color: var(--color-paper-2);
+    }
+    .process-head {
+      margin-bottom: clamp(2rem, 5vw, 5rem);
+    }
+
+    /* Mobile and tablet: a compact sticky strip (poster + readout) under the header. */
+    .process-poster {
+      position: sticky;
+      top: var(--header-h);
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      margin-inline: calc(-1 * var(--gutter));
+      padding: 0.75rem var(--gutter);
+      background-color: var(--color-paper-2);
+      border-bottom: 1px solid var(--color-line);
+    }
+    .pp-frame {
+      flex: none;
+      /* Limited by height too, so the strip never takes more than about a fifth of the screen. */
+      width: min(clamp(4.75rem, 22vw, 8rem), 12.8svh);
+    }
+
+    .pp-readout {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1rem;
+      font-family: var(--font-display);
+      font-size: 0.875rem;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+    }
+    .pp-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .pp-sw {
+      display: inline-block;
+      width: 0.875rem;
+      height: 0.875rem;
+      box-shadow: inset 0 0 0 1px var(--color-key);
+      transition:
+        background-color var(--dur-base) var(--ease-out),
+        box-shadow var(--dur-base) var(--ease-out);
+    }
+    .pp-sw-y {
+      background-color: var(--color-yellow);
+    }
+    .pp-sw-m {
+      background-color: var(--color-magenta);
+    }
+    .pp-sw-c {
+      background-color: var(--color-cyan);
+    }
+    .pp-sw-k {
+      background-color: var(--color-key);
+    }
+
+    .step {
+      min-height: 44svh;
+      padding-block: 2.25rem;
+      border-bottom: 1px solid var(--color-line);
+    }
+    .step:last-child {
+      border-bottom: 0;
+    }
+    .step-head {
+      display: flex;
+      align-items: center;
+      gap: 0.875rem;
+      margin-bottom: 1.25rem;
+    }
+    .step-num {
+      font-family: var(--font-display);
+      font-size: clamp(3rem, 2rem + 4vw, 6rem);
+      font-weight: 850;
+      line-height: 0.9;
+      letter-spacing: -0.04em;
+      font-variant-numeric: tabular-nums;
+      color: var(--color-key);
+      transition: color var(--dur-base) linear;
+    }
+    .step-sw {
+      width: 1rem;
+      height: 1rem;
+    }
+    .step-title {
+      margin-bottom: 0.75rem;
+      transition: color var(--dur-base) linear;
+    }
+    .step-text {
+      max-width: 42ch;
+    }
+
+    /* Enhanced (process.ts running): unprinted plates read as empty, inactive steps step back. */
+    .process.is-enhanced .pp-chip:not(.is-printed) .pp-sw {
+      background-color: transparent;
+    }
+    /* Dimmed but still ≥ 3:1 on paper-2 (#807C76 on #F1EFE8 ≈ 3.6:1); the active step is key. */
+    .process.is-enhanced .step:not(.is-active) .step-num {
+      color: color-mix(in srgb, var(--color-muted) 75%, var(--color-paper-2));
+    }
+    .process.is-enhanced .step:not(.is-active) .step-title {
+      color: var(--color-muted);
+    }
+
+    /* Short screens (landscape phones): no sticky strip, the poster scrolls with the page. */
+    @media (max-width: 63.99rem) and (max-height: 30rem) {
+      .process-poster {
+        position: relative;
+      }
+    }
+
+    @media (min-width: 64rem) {
+      .process-grid {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: var(--grid-gap);
+      }
+      .process-poster {
+        grid-column: 1 / span 5;
+        align-self: start;
+        top: calc(var(--header-h) + 2.5rem);
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1.5rem;
+        margin: 0;
+        padding: 0;
+        background: none;
+        border: 0;
+      }
+      .pp-frame {
+        width: min(100%, calc((100svh - var(--header-h) - 10rem) * 0.7143));
+      }
+      .steps {
+        grid-column: 7 / span 6;
+      }
+      .step {
+        min-height: 72svh;
+        padding-block: 0 4rem;
+        border-bottom: 0;
+      }
+    }
+  }
+</style>

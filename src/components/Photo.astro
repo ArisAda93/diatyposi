@@ -1,0 +1,45 @@
+---
+/**
+ * Responsive photo: AVIF + WebP sources with a JPEG fallback, explicit dimensions, lazy by default.
+ * `image` is a file name inside src/assets/portfolio/.
+ */
+import { Picture } from 'astro:assets';
+import { getImage } from '~/lib/images';
+
+interface Props {
+  image: string;
+  alt: string;
+  /** `sizes` attribute; describe the rendered width at each breakpoint. */
+  sizes: string;
+  widths?: number[];
+  class?: string;
+  /** Use 'eager' only above the fold. */
+  loading?: 'lazy' | 'eager';
+  fetchpriority?: 'high' | 'low' | 'auto';
+}
+
+const {
+  image,
+  alt,
+  sizes,
+  widths = [400, 640, 960, 1280, 1600],
+  class: className,
+  loading = 'lazy',
+  fetchpriority,
+} = Astro.props;
+const src = getImage(image);
+const usable = widths.filter((w) => w <= src.width);
+---
+
+<Picture
+  src={src}
+  alt={alt}
+  formats={['avif', 'webp']}
+  fallbackFormat="jpg"
+  widths={usable.length ? usable : [src.width]}
+  sizes={sizes}
+  loading={loading}
+  decoding="async"
+  fetchpriority={fetchpriority}
+  class={className}
+/>

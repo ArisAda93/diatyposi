@@ -1,0 +1,40 @@
+---
+/**
+ * One quote-form field: visible label, optional hint and the error slot that
+ * src/scripts/quote-form.ts fills. The control goes in the default slot; give it the `id`,
+ * `data-describe` and, when there is a hint, aria-describedby="<id>-hint".
+ * Styles live in QuoteForm.astro (shared with the services fieldset).
+ */
+import type { QuoteField } from '~/lib/quote';
+import { contactText } from '~/i18n/pages/contact';
+
+interface Props {
+  field: QuoteField;
+  /** id of the control inside the slot. */
+  id: string;
+  label: string;
+  hint?: string;
+  optional?: boolean;
+  class?: string;
+}
+
+const { field, id, label, hint, optional = false, class: className } = Astro.props;
+const text = contactText.el.form;
+---
+
+<div class:list={['field', className]} data-field={field}>
+  <label for={id} class="field-label">
+    {label}
+    {optional && <span class="field-optional">{` ${text.optional}`}</span>}
+  </label>
+  {hint && (
+    <p id={`${id}-hint`} class="field-hint">
+      {hint}
+    </p>
+  )}
+  <slot />
+  <p id={`${id}-error`} class="field-error" data-field-error hidden>
+    <span class="sr-only">{`${text.errorPrefix} `}</span>
+    <span data-error-text></span>
+  </p>
+</div>

@@ -1,0 +1,101 @@
+---
+/**
+ * Home values strip: the owner's “Για εμάς…” paragraph on the left; on the right the four values,
+ * each paired with a colour-bar patch (C, M, Y, K) in display type.
+ */
+import { ownerCopy } from '~/data/site';
+import { homeText } from '~/i18n/pages/home';
+import { capsEl } from '~/lib/text';
+
+const inks = [
+  { id: 'cyan', code: 'C' },
+  { id: 'magenta', code: 'M' },
+  { id: 'yellow', code: 'Y' },
+  { id: 'key', code: 'K' },
+] as const;
+const rows = ownerCopy.el.values.map((value, i) => ({ value, ink: inks[i] ?? inks[3] }));
+---
+
+<section class="section values" aria-labelledby="values-title">
+  <div class="wrap grid-12 gap-y-12">
+    <div class="col-span-12 lg:col-span-5">
+      <h2 id="values-title" class="label">
+        {capsEl(homeText.el.values.label)}
+      </h2>
+      <p class="values-text">{ownerCopy.el.partnership}</p>
+    </div>
+
+    <ul class="values-list col-span-12 lg:col-span-6 lg:col-start-7" role="list">
+      {rows.map(({ value, ink }) => (
+        <li class="value-row" style={`--ink:var(--color-${ink.id})`}>
+          <span class="value-bar" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
+          <span class="value-name">{value}</span>
+          <span class="value-code" aria-hidden="true">
+            {ink.code}
+          </span>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<style>
+  @layer components {
+    .values-text {
+      max-width: 38ch;
+      margin-top: 1.75rem;
+      font-size: var(--text-lead);
+      line-height: var(--text-lead--line-height);
+    }
+
+    .values-list {
+      border-top: 1px solid var(--color-key);
+    }
+    .value-row {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: clamp(1rem, 2.5vw, 2rem);
+      padding-block: clamp(1rem, 2vw, 1.5rem);
+      border-bottom: 1px solid var(--color-line);
+    }
+
+    /* A strip of the press colour bar: solid patch, then two tints of the same ink. */
+    .value-bar {
+      display: flex;
+      gap: 2px;
+      height: clamp(2.25rem, 3.5vw, 3.25rem);
+    }
+    .value-bar > span {
+      width: clamp(0.5rem, 0.9vw, 0.875rem);
+      background-color: color-mix(in srgb, var(--ink) 30%, transparent);
+    }
+    .value-bar > span:nth-child(2) {
+      background-color: color-mix(in srgb, var(--ink) 60%, transparent);
+    }
+    .value-bar > span:first-child {
+      width: clamp(2rem, 3.5vw, 3.25rem);
+      background-color: var(--ink);
+    }
+
+    .value-name {
+      font-family: var(--font-display);
+      font-size: clamp(1.625rem, 1rem + 2.4vw, 3.25rem);
+      font-weight: 820;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      text-wrap: balance;
+    }
+    .value-code {
+      font-family: var(--font-display);
+      font-size: 0.875rem;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+      color: var(--color-muted);
+    }
+  }
+</style>

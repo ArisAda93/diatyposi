@@ -1,0 +1,165 @@
+---
+/**
+ * One gallery tile. Without JS it is a plain link to the large image; the gallery script turns it
+ * into a lightbox trigger. The large image URLs ride along as data attributes and are only
+ * requested when the lightbox shows this item.
+ */
+import Photo from '../Photo.astro';
+import type { PortfolioItem } from '~/data/site';
+import { t } from '~/i18n/ui';
+import { tileSizes, type TileShape } from '~/lib/portfolio';
+
+interface Props {
+  item: PortfolioItem;
+  shape: TileShape;
+  category: string | undefined;
+  large: { src: string; srcset: string; width: number; height: number };
+  /** First tile only: it is the LCP image, so load it eagerly with high priority. */
+  priority?: boolean;
+}
+
+const { item, shape, category, large, priority = false } = Astro.props;
+const copy = item.text.el;
+---
+
+<li class="work-item" data-work-item data-shape={shape} data-service={item.service}>
+  <a
+    href={large.src}
+    class="work-tile"
+    aria-describedby="work-open-hint"
+    data-work-tile
+    data-large-src={large.src}
+    data-large-srcset={large.srcset}
+    data-large-width={large.width}
+    data-large-height={large.height}
+    data-title={copy.title}
+    data-alt={copy.alt}
+    data-category={category ?? ''}
+    data-stand-in={item.standIn ? 'true' : 'false'}
+  >
+    <span class="work-media media media-halftone">
+      <Photo
+        image={item.image}
+        alt={copy.alt}
+        sizes={tileSizes[shape]}
+        loading={priority ? 'eager' : 'lazy'}
+        fetchpriority={priority ? 'high' : 'auto'}
+      />
+    </span>
+    {item.standIn && <span class="work-standin">{t('standInLabel')}</span>}
+    <span class="work-caption">
+      <span class="work-title">{copy.title}</span>
+      {category && <span class="work-category">{category}</span>}
+    </span>
+  </a>
+</li>
+
+<style>
+  @layer components {
+    .work-item {
+      min-width: 0;
+    }
+    .work-tile {
+      position: relative;
+      display: block;
+      overflow: hidden;
+      aspect-ratio: 4 / 3;
+      text-decoration: none;
+      color: var(--color-key);
+      background-color: var(--color-paper-2);
+    }
+    .work-item[data-shape='tall'] .work-tile {
+      aspect-ratio: 4 / 5;
+    }
+    .work-item[data-shape='square'] .work-tile {
+      aspect-ratio: 1 / 1;
+    }
+    .work-media {
+      position: absolute;
+      inset: 0;
+    }
+    .work-media :global(picture) {
+      display: block;
+      height: 100%;
+    }
+
+    /* Stand-in chip, printed on yellow like a proof sticker. */
+    .work-standin {
+      position: absolute;
+      top: 0.75rem;
+      left: 0.75rem;
+      z-index: 1;
+      padding: 0.3rem 0.55rem;
+      background-color: var(--color-yellow);
+      color: var(--color-key);
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      font-weight: 720;
+      line-height: 1.2;
+    }
+
+    /* Job ticket: a paper slip at the foot of the tile. */
+    .work-caption {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
+      max-width: calc(100% - 1.5rem);
+      padding: 0.75rem 1rem 0.8rem;
+      background-color: var(--color-paper);
+      transition: box-shadow var(--dur-base) var(--ease-out);
+    }
+    .work-title {
+      font-family: var(--font-display);
+      font-size: clamp(1rem, 0.95rem + 0.25vw, 1.1875rem);
+      font-weight: 750;
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+    }
+    .work-category {
+      font-size: var(--text-small);
+      line-height: var(--text-small--line-height);
+      color: var(--color-muted);
+    }
+    .work-tile:hover .work-caption,
+    .work-tile:focus-visible .work-caption {
+      box-shadow:
+        3px -3px 0 var(--color-cyan),
+        6px -6px 0 var(--color-magenta),
+        9px -9px 0 var(--color-yellow);
+    }
+    .work-tile:focus-visible {
+      outline-offset: 4px;
+    }
+
+    @media (min-width: 48rem) {
+      .work-item {
+        grid-column: span 3;
+        grid-row: span 2;
+      }
+      .work-item[data-shape='wide'] {
+        grid-column: span 6;
+      }
+      .work-tile,
+      .work-item[data-shape='tall'] .work-tile,
+      .work-item[data-shape='square'] .work-tile {
+        aspect-ratio: auto;
+        height: 100%;
+      }
+    }
+    @media (min-width: 64rem) {
+      .work-item {
+        grid-column: span 4;
+      }
+      .work-item[data-shape='wide'] {
+        grid-column: span 8;
+      }
+      .work-item[data-shape='tall'] {
+        grid-row: span 4;
+      }
+    }
+  }
+</style>

@@ -1,0 +1,59 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import PageHeader from '~/components/PageHeader.astro';
+import ServiceIndex from '~/components/services/ServiceIndex.astro';
+import ServiceSection, { type ServiceTreatment } from '~/components/services/ServiceSection.astro';
+import { services } from '~/data/site';
+import { servicesText } from '~/i18n/pages/services';
+
+const text = servicesText.el;
+// Three treatments against two image sides: the combination only repeats every sixth section.
+const treatments: readonly ServiceTreatment[] = ['paper', 'sheet', 'ink'];
+---
+
+<BaseLayout title={text.metaTitle} description={text.metaDescription}>
+  <PageHeader label={text.headerLabel} title={text.headerTitle} intro={text.headerIntro} />
+
+  <div class="wrap services-layout">
+    <div class="services-aside">
+      <ServiceIndex />
+    </div>
+    <div class="services-list">
+      {services.map((service, i) => (
+        <ServiceSection
+          service={service}
+          number={i + 1}
+          treatment={treatments[i % treatments.length] ?? 'paper'}
+          imageSide={i % 2 === 0 ? 'right' : 'left'}
+        />
+      ))}
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  @layer components {
+    .services-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      row-gap: 2rem;
+      padding-top: clamp(2rem, 1rem + 3vw, 4rem);
+      padding-bottom: var(--section-y);
+    }
+    .services-aside,
+    .services-list {
+      min-width: 0;
+    }
+    @media (min-width: 64rem) {
+      .services-layout {
+        grid-template-columns: minmax(13rem, 3fr) minmax(0, 9fr);
+        /* Wide gap: the crop marks of a left-hand image need room next to the index. */
+        column-gap: clamp(2.5rem, 4vw, 5rem);
+        align-items: start;
+      }
+      .services-aside {
+        align-self: stretch;
+      }
+    }
+  }
+</style>

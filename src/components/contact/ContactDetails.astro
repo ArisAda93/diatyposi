@@ -1,0 +1,184 @@
+---
+/**
+ * Contact page, left column: phone, mobile, email and address from `site`, quick Viber and
+ * WhatsApp links, opening hours and social links.
+ */
+import Icon from '~/components/Icon.astro';
+import OpeningHours from './OpeningHours.astro';
+import { site } from '~/data/site';
+import { t } from '~/i18n/ui';
+import { contactText } from '~/i18n/pages/contact';
+import { mailtoHref, telHref, viberHref, whatsappHref } from '~/lib/links';
+import { capsEl } from '~/lib/text';
+
+const text = contactText.el.details;
+---
+
+<section class="contact-details" aria-labelledby="contact-details-title">
+  <div class="cd-block">
+    <h2 id="contact-details-title" class="label">
+      {capsEl(text.heading)}
+    </h2>
+    <address class="cd-list">
+      <dl>
+        <div class="cd-row">
+          <dt class="cd-term">{t('phoneLabel')}</dt>
+          <dd>
+            <a href={telHref(site.contact.phone)} class="cd-big link-draw">
+              {site.contact.phoneDisplay}
+            </a>
+          </dd>
+        </div>
+        <div class="cd-row">
+          <dt class="cd-term">{t('mobileLabel')}</dt>
+          <dd>
+            <a href={telHref(site.contact.mobile)} class="cd-big link-draw">
+              {site.contact.mobileDisplay}
+            </a>
+          </dd>
+        </div>
+        <div class="cd-row">
+          <dt class="cd-term">{t('emailLabel')}</dt>
+          <dd>
+            <a href={mailtoHref(site.contact.email)} class="cd-mail link-draw">
+              {site.contact.email}
+            </a>
+          </dd>
+        </div>
+        <div class="cd-row">
+          <dt class="cd-term">{t('addressLabel')}</dt>
+          <dd class="cd-text">
+            {site.address.street}
+            <br />
+            {`${site.address.postalCode} ${site.address.city}`}
+          </dd>
+        </div>
+      </dl>
+    </address>
+  </div>
+
+  <div class="cd-block">
+    <h3 class="label">{capsEl(text.quickHeading)}</h3>
+    <div class="cd-quick">
+      <a href={viberHref(site.contact.viber)} class="btn btn-secondary">
+        <Icon name="viber" />
+        <span>{text.viber}</span>
+      </a>
+      <a
+        href={whatsappHref(site.contact.whatsapp)}
+        class="btn btn-secondary"
+        target="_blank"
+        rel="noopener"
+      >
+        <Icon name="whatsapp" />
+        <span>
+          {text.whatsapp}
+          <span class="sr-only">{` ${t('newTab')}`}</span>
+        </span>
+      </a>
+    </div>
+  </div>
+
+  <OpeningHours />
+
+  <div class="cd-block">
+    <h3 class="label">{capsEl(t('followUs'))}</h3>
+    <ul class="cd-social">
+      <li>
+        <a href={site.social.facebook} class="cd-social-link" aria-label={t('facebookLabel')}>
+          <Icon name="facebook" size={22} />
+          <span>Facebook</span>
+        </a>
+      </li>
+      <li>
+        <a href={site.social.instagram} class="cd-social-link" aria-label={t('instagramLabel')}>
+          <Icon name="instagram" size={22} />
+          <span>Instagram</span>
+        </a>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<style>
+  @layer components {
+    .contact-details {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(2.5rem, 2rem + 2vw, 3.5rem);
+    }
+    .cd-list {
+      font-style: normal;
+    }
+    .cd-row {
+      display: grid;
+      gap: 0.25rem;
+      padding-block: 1rem;
+      border-bottom: 1px solid var(--color-line);
+    }
+    .cd-row:first-child {
+      border-top: 2px solid var(--color-key);
+    }
+    .cd-term {
+      font-size: var(--text-small);
+      color: var(--color-muted);
+    }
+    /* Tap target: at least 44px tall at every width. */
+    .cd-big {
+      display: inline-flex;
+      align-items: center;
+      min-height: 2.75rem;
+      font-family: var(--font-display);
+      font-size: var(--text-h3);
+      line-height: 1.25;
+      font-weight: 780;
+      letter-spacing: -0.01em;
+      font-variant-numeric: tabular-nums;
+      padding-block: 0.25rem;
+    }
+    .cd-mail {
+      display: inline-block;
+      font-family: var(--font-display);
+      font-size: 1.125rem;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+      padding-block: 0.5rem;
+    }
+    .cd-text {
+      font-size: 1.0625rem;
+    }
+    .cd-block {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .cd-quick {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .cd-social {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .cd-social-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.625rem;
+      min-height: 2.75rem;
+      padding: 0.5rem 1rem 0.5rem 0.75rem;
+      border: 2px solid var(--color-key);
+      font-family: var(--font-display);
+      font-weight: 700;
+      text-decoration: none;
+      transition:
+        background-color var(--dur-fast) linear,
+        color var(--dur-fast) linear;
+    }
+    .cd-social-link:hover {
+      background-color: var(--color-key);
+      color: var(--color-paper);
+    }
+  }
+</style>

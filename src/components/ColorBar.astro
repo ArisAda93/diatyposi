@@ -1,0 +1,42 @@
+---
+/**
+ * Press-sheet colour bar: solid C, M, Y, K patches followed by tint steps.
+ * Decorative.
+ */
+interface Props {
+  class?: string;
+  /** Number of tint steps after the solids. */
+  tints?: number;
+}
+const { class: className, tints = 4 } = Astro.props;
+const solids = ['cyan', 'magenta', 'yellow', 'key'] as const;
+const steps = Array.from({ length: tints }, (_, i) => Math.round(((i + 1) / (tints + 1)) * 100));
+---
+
+<div class:list={['colorbar', className]} aria-hidden="true">
+  {solids.map((c) => (
+    <span style={`background:var(--color-${c})`} />
+  ))}
+  {steps.map((pct) => (
+    <span
+      class="colorbar-tint"
+      style={`background:color-mix(in srgb, currentColor ${100 - pct}%, transparent)`}
+    />
+  ))}
+</div>
+
+<style>
+  @layer components {
+    .colorbar {
+      display: flex;
+      height: 0.625rem;
+      gap: 2px;
+    }
+    .colorbar > span {
+      flex: 0 0 1.75rem;
+    }
+    .colorbar > .colorbar-tint {
+      flex-basis: 1rem;
+    }
+  }
+</style>

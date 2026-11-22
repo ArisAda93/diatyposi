@@ -1,0 +1,102 @@
+---
+import Logo from './Logo.astro';
+import Icon from './Icon.astro';
+import ColorBar from './ColorBar.astro';
+import { routes, services, site } from '~/data/site';
+import { t, type Locale } from '~/i18n/ui';
+import { mailtoHref, telHref } from '~/lib/links';
+import { capsEl } from '~/lib/text';
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const year = new Date().getFullYear();
+---
+
+<footer class="on-ink site-footer">
+  <div class="wrap pt-14 pb-10 lg:pt-20">
+    <ColorBar class="mb-14 lg:mb-20" tints={6} />
+    <div class="grid-12 gap-y-12">
+      <div class="col-span-12 lg:col-span-4">
+        <a href={routes.home} class="inline-block" aria-label={t('homeLinkLabel', locale)}>
+          <Logo variant="full" tone="ink" id="footer-logo" class="h-auto w-56 sm:w-64" />
+        </a>
+        <p class="voice mt-8 max-w-[22ch] text-xl leading-snug text-(--color-paper)">
+          {site.tagline[locale]}
+        </p>
+      </div>
+
+      <div class="col-span-12 sm:col-span-6 lg:col-span-3 lg:col-start-6">
+        <h2 class="label mb-5">{capsEl(t('footerServices', locale))}</h2>
+        <ul class="flex flex-col gap-1">
+          {services.map((s) => (
+            <li>
+              <a href={`${routes.services}#${s.slug}`} class="footer-link link-draw">
+                {s.text[locale].short}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div class="col-span-12 sm:col-span-6 lg:col-span-4 lg:col-start-9">
+        <h2 class="label mb-5">{capsEl(t('footerContact', locale))}</h2>
+        <ul class="flex flex-col gap-1">
+          <li>
+            <a href={telHref(site.contact.phone)} class="footer-link link-draw">
+              <span class="muted">{t('phoneLabel', locale)}:</span>
+              {site.contact.phoneDisplay}
+            </a>
+          </li>
+          <li>
+            <a href={telHref(site.contact.mobile)} class="footer-link link-draw">
+              <span class="muted">{t('mobileLabel', locale)}:</span>
+              {site.contact.mobileDisplay}
+            </a>
+          </li>
+          <li>
+            <a href={mailtoHref(site.contact.email)} class="footer-link link-draw">
+              {site.contact.email}
+            </a>
+          </li>
+          <li class="footer-link muted">
+            {site.address.street}, {site.address.city}
+          </li>
+        </ul>
+        <div class="mt-6 flex gap-2">
+          <a href={site.social.facebook} class="icon-btn" aria-label={t('facebookLabel', locale)}>
+            <Icon name="facebook" size={22} />
+          </a>
+          <a href={site.social.instagram} class="icon-btn" aria-label={t('instagramLabel', locale)}>
+            <Icon name="instagram" size={22} />
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-16 flex flex-col gap-3 border-t border-(--color-ink-line) pt-6 text-small sm:flex-row sm:items-center sm:justify-between">
+      <p class="muted">
+        © {year} {site.name}. {t('copyright', locale)}
+      </p>
+      <a href={routes.privacy} class="link muted inline-flex min-h-11 items-center self-start">
+        {t('footerPrivacy', locale)}
+      </a>
+    </div>
+  </div>
+</footer>
+
+<style>
+  @layer components {
+    .site-footer {
+      background-image: none;
+    }
+    .footer-link {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 0.35em;
+      align-items: center;
+      min-height: 2.75rem;
+    }
+  }
+</style>

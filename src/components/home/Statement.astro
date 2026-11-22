@@ -1,0 +1,90 @@
+---
+/**
+ * Home statement: full-bleed ink section with the owner's closing line in display type over a
+ * faint halftone print of the arches (decorative; geometry from logo-paths.ts).
+ */
+import { ARCH, ARCH_PLATES } from '~/components/logo-paths';
+import { ownerCopy } from '~/data/site';
+
+// “ΔΙΑΤΥΠΩΣΗ —” is set as a label, the rest large. The text stays verbatim.
+const closing = ownerCopy.el.closing;
+const sep = ' — ';
+const at = closing.indexOf(sep);
+const brand = at >= 0 ? closing.slice(0, at + sep.length - 1) : '';
+const line = at >= 0 ? closing.slice(at + sep.length) : closing;
+---
+
+<section class="on-ink statement" aria-labelledby="statement-title">
+  <svg
+    class="statement-arches"
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="690 50 840 205"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <defs>
+      <pattern id="st-dots" width="9" height="9" patternUnits="userSpaceOnUse">
+        <circle cx="4.5" cy="4.5" r="2"></circle>
+      </pattern>
+      <linearGradient id="st-fade" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#fff" stop-opacity="0.25"></stop>
+        <stop offset="1" stop-color="#fff" stop-opacity="1"></stop>
+      </linearGradient>
+      <mask id="st-mask" maskContentUnits="objectBoundingBox">
+        <rect width="1" height="1" fill="url(#st-fade)"></rect>
+      </mask>
+    </defs>
+    <g mask="url(#st-mask)" fill="url(#st-dots)">
+      {ARCH_PLATES.map((p) => (
+        <path d={ARCH} transform={`translate(${p.x} 0)`} />
+      ))}
+    </g>
+  </svg>
+
+  <div class="wrap section statement-inner">
+    <h2 id="statement-title" class="statement-text">
+      {brand && <span class="label statement-brand">{brand}</span>}
+      {brand && ' '}
+      <span class="display-l statement-line">{line}</span>
+    </h2>
+  </div>
+</section>
+
+<style>
+  @layer components {
+    .statement {
+      position: relative;
+      overflow: clip;
+      isolation: isolate;
+    }
+    .statement-arches {
+      position: absolute;
+      right: 0;
+      bottom: -6%;
+      z-index: -1;
+      width: min(100%, max(22rem, 72%));
+      height: auto;
+      color: var(--color-paper);
+      opacity: 0.16;
+      pointer-events: none;
+    }
+    .statement-arches circle {
+      fill: currentColor;
+    }
+    .statement-inner {
+      position: relative;
+    }
+    .statement-text {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(1.25rem, 2.5vw, 2rem);
+    }
+    .statement-brand {
+      font-size: clamp(0.8125rem, 0.75rem + 0.3vw, 1rem);
+    }
+    .statement-line {
+      max-width: 17ch;
+      color: var(--color-paper);
+    }
+  }
+</style>

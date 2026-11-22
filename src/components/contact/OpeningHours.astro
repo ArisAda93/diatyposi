@@ -1,0 +1,78 @@
+---
+/** Opening hours from `site.hours`: ranges joined, “Κλειστά” when a day has none. */
+import Icon from '~/components/Icon.astro';
+import { site } from '~/data/site';
+import { t } from '~/i18n/ui';
+import { capsEl } from '~/lib/text';
+
+const rows = site.hours.map((entry) => ({
+  label: entry.label.el,
+  value:
+    entry.ranges.length > 0
+      ? entry.ranges.map((range) => `${range.opens} – ${range.closes}`).join(', ')
+      : t('closed'),
+  closed: entry.ranges.length === 0,
+}));
+---
+
+<div class="hours">
+  <h3 class="hours-title label">
+    <Icon name="clock" size={18} class="hours-icon" />
+    <span>{capsEl(t('hoursLabel'))}</span>
+  </h3>
+  <dl class="hours-list">
+    {rows.map((row) => (
+      <div class="hours-row">
+        <dt>{row.label}</dt>
+        <dd class:list={['hours-value', { muted: row.closed }]}>{row.value}</dd>
+      </div>
+    ))}
+  </dl>
+</div>
+
+<style>
+  @layer components {
+    .hours {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .hours-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .hours-title :global(.hours-icon) {
+      flex: none;
+      color: var(--color-key);
+    }
+    .hours-row {
+      display: flex;
+      align-items: baseline;
+      gap: 0.75rem;
+      padding-block: 0.625rem;
+      border-bottom: 1px solid var(--color-line);
+    }
+    .hours-row:first-child {
+      border-top: 2px solid var(--color-key);
+    }
+    /* Dotted leader between the day and the hours, as in a printed timetable. */
+    .hours-row::after {
+      content: '';
+      order: 1;
+      flex: 1 1 1rem;
+      min-width: 1rem;
+      border-bottom: 1px dotted var(--color-muted);
+      transform: translateY(-0.3em);
+    }
+    .hours-row dt {
+      order: 0;
+      font-weight: 600;
+    }
+    .hours-value {
+      order: 2;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+  }
+</style>

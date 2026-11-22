@@ -1,0 +1,190 @@
+---
+/**
+ * Lightbox for the gallery: a native modal <dialog> (focus trap, Esc, inert background come from
+ * the platform). The gallery script fills it; the large <img> is created only when it opens.
+ */
+import Icon from '../Icon.astro';
+import { workText } from '~/i18n/pages/work';
+import { t } from '~/i18n/ui';
+
+const text = workText.el;
+---
+
+<dialog class="lightbox on-ink" aria-labelledby="lightbox-title" data-lightbox>
+  <div class="lightbox-inner">
+    <div class="lightbox-bar">
+      <p class="label lightbox-counter" data-lb-counter></p>
+      <button type="button" class="lb-btn lb-close" data-lb-close>
+        <Icon name="close" size={22} />
+        <span>{text.lightboxClose}</span>
+      </button>
+    </div>
+
+    <figure class="lightbox-figure">
+      <div class="lightbox-stage" data-lb-stage>
+        <span class="lightbox-standin" data-lb-standin hidden>
+          {t('standInLabel')}
+        </span>
+      </div>
+      <figcaption class="lightbox-caption">
+        <div>
+          <h2 id="lightbox-title" class="h3" data-lb-title></h2>
+          <p class="muted lightbox-category" data-lb-category></p>
+        </div>
+        <div class="lightbox-nav">
+          <button
+            type="button"
+            class="lb-btn lb-arrow"
+            aria-label={text.lightboxPrevious}
+            data-lb-prev
+          >
+            <Icon name="chevron-left" size={24} />
+          </button>
+          <button type="button" class="lb-btn lb-arrow" aria-label={text.lightboxNext} data-lb-next>
+            <Icon name="chevron-right" size={24} />
+          </button>
+        </div>
+      </figcaption>
+    </figure>
+    <p class="sr-only" role="status" data-lb-status></p>
+  </div>
+</dialog>
+
+<style>
+  @layer components {
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      max-width: none;
+      height: 100dvh;
+      max-height: none;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+    .lightbox::backdrop {
+      background-color: var(--color-ink);
+    }
+    :global(html:has(.lightbox[open])) {
+      overflow: hidden;
+    }
+    .lightbox-inner {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      min-height: 100%;
+      width: 100%;
+      max-width: calc(var(--wrap) + 2 * var(--gutter));
+      margin-inline: auto;
+      padding: 0.75rem var(--gutter) calc(1.25rem + env(safe-area-inset-bottom));
+    }
+    .lightbox-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .lightbox-counter {
+      font-variant-numeric: tabular-nums;
+    }
+    .lb-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      min-width: 2.75rem;
+      min-height: 2.75rem;
+      padding-inline: 0.75rem;
+      border: 2px solid var(--color-paper);
+      background: transparent;
+      color: var(--color-paper);
+      font-family: var(--font-display);
+      font-weight: 700;
+      cursor: pointer;
+      transition:
+        background-color var(--dur-fast) linear,
+        color var(--dur-fast) linear;
+    }
+    .lb-btn:hover {
+      background-color: var(--color-paper);
+      color: var(--color-key);
+    }
+    .lb-arrow {
+      width: 3rem;
+      height: 3rem;
+      padding: 0;
+    }
+
+    .lightbox-figure {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: 1rem;
+      margin: 0;
+      min-height: 0;
+    }
+    .lightbox-stage {
+      position: relative;
+      display: flex;
+      flex: 1;
+      align-items: center;
+      justify-content: center;
+      min-height: 12rem;
+    }
+    .lightbox-stage :global(img) {
+      width: auto;
+      max-width: 100%;
+      height: auto;
+      max-height: calc(100dvh - 12rem);
+      object-fit: contain;
+      background-color: var(--color-ink-2);
+    }
+    .lightbox-standin {
+      position: absolute;
+      top: 0.75rem;
+      left: 0.75rem;
+      padding: 0.3rem 0.55rem;
+      background-color: var(--color-yellow);
+      color: var(--color-key);
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      font-weight: 720;
+      line-height: 1.2;
+    }
+    .lightbox-caption {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 1rem 1.5rem;
+    }
+    .lightbox-category {
+      margin-top: 0.25rem;
+      font-size: var(--text-small);
+    }
+    .lightbox-nav {
+      display: flex;
+      flex: none;
+      gap: 0.5rem;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .lightbox[open] {
+        animation: lightbox-in var(--dur-slow) var(--ease-out);
+      }
+    }
+  }
+
+  @keyframes lightbox-in {
+    from {
+      opacity: 0;
+      clip-path: inset(4% 4% 4% 4%);
+    }
+    to {
+      opacity: 1;
+      clip-path: inset(0 0 0 0);
+    }
+  }
+</style>

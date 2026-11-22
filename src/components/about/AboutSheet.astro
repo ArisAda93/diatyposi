@@ -1,0 +1,157 @@
+---
+/**
+ * Photo slot on /etaireia/. With `site.aboutPhoto` set it shows that photo in a crop-marked frame.
+ * Until then it shows a press sheet: the four logo arches printed as halftone plates at their
+ * screen angles (C 15°, M 75°, Y 0°, K 45°), slightly out of register, with a registration mark,
+ * a colour bar and the solid mark as the proof. Decorative, no text.
+ */
+import Photo from '../Photo.astro';
+import Logo from '../Logo.astro';
+import ColorBar from '../ColorBar.astro';
+import RegMark from '../RegMark.astro';
+import { ARCH, ARCH_PLATES } from '../logo-paths';
+import { site } from '~/data/site';
+
+const photo = site.aboutPhoto;
+
+// Same view box as the `mark` logo variant, so the masks line up with the logo geometry.
+const VIEW_BOX = '690 50 840 205';
+const screenAngle = { c: 15, m: 75, y: 0, k: 45 } as const;
+const misregister = { c: '-7px, -4px', m: '6px, -2px', y: '-3px, 6px', k: '0px, 0px' } as const;
+
+const plates = [...ARCH_PLATES].reverse().map((p) => {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${VIEW_BOX}"><path d="${ARCH}" transform="translate(${p.x} 0)"/></svg>`;
+  return {
+    id: p.id,
+    style: [
+      `--plate-mask:url("data:image/svg+xml,${encodeURIComponent(svg)}")`,
+      `--plate-color:${p.color}`,
+      `--plate-angle:${screenAngle[p.id]}deg`,
+      `--plate-offset:${misregister[p.id]}`,
+    ].join(';'),
+  };
+});
+---
+
+{photo ? (
+  <div class="about-photo crop-frame">
+    <div class="media about-photo-media">
+      <Photo
+        image={photo.image}
+        alt={photo.alt.el}
+        sizes="(min-width: 1024px) min(40vw, 600px), (min-width: 768px) 46vw, calc(100vw - 5rem)"
+      />
+    </div>
+  </div>
+) : (
+  <div class="about-photo crop-frame" aria-hidden="true">
+    <div class="about-sheet">
+      <div class="about-arches">
+        {plates.map((p) => (
+          <span class:list={['about-plate', `about-plate-${p.id}`]} style={p.style} />
+        ))}
+      </div>
+      <RegMark size={30} class="about-reg" />
+      <div class="about-foot">
+        <ColorBar tints={3} class="about-colorbar" />
+        <Logo variant="mark" id="about-proof-mark" class="about-proof" />
+      </div>
+    </div>
+  </div>
+)}
+
+<style>
+  @layer components {
+    .about-photo {
+      /* Room for the crop marks on narrow screens. */
+      margin-inline: 1.5rem;
+    }
+    .about-photo-media,
+    .about-sheet {
+      aspect-ratio: 4 / 5;
+    }
+    .about-photo-media :global(picture) {
+      display: block;
+      height: 100%;
+    }
+
+    .about-sheet {
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+      background-color: var(--color-paper-2);
+      background-image: var(--grain);
+      background-size: 160px 160px;
+    }
+    /* The arches bleed off the right edge of the sheet, as on the home hero. */
+    .about-arches {
+      position: absolute;
+      left: 9%;
+      top: 26%;
+      width: 125%;
+      aspect-ratio: 840 / 205;
+    }
+    .about-plate {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      color: var(--plate-color);
+      mix-blend-mode: multiply;
+      -webkit-mask: var(--plate-mask) center / 100% 100% no-repeat;
+      mask: var(--plate-mask) center / 100% 100% no-repeat;
+      transform: translate(var(--plate-offset));
+      transition: transform var(--dur-slow) var(--ease-snap);
+    }
+    /* A square screen wider than the plate's diagonal, so it covers the plate at any angle. */
+    .about-plate::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 110%;
+      aspect-ratio: 1;
+      background-image: radial-gradient(circle at center, currentColor 0 2.6px, transparent 3.3px);
+      background-size: 9px 9px;
+      transform: translate(-50%, -50%) rotate(var(--plate-angle));
+    }
+    .about-plate-k {
+      mix-blend-mode: normal;
+      opacity: 0.85;
+    }
+    /* Hovering the sheet pulls the plates into register. */
+    .about-sheet:hover .about-plate {
+      transform: translate(0, 0);
+    }
+
+    .about-reg {
+      position: absolute;
+      top: 7%;
+      left: 9%;
+      color: var(--color-key);
+    }
+    .about-foot {
+      position: absolute;
+      left: 9%;
+      right: 9%;
+      bottom: 8%;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 1rem;
+      color: var(--color-key);
+    }
+    .about-colorbar {
+      flex: none;
+    }
+    .about-proof {
+      width: clamp(4.5rem, 22%, 7.5rem);
+      height: auto;
+    }
+
+    @media (min-width: 48rem) {
+      .about-photo {
+        margin-inline: 0;
+      }
+    }
+  }
+</style>

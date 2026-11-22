@@ -1,0 +1,222 @@
+---
+/**
+ * Home services overview: an editorial bento of all nine services in three treatments (paper,
+ * ink, yellow) and varied spans. Each card is one link to its section on /ypiresies/.
+ */
+import Icon from '~/components/Icon.astro';
+import PlateIcon from '~/components/PlateIcon.astro';
+import { ownerCopy, routes, services } from '~/data/site';
+import { homeText } from '~/i18n/pages/home';
+import { capsEl } from '~/lib/text';
+
+const copy = homeText.el.services;
+
+type Treatment = 'ink' | 'paper' | 'yellow';
+/** Treatment per position; the first (large) card is ink. */
+const treatments: Treatment[] = [
+  'ink',
+  'paper',
+  'yellow',
+  'paper',
+  'ink',
+  'paper',
+  'paper',
+  'yellow',
+  'paper',
+];
+const treatmentClass: Record<Treatment, string> = {
+  ink: 'on-ink svc-ink',
+  paper: 'svc-paper',
+  yellow: 'bg-yellow text-key svc-yellow',
+};
+---
+
+<section class="section services" aria-labelledby="services-title">
+  <div class="wrap">
+    <div class="svc-head">
+      <div>
+        <p class="label mb-5">{capsEl(copy.label)}</p>
+        <h2 id="services-title" class="h2">
+          {ownerCopy.el.servicesHeading}
+        </h2>
+      </div>
+      <a href={routes.services} class="link svc-all">
+        <span>{copy.allLink}</span>
+        <Icon name="arrow-right" size={20} />
+      </a>
+    </div>
+
+    <ul class="bento" role="list">
+      {services.map((s, i) => {
+        const treatment = treatments[i] ?? 'paper';
+        const large = i === 0;
+        return (
+          <li class={`bento-item bento-${i + 1}`}>
+            <a
+              href={`${routes.services}#${s.slug}`}
+              class:list={['svc-card card-lift plate-hover', treatmentClass[treatment]]}
+            >
+              <div class="svc-top" aria-hidden="true">
+                <span class="svc-num">{String(i + 1).padStart(2, '0')}</span>
+                <span class="svc-arrow">
+                  <Icon name="arrow-up-right" size={22} />
+                </span>
+              </div>
+              <div class="svc-body">
+                <PlateIcon name={s.icon} size={large ? 88 : 52} />
+                <h3 class:list={['svc-title', { 'svc-title-lg': large }]}>{s.text.el.title}</h3>
+                {large && <p class="svc-desc muted">{s.text.el.description}</p>}
+              </div>
+            </a>
+          </li>
+        );
+      })}
+    </ul>
+  </div>
+</section>
+
+<style>
+  @layer components {
+    .svc-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 1.5rem 3rem;
+      margin-bottom: clamp(2.5rem, 5vw, 4.5rem);
+    }
+    .svc-all {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-height: 2.75rem;
+      font-family: var(--font-display);
+      font-weight: 700;
+    }
+
+    .bento {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--grid-gap);
+    }
+    .bento-item {
+      display: flex;
+    }
+
+    .svc-card {
+      /* Ink cards set a yellow focus ring for their insides; on the paper page it must stay key. */
+      --focus: var(--color-key);
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      width: 100%;
+      min-height: 12rem;
+      padding: clamp(1.25rem, 2.2vw, 2rem);
+      text-decoration: none;
+    }
+    .svc-paper {
+      background-color: var(--color-paper-2);
+      color: var(--color-key);
+      box-shadow: inset 0 0 0 1px var(--color-line);
+    }
+    .svc-card:hover {
+      box-shadow:
+        inset 0 0 0 2px var(--color-key),
+        0 2px 0 var(--color-key);
+    }
+    .svc-ink:hover {
+      box-shadow: 0 2px 0 var(--color-key);
+    }
+
+    .svc-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .svc-num {
+      font-family: var(--font-display);
+      font-size: 0.9375rem;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+      font-variant-numeric: tabular-nums;
+    }
+    .svc-body {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1.25rem;
+      margin-top: auto;
+    }
+    .svc-title {
+      max-width: 22ch;
+      overflow-wrap: break-word;
+      font-size: var(--text-h3);
+      line-height: var(--text-h3--line-height);
+      font-weight: 760;
+      letter-spacing: -0.015em;
+    }
+    .svc-title-lg {
+      max-width: 16ch;
+      font-size: clamp(1.75rem, 1.1rem + 2.4vw, 3.25rem);
+      line-height: 1.05;
+      font-weight: 820;
+      letter-spacing: -0.03em;
+    }
+    .svc-desc {
+      max-width: 44ch;
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+    .svc-arrow {
+      transition: transform var(--dur-base) var(--ease-out);
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .svc-card:hover .svc-arrow {
+        transform: translate(3px, -3px);
+      }
+    }
+
+    @media (min-width: 48rem) {
+      .bento {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .bento-1 {
+        grid-column: 1 / -1;
+      }
+      .svc-card {
+        min-height: 15rem;
+      }
+    }
+
+    @media (min-width: 64rem) {
+      .bento {
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        grid-auto-rows: minmax(15.5rem, auto);
+      }
+      .bento-1 {
+        grid-column: 1 / span 7;
+        grid-row: span 2;
+      }
+      .bento-2,
+      .bento-3 {
+        grid-column: 8 / span 5;
+      }
+      .bento-4,
+      .bento-5,
+      .bento-6,
+      .bento-9 {
+        grid-column: span 4;
+      }
+      .bento-7 {
+        grid-column: span 5;
+      }
+      .bento-8 {
+        grid-column: span 3;
+      }
+      .svc-card {
+        min-height: 0;
+      }
+    }
+  }
+</style>

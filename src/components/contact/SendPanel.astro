@@ -1,0 +1,145 @@
+---
+/**
+ * Shown after a valid quote form submit (src/scripts/quote-form.ts fills it): the three send
+ * links, the attachment note, a read-only preview of the text with a copy button, and a way
+ * back to the form. The hrefs below are plain fallbacks; the script adds the composed text.
+ */
+import Icon from '~/components/Icon.astro';
+import { site } from '~/data/site';
+import { t } from '~/i18n/ui';
+import { contactText } from '~/i18n/pages/contact';
+import { mailtoHref, viberHref, whatsappHref } from '~/lib/links';
+
+const text = contactText.el.send;
+---
+
+<div class="send-panel" data-send-panel hidden>
+  <h3 class="h3 send-heading" tabindex="-1" data-send-heading>
+    <Icon name="check" size={28} class="send-check" />
+    <span>{text.heading}</span>
+  </h3>
+  <p class="mt-3 max-w-[52ch]">{text.intro}</p>
+
+  <div class="send-actions">
+    <a href={mailtoHref(site.contact.email)} class="btn btn-primary" data-send="email">
+      <Icon name="mail" />
+      <span>{text.email}</span>
+    </a>
+    <a href={viberHref(site.contact.viber)} class="btn btn-secondary" data-send="viber">
+      <Icon name="viber" />
+      <span>{text.viber}</span>
+    </a>
+    <a
+      href={whatsappHref(site.contact.whatsapp)}
+      class="btn btn-secondary"
+      target="_blank"
+      rel="noopener"
+      data-send="whatsapp"
+    >
+      <Icon name="whatsapp" />
+      <span>
+        {text.whatsapp}
+        <span class="sr-only">{` ${t('newTab')}`}</span>
+      </span>
+    </a>
+  </div>
+
+  <p class="attach-note">
+    <Icon name="paperclip" size={22} />
+    <span>{text.attach}</span>
+  </p>
+
+  <div class="send-preview">
+    <label for="q-preview" class="field-label">
+      {text.previewLabel}
+    </label>
+    <p id="q-preview-hint" class="field-hint">
+      {text.previewHint}
+    </p>
+    <textarea
+      id="q-preview"
+      class="input preview-text"
+      rows="11"
+      readonly
+      aria-describedby="q-preview-hint"
+      data-preview
+    ></textarea>
+    <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
+      <button type="button" class="btn btn-secondary" data-copy>
+        <Icon name="copy" />
+        <span>{text.copy}</span>
+      </button>
+      <p class="text-small" role="status" data-copy-status></p>
+    </div>
+  </div>
+
+  <button type="button" class="back-link" data-edit>
+    <Icon name="chevron-left" size={20} />
+    <span class="link">{text.edit}</span>
+  </button>
+</div>
+
+<style>
+  @layer components {
+    .send-panel {
+      display: flex;
+      flex-direction: column;
+      container-type: inline-size;
+    }
+    .send-heading {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      outline-offset: 6px;
+    }
+    .send-heading :global(.send-check) {
+      flex: none;
+      margin-top: 0.05em;
+      padding: 3px;
+      background: var(--color-yellow);
+      color: var(--color-key);
+    }
+    .send-actions {
+      display: grid;
+      gap: 0.75rem;
+      margin-top: 1.75rem;
+    }
+    .send-actions .btn {
+      justify-content: flex-start;
+      white-space: normal;
+    }
+    @container (min-width: 36rem) {
+      .send-actions {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .send-actions .btn {
+        justify-content: center;
+        padding-inline: 1rem;
+      }
+    }
+    .send-preview {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 2rem;
+    }
+    /* Beats the shared .quote .input rule (QuoteForm.astro). */
+    .send-preview .preview-text {
+      min-height: 14rem;
+      resize: vertical;
+      font-size: 0.9375rem;
+      line-height: 1.6;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      align-self: flex-start;
+      min-height: 2.75rem;
+      margin-top: 1.75rem;
+      font-family: var(--font-display);
+      font-weight: 700;
+      cursor: pointer;
+    }
+  }
+</style>

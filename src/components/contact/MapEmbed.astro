@@ -1,0 +1,188 @@
+---
+/**
+ * Click-to-load Google map. Until the visitor presses the button, the box shows a printed
+ * placeholder (halftone sheet, out-of-register pin) and nothing loads from Google
+ * (src/scripts/map-consent.ts swaps in the iframe). Without JS only the external link shows.
+ */
+import Icon from '~/components/Icon.astro';
+import { site } from '~/data/site';
+import { t } from '~/i18n/ui';
+import { contactText } from '~/i18n/pages/contact';
+import { capsEl } from '~/lib/text';
+
+const text = contactText.el.map;
+const query = encodeURIComponent(site.address.mapQuery);
+const embedSrc = `https://www.google.com/maps?q=${query}&output=embed`;
+const openHref = `https://www.google.com/maps/search/?api=1&query=${query}`;
+const pinPath =
+  'M12 1.5a8 8 0 0 0-8 8c0 6 8 13 8 13s8-7 8-13a8 8 0 0 0-8-8zm0 5a3 3 0 1 1 0 6 3 3 0 0 1 0-6z';
+const plates = ['c', 'm', 'y', 'k'] as const;
+---
+
+<section class="map" aria-labelledby="map-title">
+  <h2 id="map-title" class="label">
+    {capsEl(text.heading)}
+  </h2>
+  <p class="map-address">
+    <Icon name="pin" size={22} />
+    <span>{`${site.address.street}, ${site.address.city}`}</span>
+  </p>
+
+  <div
+    class="map-box crop-frame"
+    data-map-consent
+    data-map-src={embedSrc}
+    data-map-title={text.iframeTitle}
+  >
+    <div class="map-placeholder" data-map-placeholder>
+      <div class="map-art" aria-hidden="true">
+        <span class="map-dots halftone"></span>
+        <span class="map-pin">
+          {plates.map((plate) => (
+            <svg viewBox="0 0 24 24" class={`map-plate map-plate-${plate}`} focusable="false">
+              <path d={pinPath} fill-rule="evenodd" fill="currentColor" />
+            </svg>
+          ))}
+        </span>
+      </div>
+      <div class="map-copy">
+        <p class="map-note">{text.note}</p>
+        <button type="button" class="btn btn-primary" data-map-load>
+          <Icon name="pin" />
+          <span>{text.load}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <a href={openHref} class="map-open" target="_blank" rel="noopener">
+    <Icon name="external" size={20} />
+    <span class="link">{text.open}</span>
+    <span class="sr-only">{` ${t('newTab')}`}</span>
+  </a>
+</section>
+
+<script>
+  import '~/scripts/map-consent';
+</script>
+
+<style>
+  @layer components {
+    .map {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .map-address {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      font-weight: 600;
+    }
+    .map-address :global(svg) {
+      flex: none;
+      margin-top: 0.1em;
+    }
+
+    /* The crop marks sit 20px outside the box: keep that room so they never overflow. */
+    .map-box {
+      position: relative;
+      display: grid;
+      margin: 1.75rem 1.25rem 1.25rem;
+      aspect-ratio: 4 / 3;
+      background-color: var(--color-paper-2);
+      border: 1px solid var(--color-line);
+    }
+    :global(.no-js) .map-box {
+      display: none;
+    }
+    .map-box :global(iframe) {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+
+    .map-placeholder {
+      display: grid;
+      grid-template-rows: 1fr auto;
+    }
+    .map-art {
+      position: relative;
+      display: grid;
+      place-items: center;
+      min-height: 7rem;
+      overflow: hidden;
+      isolation: isolate;
+    }
+    .map-dots {
+      position: absolute;
+      inset: 0;
+      --dot: 1.2px;
+      --pitch: 10px;
+      color: var(--color-muted);
+      opacity: 0.35;
+      mask-image: radial-gradient(circle at 50% 55%, #000 0 35%, transparent 75%);
+    }
+    .map-pin {
+      position: relative;
+      display: grid;
+      width: clamp(3.5rem, 2.5rem + 4vw, 5.5rem);
+    }
+    .map-plate {
+      grid-area: 1 / 1;
+      width: 100%;
+      height: auto;
+      mix-blend-mode: multiply;
+      transition: transform var(--dur-slow) var(--ease-snap);
+    }
+    .map-plate-c {
+      color: var(--color-cyan);
+      transform: translate(-5px, -3px);
+    }
+    .map-plate-m {
+      color: var(--color-magenta);
+      transform: translate(5px, -1px);
+    }
+    .map-plate-y {
+      color: var(--color-yellow);
+      transform: translate(-2px, 5px);
+    }
+    .map-plate-k {
+      color: var(--color-key);
+      transform: translate(1px, 0);
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .map-placeholder:has([data-map-load]:hover) .map-plate,
+      .map-placeholder:has([data-map-load]:focus-visible) .map-plate {
+        transform: translate(0, 0);
+      }
+    }
+
+    .map-copy {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 1.25rem;
+      background-color: var(--color-paper);
+      border-top: 1px solid var(--color-line);
+    }
+    .map-note {
+      max-width: 44ch;
+      font-size: var(--text-small);
+      line-height: var(--text-small--line-height);
+      color: var(--color-muted);
+    }
+
+    .map-open {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      align-self: flex-start;
+      min-height: 2.75rem;
+      font-weight: 600;
+    }
+  }
+</style>

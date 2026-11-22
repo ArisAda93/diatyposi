@@ -1,0 +1,71 @@
+---
+/**
+ * ΔΙΑΤΥΠΩΣΗ logo as inline SVG.
+ *
+ * variant:
+ *  - full     arches + wordmark + red subtitle
+ *  - compact  arches + wordmark (header)
+ *  - mark     arches only
+ *
+ * The arches are separate groups (`.logo-plate[data-plate=c|m|y|k]`) so they can be animated.
+ * Overlaps use the logo's knock-out stacking: each arch carries a stroke in the background colour
+ * (`--logo-bg`, paper by default) and the cyan arch sits on top.
+ */
+import { ARCH, ARCH_PLATES, WORDMARK, SUBTITLE } from './logo-paths';
+
+interface Props {
+  variant?: 'full' | 'compact' | 'mark';
+  /** Accessible name. Omit (or pass '') for a decorative logo. */
+  title?: string;
+  /** Wordmark colour: key on paper, paper on ink. */
+  tone?: 'paper' | 'ink';
+  class?: string;
+  /** Unique id prefix when several logos share a page. */
+  id?: string;
+}
+
+const { variant = 'compact', title, tone = 'paper', class: className, id = 'logo' } = Astro.props;
+
+const viewBoxes = {
+  full: '40 50 1505 445',
+  compact: '40 50 1505 440',
+  mark: '690 50 840 205',
+} as const;
+
+const ink = tone === 'ink';
+const wordColor = ink ? 'var(--color-paper)' : 'var(--color-key)';
+const bg = ink ? 'var(--color-ink)' : 'var(--color-paper)';
+// back to front: key, yellow, magenta, cyan
+const plates = [...ARCH_PLATES].reverse();
+const titleId = `${id}-title`;
+---
+
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox={viewBoxes[variant]}
+  class:list={['logo', `logo-${variant}`, className]}
+  style={`--logo-bg:${bg}`}
+  role={title ? 'img' : undefined}
+  aria-labelledby={title ? titleId : undefined}
+  aria-hidden={title ? undefined : 'true'}
+  focusable="false"
+>
+  {title && <title id={titleId}>{title}</title>}
+  <g class="logo-arches">
+    {plates.map((p) => (
+      <g class={`logo-plate logo-plate-${p.id}`} data-plate={p.id}>
+        <path
+          d={ARCH}
+          transform={`translate(${p.x} 0)`}
+          fill={p.id === 'k' && ink ? 'var(--color-paper)' : p.color}
+          stroke="var(--logo-bg)"
+          stroke-width="9"
+          stroke-linejoin="round"
+          paint-order="stroke"
+        />
+      </g>
+    ))}
+  </g>
+  {variant !== 'mark' && <path class="logo-wordmark" fill={wordColor} d={WORDMARK} />}
+  {variant === 'full' && <path class="logo-subtitle" fill="var(--color-red)" d={SUBTITLE} />}
+</svg>

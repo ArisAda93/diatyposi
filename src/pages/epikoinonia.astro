@@ -1,0 +1,64 @@
+---
+/**
+ * Επικοινωνία: contact details, opening hours, social links, the click-to-load map and the quote
+ * form (#prosfora). Desktop: details and map on the left, the form on the right. Phones: details,
+ * form, map (the DOM order, so reading and focus order match what is seen).
+ */
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import PageHeader from '~/components/PageHeader.astro';
+import ContactDetails from '~/components/contact/ContactDetails.astro';
+import MapEmbed from '~/components/contact/MapEmbed.astro';
+import QuoteForm from '~/components/contact/QuoteForm.astro';
+import { contactText } from '~/i18n/pages/contact';
+
+const text = contactText.el;
+---
+
+<BaseLayout title={text.meta.title} description={text.meta.description} structuredData>
+  <PageHeader label={text.header.label} title={text.header.title} intro={text.header.intro} />
+
+  <div class="wrap contact-layout">
+    <div class="contact-area-details">
+      <ContactDetails />
+    </div>
+    <div class="contact-area-form">
+      <QuoteForm />
+    </div>
+    <div class="contact-area-map">
+      <MapEmbed />
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  @layer components {
+    .contact-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: clamp(3.5rem, 2.5rem + 4vw, 5rem);
+      padding-top: clamp(3rem, 2rem + 3vw, 5rem);
+      padding-bottom: var(--section-y);
+    }
+    @media (min-width: 64rem) {
+      .contact-layout {
+        grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+        grid-template-rows: auto 1fr;
+        grid-template-areas:
+          'details form'
+          'map form';
+        column-gap: clamp(2.5rem, 1rem + 4vw, 6rem);
+        row-gap: 4rem;
+        align-items: start;
+      }
+      .contact-area-details {
+        grid-area: details;
+      }
+      .contact-area-form {
+        grid-area: form;
+      }
+      .contact-area-map {
+        grid-area: map;
+      }
+    }
+  }
+</style>

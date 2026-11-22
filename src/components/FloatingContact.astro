@@ -1,0 +1,58 @@
+---
+/** Mobile-only bar fixed to the bottom of the screen: call and Viber. */
+import Icon from './Icon.astro';
+import { site } from '~/data/site';
+import { t, type Locale } from '~/i18n/ui';
+import { telHref, viberHref } from '~/lib/links';
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+---
+
+<nav class="floating-contact md:hidden" aria-label={t('floatingLabel', locale)}>
+  <a href={telHref(site.contact.phone)} class="fc-btn fc-call">
+    <Icon name="phone" size={20} />
+    <span>{t('callShort', locale)}</span>
+  </a>
+  <a href={viberHref(site.contact.viber)} class="fc-btn fc-viber">
+    <Icon name="viber" size={20} />
+    <span>{t('viber', locale)}</span>
+  </a>
+</nav>
+
+<style>
+  @layer components {
+    .floating-contact {
+      position: fixed;
+      inset: auto 0 0 0;
+      z-index: 30;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px;
+      padding: 0.5rem var(--gutter) calc(0.5rem + env(safe-area-inset-bottom));
+      background: var(--color-paper);
+      border-top: 1px solid var(--color-line);
+    }
+    .fc-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      min-height: 3rem;
+      font-family: var(--font-display);
+      font-weight: 720;
+      text-decoration: none;
+      border: 2px solid var(--color-key);
+    }
+    .fc-call {
+      background: var(--color-key);
+      color: var(--color-paper);
+    }
+    .fc-viber {
+      background: var(--color-paper);
+      color: var(--color-key);
+    }
+  }
+</style>

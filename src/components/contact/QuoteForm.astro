@@ -1,0 +1,484 @@
+---
+/**
+ * Quote request form (section #prosfora on the contact page), styled as a print-shop job ticket.
+ * Validation, ?ypiresia= pre-selection and message composition run in src/scripts/quote-form.ts;
+ * nothing is sent to a server. Without JS the form is hidden and a note with the direct contact
+ * links takes its place, so the section is never a dead end.
+ */
+import Icon from '~/components/Icon.astro';
+import ColorBar from '~/components/ColorBar.astro';
+import Field from './Field.astro';
+import SendPanel from './SendPanel.astro';
+import { routes, services, site } from '~/data/site';
+import { t } from '~/i18n/ui';
+import { contactText } from '~/i18n/pages/contact';
+import { mailtoHref, telHref, viberHref, whatsappHref } from '~/lib/links';
+import { capsEl } from '~/lib/text';
+
+const text = contactText.el.form;
+---
+
+<section
+  id="prosfora"
+  class="quote"
+  aria-labelledby="quote-title"
+  data-quote
+  data-email={site.contact.email}
+  data-viber={site.contact.viber}
+  data-whatsapp={site.contact.whatsapp}
+>
+  <div class="quote-ticket" aria-hidden="true">
+    <span class="label">{capsEl(text.ticket)}</span>
+    <ColorBar tints={2} />
+  </div>
+  <h2 id="quote-title" class="h2">
+    {t('requestQuote')}
+  </h2>
+  <p class="lead mt-4 max-w-[52ch]">{text.intro}</p>
+
+  <noscript>
+    <div class="quote-nojs">
+      <p class="font-display text-h3 font-bold">{text.noJsTitle}</p>
+      <p class="mt-2">{text.noJsText}</p>
+      <div class="mt-5 flex flex-wrap gap-3">
+        <a href={telHref(site.contact.phone)} class="btn btn-primary">
+          <Icon name="phone" />
+          <span>{`${t('callShort')}: ${site.contact.phoneDisplay}`}</span>
+        </a>
+        <a href={mailtoHref(site.contact.email)} class="btn btn-secondary">
+          <Icon name="mail" />
+          <span>{t('email')}</span>
+        </a>
+        <a href={viberHref(site.contact.viber)} class="btn btn-secondary">
+          <Icon name="viber" />
+          <span>{t('viber')}</span>
+        </a>
+        <a href={whatsappHref(site.contact.whatsapp)} class="btn btn-secondary">
+          <Icon name="whatsapp" />
+          <span>{t('whatsapp')}</span>
+        </a>
+      </div>
+    </div>
+  </noscript>
+
+  <div class="quote-body">
+    <form class="quote-form" novalidate data-quote-form>
+      <div
+        class="error-summary"
+        role="alert"
+        tabindex="-1"
+        aria-labelledby="q-summary-title"
+        data-error-summary
+        hidden
+      >
+        <p id="q-summary-title" class="error-summary-title">
+          {text.summaryTitle}
+        </p>
+        <ul class="error-summary-list" data-error-list></ul>
+      </div>
+
+      <p class="text-small muted">{text.requiredNote}</p>
+
+      <div class="q-grid">
+        <Field field="name" id="q-name" label={text.nameLabel}>
+          <input
+            id="q-name"
+            name="name"
+            type="text"
+            class="input"
+            autocomplete="name"
+            required
+            aria-required="true"
+            data-describe
+          />
+        </Field>
+
+        <Field field="phone" id="q-phone" label={text.phoneLabel} hint={text.phoneHint}>
+          <input
+            id="q-phone"
+            name="phone"
+            type="tel"
+            class="input"
+            autocomplete="tel"
+            required
+            aria-required="true"
+            aria-describedby="q-phone-hint"
+            data-describe
+          />
+        </Field>
+
+        <Field field="email" id="q-email" label={text.emailLabel} optional class="q-span">
+          <input
+            id="q-email"
+            name="email"
+            type="email"
+            class="input"
+            autocomplete="email"
+            spellcheck="false"
+            data-describe
+          />
+        </Field>
+
+        <div class="field q-span" data-field="services">
+          <fieldset class="q-services" aria-describedby="q-services-hint" data-describe>
+            <legend class="field-label">{text.servicesLegend}</legend>
+            <p id="q-services-hint" class="field-hint">
+              {text.servicesHint}
+            </p>
+            <ul class="svc-grid">
+              {services.map((service, i) => (
+                <li>
+                  <label class="svc-tile" for={`q-svc-${service.slug}`}>
+                    <input
+                      id={`q-svc-${service.slug}`}
+                      class="svc-check"
+                      type="checkbox"
+                      name="services"
+                      value={service.slug}
+                      data-title={service.text.el.title}
+                    />
+                    <span class="svc-name">{service.text.el.short}</span>
+                    <span class="svc-num" aria-hidden="true">
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+            <p id="q-services-error" class="field-error" data-field-error hidden>
+              <span class="sr-only">{`${text.errorPrefix} `}</span>
+              <span data-error-text></span>
+            </p>
+          </fieldset>
+        </div>
+
+        <Field
+          field="quantity"
+          id="q-quantity"
+          label={text.quantityLabel}
+          hint={text.quantityHint}
+          optional
+        >
+          <input
+            id="q-quantity"
+            name="quantity"
+            type="text"
+            class="input"
+            aria-describedby="q-quantity-hint"
+            data-describe
+          />
+        </Field>
+
+        <Field field="date" id="q-date" label={text.dateLabel} optional>
+          <input id="q-date" name="date" type="date" class="input" data-describe />
+        </Field>
+
+        <Field
+          field="message"
+          id="q-message"
+          label={text.messageLabel}
+          hint={text.messageHint}
+          class="q-span"
+        >
+          <textarea
+            id="q-message"
+            name="message"
+            class="input q-textarea"
+            rows="6"
+            required
+            aria-required="true"
+            aria-describedby="q-message-hint"
+            data-describe
+          ></textarea>
+        </Field>
+      </div>
+
+      <p class="attach-note">
+        <Icon name="paperclip" size={22} />
+        <span>{text.attach}</span>
+      </p>
+
+      <div class="q-submit">
+        <button type="submit" class="btn btn-primary">
+          <span>{text.submit}</span>
+          <Icon name="arrow-right" />
+        </button>
+        <p class="text-small muted max-w-[46ch]">
+          {`${text.noSend} `}
+          <a href={routes.privacy} class="link">
+            {text.privacyLink}
+          </a>
+        </p>
+      </div>
+    </form>
+
+    <SendPanel />
+  </div>
+</section>
+
+<script>
+  import '~/scripts/quote-form';
+</script>
+
+<style>
+  @layer components {
+    /* Job ticket panel: full bleed on phones, a paper-2 sheet with a key rule on wider screens. */
+    .quote {
+      margin-inline: calc(var(--gutter) * -1);
+      padding: clamp(2rem, 1.5rem + 2.5vw, 3.5rem) var(--gutter);
+      background-color: var(--color-paper-2);
+      border-top: 6px solid var(--color-key);
+    }
+    @media (min-width: 40rem) {
+      .quote {
+        margin-inline: 0;
+        padding-inline: clamp(1.5rem, 1rem + 2.5vw, 3.5rem);
+      }
+    }
+    .quote-ticket {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    :global(.no-js) .quote-body {
+      display: none;
+    }
+    .quote-nojs {
+      margin-top: 2rem;
+      padding: 1.5rem;
+      background-color: var(--color-paper);
+      border: 2px solid var(--color-key);
+    }
+    .quote-nojs .btn {
+      white-space: normal;
+    }
+
+    .quote-body {
+      margin-top: 2.5rem;
+    }
+    .quote-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.75rem;
+    }
+    .q-grid {
+      display: grid;
+      gap: 1.75rem 1.5rem;
+    }
+    @media (min-width: 40rem) {
+      .q-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .q-grid > :global(.q-span) {
+        grid-column: 1 / -1;
+      }
+    }
+
+    /* Field parts (shared with Field.astro and SendPanel.astro). */
+    .quote :global(.field) {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      min-width: 0;
+    }
+    .quote :global(.field-label) {
+      font-family: var(--font-display);
+      font-weight: 720;
+      font-size: 1.0625rem;
+      line-height: 1.3;
+    }
+    .quote :global(.field-optional) {
+      font-family: var(--font-sans);
+      font-weight: 400;
+      font-size: var(--text-small);
+      color: var(--color-muted);
+    }
+    .quote :global(.field-hint) {
+      font-size: var(--text-small);
+      line-height: var(--text-small--line-height);
+      color: var(--color-muted);
+    }
+    .quote :global(.field-error) {
+      display: flex;
+      gap: 0.5rem;
+      align-items: baseline;
+      font-size: var(--text-small);
+      line-height: var(--text-small--line-height);
+      font-weight: 600;
+      color: var(--color-red);
+    }
+    .quote :global(.field-error)::before {
+      content: '';
+      flex: none;
+      width: 0.625rem;
+      height: 0.625rem;
+      background-color: var(--color-red);
+      transform: translateY(0.05em);
+    }
+
+    .quote :global(.input) {
+      width: 100%;
+      min-height: 3rem;
+      padding: 0.75rem 0.875rem;
+      font: inherit;
+      font-size: 1.0625rem;
+      color: var(--color-key);
+      background-color: var(--color-paper);
+      border: 2px solid var(--color-key);
+      border-radius: 0;
+      transition: box-shadow var(--dur-fast) var(--ease-out);
+    }
+    .quote :global(.input:focus) {
+      box-shadow: 5px 5px 0 var(--color-yellow);
+    }
+    .quote :global(.input[aria-invalid='true']) {
+      border-color: var(--color-red);
+      box-shadow: inset 4px 0 0 var(--color-red);
+    }
+    .quote :global(.input[aria-invalid='true']:focus) {
+      box-shadow:
+        inset 4px 0 0 var(--color-red),
+        5px 5px 0 var(--color-yellow);
+    }
+    .quote .q-textarea {
+      min-height: 9rem;
+      resize: vertical;
+    }
+
+    /* Services: square tiles; a ticked tile is printed in yellow. */
+    .q-services {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      min-width: 0;
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+    .q-services legend {
+      padding: 0;
+    }
+    .svc-grid {
+      display: grid;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    @media (min-width: 40rem) {
+      .svc-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (min-width: 80rem) {
+      .svc-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+    .svc-tile {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 0.75rem;
+      height: 100%;
+      min-height: 3.25rem;
+      padding: 0.625rem 0.75rem;
+      background-color: var(--color-paper);
+      border: 2px solid var(--color-line);
+      cursor: pointer;
+      transition:
+        border-color var(--dur-fast) linear,
+        background-color var(--dur-fast) linear;
+    }
+    .svc-tile:hover {
+      border-color: var(--color-key);
+    }
+    .svc-tile:has(.svc-check:checked) {
+      background-color: var(--color-yellow);
+      border-color: var(--color-key);
+    }
+    .svc-check {
+      width: 1.25rem;
+      height: 1.25rem;
+      margin: 0;
+      accent-color: var(--color-key);
+      cursor: pointer;
+    }
+    .svc-name {
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .svc-num {
+      font-family: var(--font-display);
+      font-size: var(--text-label);
+      font-weight: 750;
+      letter-spacing: 0.12em;
+      color: var(--color-muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .svc-tile:has(.svc-check:checked) .svc-num {
+      color: var(--color-key);
+    }
+    [data-field][data-invalid] .svc-tile {
+      border-color: var(--color-red);
+    }
+
+    /* Error summary at the top of the form. */
+    .error-summary {
+      padding: 1.25rem 1.25rem 1.25rem 1.5rem;
+      background-color: var(--color-paper);
+      border: 2px solid var(--color-red);
+      border-left-width: 8px;
+      outline-offset: 4px;
+    }
+    .error-summary-title {
+      font-family: var(--font-display);
+      font-weight: 750;
+      font-size: 1.125rem;
+    }
+    .error-summary-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      margin-top: 0.75rem;
+    }
+    .error-summary-list :global(a) {
+      display: inline-flex;
+      min-height: 2.75rem;
+      align-items: center;
+      font-weight: 600;
+      color: var(--color-red);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    /* Attachment note (form and send panel). */
+    .quote :global(.attach-note) {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+      margin-top: 1.75rem;
+      padding: 1rem 1.125rem;
+      background-color: var(--color-paper);
+      border-left: 4px solid var(--color-key);
+    }
+    .quote-form .attach-note {
+      margin-top: 0;
+    }
+    .quote :global(.attach-note svg) {
+      flex: none;
+      margin-top: 0.1em;
+    }
+
+    .q-submit {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+    .q-submit .btn {
+      white-space: normal;
+    }
+  }
+</style>
