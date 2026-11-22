@@ -159,9 +159,10 @@ const tiles = await Promise.all(
         3px 3px 0 var(--color-cyan),
         6px 6px 0 var(--color-magenta);
     }
+    /* The tally of the pressed chip: ink on yellow in both themes. */
     .work-chip[aria-pressed='true'] .chip-count {
       background-color: var(--color-yellow);
-      color: var(--color-key);
+      color: var(--ink-fixed);
     }
     /* Press: the plates snap into register (the push-in itself is the global aria-pressed rule). */
     .work-chip:active {

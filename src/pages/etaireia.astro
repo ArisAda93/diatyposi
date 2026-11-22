@@ -1,17 +1,20 @@
 ---
 /**
- * Η εταιρεία: page header with the owner's intro, the photo slot (AboutSheet) beside the owner's
- * “Για εμάς…” paragraph, the four values (ValueBlocks) and the contact band. Light sections paint
- * no background; each tints the living background through `data-bg-accent`.
+ * Η εταιρεία: page header with the owner's intro, then three sections (Section.astro): 01 the
+ * photo slot (AboutSheet) beside the owner's “Για εμάς…” paragraph, 02 the four values
+ * (ValueBlocks), and the contact band. Light sections paint no background; each tints the living
+ * background through `data-bg-accent`. The section label “Πώς δουλεύουμε” is the first section's
+ * heading (no separate title).
  */
 import BaseLayout from '~/layouts/BaseLayout.astro';
 import PageHeader from '~/components/PageHeader.astro';
+import Section from '~/components/Section.astro';
 import ContactBand from '~/components/ContactBand.astro';
+import SectionRail from '~/components/SectionRail.astro';
 import AboutSheet from '~/components/about/AboutSheet.astro';
 import ValueBlocks from '~/components/about/ValueBlocks.astro';
 import { ownerCopy } from '~/data/site';
 import { aboutText } from '~/i18n/pages/about';
-import { capsEl } from '~/lib/text';
 
 const text = aboutText.el;
 const owner = ownerCopy.el;
@@ -25,57 +28,32 @@ const owner = ownerCopy.el;
     accent="yellow"
   />
 
-  <section
-    class="section about-approach"
-    aria-labelledby="about-approach-title"
-    data-bg-accent="cyan"
+  <Section
+    id="about-approach"
+    index="01"
+    label={text.approachHeading}
+    accent="cyan"
+    class="about-approach"
   >
-    <div class="wrap grid-12 items-center gap-y-14">
+    <div class="grid-12 items-center gap-y-14">
       <div class="col-span-12 md:col-span-6 lg:col-span-5">
         <AboutSheet />
       </div>
       <div class="col-span-12 md:col-span-5 md:col-start-8 lg:col-span-6 lg:col-start-7">
-        <h2 id="about-approach-title" class="label about-approach-label">
-          <span class="about-approach-rule" aria-hidden="true"></span>
-          <span>{capsEl(text.approachHeading)}</span>
-        </h2>
         <p class="about-partnership">{owner.partnership}</p>
       </div>
     </div>
-  </section>
+  </Section>
 
   <ValueBlocks />
 
   <ContactBand />
+  <SectionRail />
 </BaseLayout>
 
 <style>
   @layer components {
-    .about-approach {
-      padding-top: clamp(3rem, 2rem + 4vw, 6rem);
-      /* The values section below brings its own top padding. */
-      padding-bottom: 0;
-    }
-    .about-approach-label {
-      display: inline-flex;
-      align-items: center;
-      gap: 1rem;
-    }
-    /* The press colour bar in miniature, leading into the owner's paragraph. */
-    .about-approach-rule {
-      flex: none;
-      width: 3rem;
-      height: 0.375rem;
-      background-image: linear-gradient(
-        90deg,
-        var(--color-cyan) 0 25%,
-        var(--color-magenta) 25% 50%,
-        var(--color-yellow) 50% 75%,
-        var(--color-key) 75% 100%
-      );
-    }
     .about-partnership {
-      margin-top: 1.75rem;
       max-width: 30ch;
       font-family: var(--font-display);
       font-size: clamp(1.375rem, 1.1rem + 1.1vw, 2.125rem);

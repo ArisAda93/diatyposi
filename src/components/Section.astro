@@ -1,0 +1,399 @@
+---
+/**
+ * The shared section shell: every content section of a page starts the same way, so a visitor
+ * always sees where one part ends and the next begins.
+ *
+ * Head (from the top): a hairline rule across the content width that starts with a short C/M/Y/K
+ * colour-bar segment and ends with a registration mark, like the control strip at the edge of a
+ * press sheet; then the index (“01”) and the red spaced-caps label; then the h2 (`.h2`, so the
+ * motion layer's registration reveal applies) with an optional lead. An optional “see all” link
+ * (and anything in the `head-extra` slot) sits on the right of the head from 48rem, below it on
+ * phones. Without `title` and without a `title` slot, the label itself is the section's h2.
+ *
+ * Variants:
+ * - `plain`: paints nothing, so the living background shows (`data-bg-accent` tints it).
+ * - `sheet`: the head and the content sit on a raised press sheet inside the wrap (paper-2 with
+ *   grain, crop marks at its corners, a soft shadow in light mode and a hairline edge in dark).
+ * - `ink`: the solid ink section (`.on-ink`, opaque; in the dark theme global.css sinks it below
+ *   the page with a hairline edge). Positioned, clipped and isolated, so decorative layers with a
+ *   negative z-index stay inside it.
+ * - `band`: a full-bleed yellow band with ink text in both themes (`.tokens-light`).
+ *
+ * Rhythm: every section has the same vertical padding (`--sec-y`). Two transparent sections in a
+ * row share one gap (the second drops its top padding), so the space before every head is the
+ * same everywhere. The hairline draws in and the mark turns into register as the head scrolls in
+ * (CSS scroll-driven, where supported; at rest under reduced motion and without support).
+ *
+ * SectionRail.astro reads `data-section`, `data-section-index` and `data-section-label`.
+ * Extra `data-*` attributes are forwarded to the <section> (scripts that find the section).
+ * A consumer's scoped styles do not reach the <section> itself: style it from the consumer with
+ * `:global(.your-class)`, or style the slotted content (which carries the consumer's scope).
+ */
+import Icon from './Icon.astro';
+import RegMark from './RegMark.astro';
+import { capsEl } from '~/lib/text';
+
+interface Props {
+  /** Section anchor id; used by SectionRail. */
+  id: string;
+  /** '01', '02'… shown in the head and in the rail. */
+  index?: string;
+  /** Eyebrow in sentence case, shown in capitals via capsEl(). */
+  label: string;
+  /** h2 text; omit if you fill slot="title" yourself (an h2 with id `titleId`). */
+  title?: string;
+  /** id of the h2 (aria-labelledby); default `${id}-title`. */
+  titleId?: string;
+  /** Optional lead paragraph under the h2. */
+  lead?: string;
+  /** Optional “see all” link on the right of the head. */
+  link?: { href: string; text: string };
+  /** Ink that tints the living background while this section is on screen. */
+  accent?: 'cyan' | 'magenta' | 'yellow' | 'key';
+  variant?: 'plain' | 'sheet' | 'ink' | 'band';
+  class?: string;
+  /** Extra data attributes, forwarded to the <section>. */
+  [attribute: `data-${string}`]: string | boolean | undefined;
+}
+
+const {
+  id,
+  index,
+  label,
+  title,
+  titleId = `${id}-title`,
+  lead,
+  link,
+  accent,
+  variant = 'plain',
+  class: className,
+  ...rest
+} = Astro.props;
+
+const hasTitleSlot = Astro.slots.has('title');
+const hasExtra = Astro.slots.has('head-extra');
+/** No h2 given: the eyebrow is the heading. */
+const labelIsTitle = !title && !hasTitleSlot;
+const caps = capsEl(label);
+---
+
+<section
+  id={id}
+  class:list={[
+    'sec',
+    `sec--${variant}`,
+    { 'on-ink': variant === 'ink', 'tokens-light': variant === 'band' },
+    className,
+  ]}
+  aria-labelledby={titleId}
+  data-bg-accent={accent}
+  data-section
+  data-section-index={index}
+  data-section-label={label}
+  {...rest}
+>
+  <div class="wrap sec-wrap">
+    <div class:list={['sec-frame', { 'crop-frame': variant === 'sheet' }]}>
+      <header class="sec-head">
+        <div class="sec-rule" aria-hidden="true">
+          <span class="sec-bar">
+            <span class="sec-bar-c"></span>
+            <span class="sec-bar-m"></span>
+            <span class="sec-bar-y"></span>
+            <span class="sec-bar-k"></span>
+          </span>
+          <span class="sec-line"></span>
+          <RegMark size={16} class="sec-reg" />
+        </div>
+
+        <div class:list={['sec-head-row', { 'has-aside': Boolean(link) || hasExtra }]}>
+          <div class="sec-head-main">
+            {labelIsTitle ? (
+              <h2 id={titleId} class="sec-eyebrow">
+                {index && (
+                  <span class="sec-index" aria-hidden="true">
+                    {index}
+                  </span>
+                )}
+                {index && <span class="sec-eyebrow-rule" aria-hidden="true" />}
+                <span class="label sec-label">{caps}</span>
+              </h2>
+            ) : (
+              <p class="sec-eyebrow">
+                {index && (
+                  <span class="sec-index" aria-hidden="true">
+                    {index}
+                  </span>
+                )}
+                {index && <span class="sec-eyebrow-rule" aria-hidden="true" />}
+                <span class="label sec-label">{caps}</span>
+              </p>
+            )}
+            {title ? (
+              <h2 id={titleId} class="h2 sec-title">
+                {title}
+              </h2>
+            ) : (
+              <slot name="title" />
+            )}
+            {lead && <p class="lead muted sec-lead">{lead}</p>}
+          </div>
+
+          {(link || hasExtra) && (
+            <div class="sec-head-aside">
+              {link && (
+                <a href={link.href} class="sec-link">
+                  <span class="link">{link.text}</span>
+                  <Icon name="arrow-right" size={20} class="sec-link-arrow" />
+                </a>
+              )}
+              <slot name="head-extra" />
+            </div>
+          )}
+        </div>
+      </header>
+
+      <div class="sec-body">
+        <slot />
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  @layer components {
+    .sec {
+      /* Same rhythm everywhere: the space before every section head. */
+      --sec-y: clamp(4rem, 2.5rem + 5vw, 7.5rem);
+      --sec-rule-color: color-mix(in srgb, var(--color-key) 24%, transparent);
+      --sec-k: var(--color-key);
+      --sec-index-color: var(--color-key);
+      --sec-reg-color: var(--color-muted);
+      padding-block: var(--sec-y);
+    }
+    /* Two transparent sections in a row share one gap. */
+    .sec:is(.sec--plain, .sec--sheet) + .sec:is(.sec--plain, .sec--sheet) {
+      padding-top: 0;
+    }
+    /* Right after an inner page's header (PageHeader.astro), whose masthead rule already opened
+       the page and which brings its own bottom space. */
+    :global(.page-header) + .sec:is(.sec--plain, .sec--sheet) {
+      padding-top: clamp(1rem, 0.5rem + 2vw, 2.5rem);
+    }
+
+    /* ---- Head ------------------------------------------------------------------------------- */
+    .sec-head {
+      margin-bottom: clamp(2.5rem, 1.5rem + 3vw, 4.5rem);
+    }
+
+    /* The press control strip: C/M/Y/K segment, hairline, registration mark. */
+    .sec-rule {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .sec-bar {
+      display: flex;
+      flex: none;
+      gap: 2px;
+    }
+    .sec-bar > span {
+      width: 1rem;
+      height: 0.375rem;
+    }
+    .sec-bar-c {
+      background-color: var(--color-cyan);
+    }
+    .sec-bar-m {
+      background-color: var(--color-magenta);
+    }
+    .sec-bar-y {
+      background-color: var(--color-yellow);
+    }
+    .sec-bar-k {
+      background-color: var(--sec-k);
+    }
+    .sec-line {
+      flex: 1;
+      height: 1px;
+      background-color: var(--sec-rule-color);
+      transform-origin: left center;
+    }
+    .sec-rule :global(.sec-reg) {
+      flex: none;
+      color: var(--sec-reg-color);
+    }
+
+    .sec-head-row {
+      display: grid;
+      gap: 1.25rem;
+      margin-top: 1.25rem;
+    }
+    .sec-eyebrow {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem;
+      margin: 0;
+      font-size: inherit;
+      letter-spacing: normal;
+    }
+    .sec-index {
+      font-family: var(--font-display);
+      font-size: var(--text-label);
+      line-height: var(--text-label--line-height);
+      font-weight: 780;
+      letter-spacing: 0.12em;
+      color: var(--sec-index-color);
+      font-variant-numeric: tabular-nums;
+    }
+    .sec-eyebrow-rule {
+      width: 1.5rem;
+      height: 1px;
+      background-color: var(--sec-rule-color);
+    }
+    .sec-title {
+      max-width: 24ch;
+    }
+    /* The h2 under the eyebrow (`title`, or the consumer's own in the `title` slot). */
+    .sec-head-main :global(h2:not(.sec-eyebrow)) {
+      margin-top: 1.25rem;
+    }
+    .sec-lead {
+      max-width: 56ch;
+      margin-top: clamp(1rem, 0.75rem + 1vw, 1.5rem);
+    }
+
+    .sec-head-aside {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1rem 1.5rem;
+    }
+    .sec-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-height: 2.75rem;
+      font-family: var(--font-display);
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .sec-link :global(.sec-link-arrow) {
+      flex: none;
+      transition: transform var(--dur-base) var(--ease-out);
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .sec-link:is(:hover, :focus-visible) :global(.sec-link-arrow) {
+        transform: translateX(4px);
+      }
+    }
+
+    @media (min-width: 48rem) {
+      .sec-head-row.has-aside {
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+        column-gap: 3rem;
+      }
+      .sec-head-aside {
+        justify-content: flex-end;
+      }
+    }
+
+    /* The hairline draws in from the colour bar and the mark turns into register as the head
+       scrolls in. Nothing is hidden where scroll-driven animations are unsupported. */
+    @supports (animation-timeline: view()) {
+      @media (prefers-reduced-motion: no-preference) {
+        .sec-line {
+          animation: sec-draw linear both;
+          animation-timeline: view();
+          animation-range: entry 0% cover 35%;
+        }
+        .sec-rule :global(.sec-reg) {
+          animation: sec-register linear both;
+          animation-timeline: view();
+          animation-range: entry 20% cover 40%;
+        }
+      }
+    }
+
+    /* ---- Variants --------------------------------------------------------------------------- */
+
+    /* Sheet: a raised press sheet inside the wrap; the background shows around it. */
+    .sec--sheet .sec-frame {
+      --sheet-shadow:
+        0 1px 2px color-mix(in srgb, var(--ink-fixed) 6%, transparent),
+        0 22px 48px -28px color-mix(in srgb, var(--ink-fixed) 32%, transparent);
+      padding: clamp(1.5rem, 0.75rem + 3.5vw, 4.5rem);
+      background-color: var(--color-paper-2);
+      background-image: var(--grain);
+      background-size: 160px 160px;
+      box-shadow: var(--sheet-shadow);
+    }
+    /* No shadow on dark paper: a hairline edge lifts the sheet instead (screen only, like the
+       theme's tokens in global.css). */
+    @media not print {
+      :global(html[data-theme='dark']) .sec--sheet .sec-frame {
+        --sheet-shadow: 0 0 0 1px var(--color-line);
+      }
+    }
+    /* The crop marks stay inside the 16px gutter on phones. */
+    @media (max-width: 39.99rem) {
+      .sec--sheet .sec-frame {
+        --m: 9px;
+        --g: 4px;
+      }
+    }
+
+    /* Ink: opaque; decorative layers with a negative z-index stay inside it. */
+    .sec--ink {
+      --sec-rule-color: color-mix(in srgb, var(--color-paper) 22%, transparent);
+      --sec-k: var(--color-paper);
+      --sec-index-color: var(--color-paper);
+      --sec-reg-color: var(--color-ink-muted);
+      position: relative;
+      overflow: clip;
+      isolation: isolate;
+    }
+
+    /* Band: full-bleed yellow with ink text in both themes (light tokens in its subtree). */
+    .sec--band {
+      --sec-reg-color: var(--color-key);
+      position: relative;
+      overflow: clip;
+      background-color: var(--color-yellow);
+      color: var(--color-key);
+    }
+    .sec--band .sec-label {
+      color: var(--color-key);
+    }
+    /* A band is a short call to action: its content follows the heading closely. */
+    .sec--band .sec-head {
+      margin-bottom: clamp(1.25rem, 1rem + 1vw, 2rem);
+    }
+    /* The site's selection colour is yellow: invert it here so a selection stays visible. */
+    .sec--band :global(::selection) {
+      background: var(--color-key);
+      color: var(--color-yellow);
+    }
+  }
+
+  @keyframes sec-draw {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+  @keyframes sec-register {
+    from {
+      opacity: 0;
+      transform: rotate(-90deg) scale(0.6);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+</style>

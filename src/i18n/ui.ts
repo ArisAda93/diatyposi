@@ -43,6 +43,11 @@ export const ui = {
     footerPrivacy: 'Πολιτική απορρήτου',
     copyright: 'Με επιφύλαξη παντός δικαιώματος.',
     floatingLabel: 'Γρήγορη επικοινωνία',
+    /** Theme toggle: its accessible name (a toggle button, pressed = dark theme on). */
+    themeToggle: 'Σκούρο θέμα',
+    /** Theme toggle state words, shown in its tooltip and in the menu row. */
+    themeOn: 'Ενεργό',
+    themeOff: 'Ανενεργό',
     newTab: '(ανοίγει σε νέα καρτέλα)',
     standInLabel: 'Ενδεικτική εικόνα',
     defaultDescription:

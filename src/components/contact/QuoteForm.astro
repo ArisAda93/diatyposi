@@ -10,6 +10,10 @@
  * red rule and a short shake. Service choices are drawn square checkboxes that print a key tick
  * with a plate pop. The panel itself is the paper job ticket (allowed: it is a card, not a
  * full-width section).
+ *
+ * Dark theme: the ticket and the fields are dark paper with light key text; the fields' resting
+ * border is a softer key (still ≥ 3:1), full key on hover and focus; the passed-field check is
+ * drawn in the light key; a ticked tile stays yellow with ink text and an ink checkbox.
  */
 import Icon from '~/components/Icon.astro';
 import ColorBar from '~/components/ColorBar.astro';
@@ -231,6 +235,8 @@ const text = contactText.el.form;
   @layer components {
     /* Job ticket panel: full bleed on phones, a paper-2 sheet with a key rule on wider screens. */
     .quote {
+      /* Field border at rest (the dark theme softens it). */
+      --q-edge: var(--color-key);
       /* Check marks (the `check` icon path): key for a passed field, a mask for the ticked box. */
       --q-tick-key: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23221F20' stroke-width='2.5' stroke-linecap='square'%3E%3Cpath d='M4 12.5l5 5L20 6.5'/%3E%3C/svg%3E");
       --q-tick-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3.5' stroke-linecap='square'%3E%3Cpath d='M4 12.5l5 5L20 6.5'/%3E%3C/svg%3E");
@@ -238,6 +244,14 @@ const text = contactText.el.form;
       padding: clamp(2rem, 1.5rem + 2.5vw, 3.5rem) var(--gutter);
       background-color: var(--color-paper-2);
       border-top: 6px solid var(--color-key);
+    }
+    /* Dark theme (screen only, like the theme's tokens in global.css). */
+    @media not print {
+      :global(html[data-theme='dark']) .quote {
+        --q-edge: color-mix(in srgb, var(--color-key) 55%, var(--color-paper));
+        /* The same check, stroked in the dark theme's key (#F2EFE8). */
+        --q-tick-key: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23F2EFE8' stroke-width='2.5' stroke-linecap='square'%3E%3Cpath d='M4 12.5l5 5L20 6.5'/%3E%3C/svg%3E");
+      }
     }
     @media (min-width: 40rem) {
       .quote {
@@ -355,11 +369,14 @@ const text = contactText.el.form;
       font-size: 1.0625rem;
       color: var(--color-key);
       background-color: var(--color-paper);
-      border: 2px solid var(--color-key);
+      border: 2px solid var(--q-edge);
       border-radius: 0;
       transition:
         box-shadow var(--dur-base) var(--ease-out),
         border-color var(--dur-fast) linear;
+    }
+    .quote :global(.input:is(:hover, :focus)) {
+      border-color: var(--color-key);
     }
     .quote :global(.input:hover) {
       box-shadow: 3px 3px 0 var(--color-line);
@@ -452,6 +469,11 @@ const text = contactText.el.form;
       background-color: var(--color-yellow);
       border-color: var(--color-key);
       box-shadow: 3px 3px 0 var(--color-key);
+      /* Ink on yellow in both themes (the border and the shadow keep the page's key). */
+      color: var(--ink-fixed);
+    }
+    .svc-tile:has(.svc-check:checked) .svc-check {
+      border-color: var(--ink-fixed);
     }
     @media (prefers-reduced-motion: no-preference) {
       .svc-tile:active {
@@ -479,14 +501,15 @@ const text = contactText.el.form;
       content: '';
       width: 0.875rem;
       height: 0.875rem;
-      background-color: var(--color-paper);
+      background-color: var(--paper-fixed);
       -webkit-mask: var(--q-tick-mask) center / contain no-repeat;
       mask: var(--q-tick-mask) center / contain no-repeat;
       transform: scale(0);
       transition: transform var(--dur-base) var(--ease-snap);
     }
+    /* Checked only ever sits on the yellow tile: an ink box with a paper tick in both themes. */
     .svc-check:checked {
-      background-color: var(--color-key);
+      background-color: var(--ink-fixed);
     }
     .svc-check:checked::before {
       transform: scale(1);
@@ -528,7 +551,7 @@ const text = contactText.el.form;
       font-variant-numeric: tabular-nums;
     }
     .svc-tile:has(.svc-check:checked) .svc-num {
-      color: var(--color-key);
+      color: var(--ink-fixed);
     }
     [data-field][data-invalid] .svc-tile {
       border-color: var(--color-red);

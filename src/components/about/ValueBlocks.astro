@@ -1,15 +1,16 @@
 ---
 /**
- * The owner's four values as four plate-coloured blocks: cyan and yellow fills with key text,
- * magenta only as a graphic band and halftone (never behind text), and a solid ink block.
- * Hovering a block sends C/M/Y ghosts of its plate letter out of register and back, and turns
- * its registration mark. The ink block is opaque; the section paints nothing
- * else, so the living background shows between the blocks (`data-bg-accent`).
+ * The owner's four values on /etaireia/ (section 02, a `plain` Section) as four plate-coloured
+ * blocks: cyan and yellow fills with ink text in both themes (`.tokens-light`), magenta only as a
+ * graphic band and halftone (never behind text), and a solid ink block (`.on-ink`; darker than
+ * the page with a hairline edge in the dark theme). Hovering a block sends C/M/Y ghosts of its
+ * plate letter out of register and back, and turns its registration mark. The section paints
+ * nothing else, so the living background shows between the blocks (`data-bg-accent`).
  */
 import RegMark from '../RegMark.astro';
+import Section from '../Section.astro';
 import { ownerCopy } from '~/data/site';
 import { aboutText } from '~/i18n/pages/about';
-import { capsEl } from '~/lib/text';
 
 const text = aboutText.el;
 const plates = ['c', 'm', 'y', 'k'] as const;
@@ -20,35 +21,37 @@ const blocks = ownerCopy.el.values.map((value, i) => ({
 }));
 ---
 
-<section class="section values" aria-labelledby="values-title" data-bg-accent="magenta">
-  <div class="wrap">
-    <div class="grid-12 gap-y-6">
-      <p class="label col-span-12 lg:col-span-3">{capsEl(text.valuesLabel)}</p>
-      <h2 id="values-title" class="h2 col-span-12 max-w-[20ch] lg:col-span-9">
-        {text.valuesTitle}
-      </h2>
-    </div>
-
-    <ul class="values-grid">
-      {blocks.map((b) => (
-        <li
-          class:list={['value', `value-${b.plate}`, { 'on-ink': b.plate === 'k' }]}
-          data-reveal="depth"
-          data-tilt
-        >
-          <div class="value-top" aria-hidden="true">
-            <span class="value-plate">{b.plate.toUpperCase()}</span>
-            <RegMark size={22} class="value-reg" />
-          </div>
-          <div>
-            <h3 class="h3 value-title">{b.value}</h3>
-            <p class="value-note">{b.note}</p>
-          </div>
-        </li>
-      ))}
-    </ul>
-  </div>
-</section>
+<Section
+  id="values"
+  index="02"
+  label={text.valuesLabel}
+  title={text.valuesTitle}
+  accent="magenta"
+  class="values"
+>
+  <ul class="values-grid">
+    {blocks.map((b) => (
+      <li
+        class:list={[
+          'value',
+          `value-${b.plate}`,
+          { 'on-ink': b.plate === 'k', 'tokens-light': b.plate === 'c' || b.plate === 'y' },
+        ]}
+        data-reveal="depth"
+        data-tilt
+      >
+        <div class="value-top" aria-hidden="true">
+          <span class="value-plate">{b.plate.toUpperCase()}</span>
+          <RegMark size={22} class="value-reg" />
+        </div>
+        <div>
+          <h3 class="h3 value-title">{b.value}</h3>
+          <p class="value-note">{b.note}</p>
+        </div>
+      </li>
+    ))}
+  </ul>
+</Section>
 
 <style>
   @layer components {
@@ -56,7 +59,6 @@ const blocks = ownerCopy.el.values.map((value, i) => ({
       display: grid;
       grid-template-columns: minmax(0, 1fr);
       gap: var(--grid-gap);
-      margin-top: clamp(2.5rem, 1.5rem + 3vw, 4.5rem);
     }
     .value {
       position: relative;
@@ -163,15 +165,15 @@ const blocks = ownerCopy.el.values.map((value, i) => ({
     0%,
     100% {
       text-shadow:
-        0 0 0 rgb(0 174 239 / 0),
-        0 0 0 rgb(237 0 140 / 0),
-        0 0 0 rgb(255 241 0 / 0);
+        0 0 0 transparent,
+        0 0 0 transparent,
+        0 0 0 transparent;
     }
     35% {
       text-shadow:
-        -5px -3px 0 rgb(0 174 239 / 0.9),
-        5px -1px 0 rgb(237 0 140 / 0.9),
-        -2px 5px 0 rgb(255 241 0 / 0.9);
+        -5px -3px 0 color-mix(in srgb, var(--color-cyan) 90%, transparent),
+        5px -1px 0 color-mix(in srgb, var(--color-magenta) 90%, transparent),
+        -2px 5px 0 color-mix(in srgb, var(--color-yellow) 90%, transparent);
     }
   }
 </style>

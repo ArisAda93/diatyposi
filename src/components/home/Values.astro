@@ -1,16 +1,20 @@
 ---
 /**
- * Home values strip: the owner's “Για εμάς…” paragraph on the left; on the right the four values,
- * each paired with a colour-bar patch (C, M, Y, K) in display type.
+ * Home values (section 04, a `sheet` Section: the content sits on a raised press sheet): the
+ * owner's “Για εμάς…” paragraph on the left; on the right the four values, each paired with a
+ * colour-bar patch (C, M, Y, K) in display type. The h2 reuses the values title of /etaireia/
+ * (aboutText.valuesTitle), so both pages name the values the same way.
  *
  * Alive: each patch prints in as its row scrolls into view, the solid and its two tints arriving
  * out of register and settling (CSS scroll-driven, where supported; the motion layer also prints
  * the strip in through its halftone screen). Hovering a row washes it in its ink, the tints split
  * and snap back into register, and the plate letter darkens. All of it rests under reduced motion.
+ * The K patch is the theme's key (light on the dark page), like every K plate on the site.
  */
+import Section from '~/components/Section.astro';
 import { ownerCopy } from '~/data/site';
+import { aboutText } from '~/i18n/pages/about';
 import { homeText } from '~/i18n/pages/home';
-import { capsEl } from '~/lib/text';
 
 const inks = [
   { id: 'cyan', code: 'C' },
@@ -21,12 +25,17 @@ const inks = [
 const rows = ownerCopy.el.values.map((value, i) => ({ value, ink: inks[i] ?? inks[3] }));
 ---
 
-<section class="section values" aria-labelledby="values-title" data-bg-accent="yellow">
-  <div class="wrap grid-12 gap-y-12">
+<Section
+  id="values"
+  index="04"
+  label={homeText.el.values.label}
+  title={aboutText.el.valuesTitle}
+  accent="yellow"
+  variant="sheet"
+  class="values"
+>
+  <div class="grid-12 gap-y-12">
     <div class="values-intro col-span-12 lg:col-span-5">
-      <h2 id="values-title" class="label">
-        {capsEl(homeText.el.values.label)}
-      </h2>
       <p class="values-text">{ownerCopy.el.partnership}</p>
     </div>
 
@@ -46,13 +55,12 @@ const rows = ownerCopy.el.values.map((value, i) => ({ value, ink: inks[i] ?? ink
       ))}
     </ul>
   </div>
-</section>
+</Section>
 
 <style>
   @layer components {
     .values-text {
       max-width: 38ch;
-      margin-top: 1.75rem;
       font-size: var(--text-lead);
       line-height: var(--text-lead--line-height);
     }

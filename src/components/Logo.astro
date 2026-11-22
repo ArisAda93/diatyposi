@@ -10,6 +10,12 @@
  * The arches are separate groups (`.logo-plate[data-plate=c|m|y|k]`) so they can be animated.
  * Overlaps use the logo's knock-out stacking: each arch carries a stroke in the background colour
  * (`--logo-bg`, paper by default) and the cyan arch sits on top.
+ *
+ * Theme-aware through the tokens alone (no prop): on paper the wordmark and the K arch are
+ * `--color-key` and the knock-out is `--color-paper`, so in the dark theme the logo prints light
+ * on dark paper; the subtitle is `--color-red`, the red lifted for the dark paper. `tone="ink"`
+ * (solid ink sections) uses the fixed paper (`--paper-fixed`) and the section ink, so it is the
+ * same in both themes.
  */
 import { ARCH, ARCH_PLATES, WORDMARK, SUBTITLE } from './logo-paths';
 
@@ -17,7 +23,7 @@ interface Props {
   variant?: 'full' | 'compact' | 'mark';
   /** Accessible name. Omit (or pass '') for a decorative logo. */
   title?: string;
-  /** Wordmark colour: key on paper, paper on ink. */
+  /** Wordmark colour: key on paper (follows the theme), paper on ink (fixed). */
   tone?: 'paper' | 'ink';
   class?: string;
   /** Unique id prefix when several logos share a page. */
@@ -33,7 +39,7 @@ const viewBoxes = {
 } as const;
 
 const ink = tone === 'ink';
-const wordColor = ink ? 'var(--color-paper)' : 'var(--color-key)';
+const wordColor = ink ? 'var(--paper-fixed)' : 'var(--color-key)';
 const bg = ink ? 'var(--color-ink)' : 'var(--color-paper)';
 // back to front: key, yellow, magenta, cyan
 const plates = [...ARCH_PLATES].reverse();
@@ -57,7 +63,7 @@ const titleId = `${id}-title`;
         <path
           d={ARCH}
           transform={`translate(${p.x} 0)`}
-          fill={p.id === 'k' && ink ? 'var(--color-paper)' : p.color}
+          fill={p.id === 'k' && ink ? 'var(--paper-fixed)' : p.color}
           stroke="var(--logo-bg)"
           stroke-width="9"
           stroke-linejoin="round"

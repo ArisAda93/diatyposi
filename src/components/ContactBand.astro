@@ -1,11 +1,12 @@
 ---
 /**
- * Yellow contact band (home and /etaireia/): the page's confident close. Opaque yellow, ink text.
- * Left (8 of 12 columns): label, the heading in display type, one line, then the two actions
- * (quote, call). Right: a proof sheet with the arches mark, lying on the band with a C/M plate
- * shadow printed on the yellow, in the colours the overprint gives on press (C×Y green, M×Y red,
- * C×M×Y near black where they overlap); it sits on a parallax layer (`data-parallax`, motion.ts)
- * and tilts towards the pointer (`data-tilt`).
+ * Yellow contact band (home and /etaireia/): the page's confident close, a `band` Section
+ * (Section.astro): opaque yellow with ink text in both themes (`.tokens-light`). The head carries
+ * the label and the heading in display type; under it, the line and the two actions (quote,
+ * call) on the left (7 of 12 columns from 64rem) and, on the right, a proof sheet with the arches
+ * mark, lying on the band with a C/M plate shadow printed on the yellow, in the colours the
+ * overprint gives on press (C×Y green, M×Y red, C×M×Y near black where they overlap); it sits on
+ * a parallax layer (`data-parallax`, motion.ts) and tilts towards the pointer (`data-tilt`).
  * Hovering or focusing the quote button pulls the plates into register. Decoration is
  * aria-hidden. Takes no props; strings live in src/i18n/pages/home.ts (contactBand).
  */
@@ -13,25 +14,22 @@ import Icon from './Icon.astro';
 import Logo from './Logo.astro';
 import ColorBar from './ColorBar.astro';
 import RegMark from './RegMark.astro';
+import Section from './Section.astro';
 import { routes, site } from '~/data/site';
 import { homeText } from '~/i18n/pages/home';
 import { t } from '~/i18n/ui';
 import { telHref } from '~/lib/links';
-import { capsEl } from '~/lib/text';
 
 const copy = homeText.el.contactBand;
 ---
 
-<section class="contact-band" aria-labelledby="contact-band-title">
-  <div class="wrap cb-inner">
+<Section id="contact-band" label={copy.label} variant="band" class="contact-band">
+  <h2 slot="title" id="contact-band-title" class="display-l cb-title">
+    {copy.heading}
+  </h2>
+
+  <div class="cb-inner">
     <div class="cb-copy">
-      <p class="label cb-label">
-        <span class="cb-label-mark" aria-hidden="true"></span>
-        <span>{capsEl(copy.label)}</span>
-      </p>
-      <h2 id="contact-band-title" class="display-l cb-title">
-        {copy.heading}
-      </h2>
       <p class="lead cb-text">{copy.text}</p>
       <div class="cb-actions">
         <a href={routes.quote} class="btn btn-primary cb-primary">
@@ -63,46 +61,19 @@ const copy = homeText.el.contactBand;
       </div>
     </div>
   </div>
-</section>
+</Section>
 
 <style>
   @layer components {
-    .contact-band {
-      position: relative;
-      overflow: clip;
-      background-color: var(--color-yellow);
-      color: var(--color-key);
-    }
-    /* The site's selection colour is yellow: invert it here so a selection stays visible. */
-    .contact-band ::selection {
-      background: var(--color-key);
-      color: var(--color-yellow);
-    }
     .cb-inner {
-      position: relative;
       display: grid;
       gap: clamp(3rem, 2rem + 4vw, 4.5rem);
-      padding-block: clamp(4rem, 2.5rem + 6vw, 8rem);
-    }
-
-    .contact-band .cb-label {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.75rem;
-      margin-bottom: 1.5rem;
-      color: var(--color-key);
-    }
-    .cb-label-mark {
-      width: 1.75rem;
-      height: 0.5rem;
-      background-color: var(--color-key);
     }
     .cb-title {
       max-width: 16ch;
     }
     .cb-text {
       max-width: 46ch;
-      margin-top: clamp(1.25rem, 1rem + 1vw, 2rem);
     }
     .cb-actions {
       display: flex;
@@ -138,8 +109,9 @@ const copy = homeText.el.contactBand;
     /*
      * The plates. The proof is an isolated group (and the parallax layer a stacking context), so
      * a blend cannot reach the yellow behind: the plates carry the overprinted colours instead
-     * (cyan × yellow, magenta × yellow), and the cyan plate multiplies onto the magenta one, which
-     * gives the near-black of C+M+Y where they overlap.
+     * (cyan × yellow, magenta × yellow, fixed: the band is yellow in both themes), and the cyan
+     * plate overprints the magenta one, which gives the near-black of C+M+Y where they overlap.
+     * `--blend-ink` is multiply here in both themes (`.tokens-light`).
      */
     .cb-plate {
       position: absolute;
@@ -150,7 +122,7 @@ const copy = homeText.el.contactBand;
     .cb-plate-c {
       z-index: -1;
       background-color: #00a400;
-      mix-blend-mode: multiply;
+      mix-blend-mode: var(--blend-ink);
       transform: translate(10px, 10px);
     }
     .cb-plate-m {
@@ -158,7 +130,7 @@ const copy = homeText.el.contactBand;
       background-color: #ed0000;
       transform: translate(20px, 20px);
     }
-    .contact-band:has(.cb-primary:hover, .cb-primary:focus-visible) .cb-plate {
+    .cb-inner:has(.cb-primary:hover, .cb-primary:focus-visible) .cb-plate {
       transform: translate(0, 0);
     }
     .cb-sheet {

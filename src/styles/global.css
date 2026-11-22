@@ -126,8 +126,55 @@
   --focus: var(--color-key);
   --plate-shift: 4px;
 
-  /* Faint paper grain (SVG noise tile) */
-  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.13 0 0 0 0 0.12 0 0 0 0 0.11 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.09'/%3E%3C/svg%3E");
+  /* Never flip with the theme: the logo's key and the paper, for text on yellow and the like. */
+  --ink-fixed: #221f20;
+  --paper-fixed: #fafaf7;
+  /* How CMY inks overprint the page: multiply on paper; screen (light ghosts) on dark paper. */
+  --blend-ink: multiply;
+
+  /* Faint paper grain (SVG noise tile): dark specks on paper; fine light specks on dark paper. */
+  --grain-light: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.13 0 0 0 0 0.12 0 0 0 0 0.11 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.09'/%3E%3C/svg%3E");
+  --grain-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.95' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.95 0 0 0 0 0.93 0 0 0 0 0.9 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.05'/%3E%3C/svg%3E");
+  --grain: var(--grain-light);
+}
+
+/* ------------------------------------------------------------------------------------------ */
+/* Dark theme (theme.ts, ThemeToggle.astro). `html[data-theme]` is set before first paint by   */
+/* BaseLayout's inline script; without JS it is missing and the page stays light. A warm dark  */
+/* palette, not an inversion: dark paper, light key, the logo red lifted for contrast. The     */
+/* values are mirrored in PALETTE (src/scripts/theme.ts); tests/theme.test.ts checks both.     */
+/* Screen only: a printout is always the light page.                                          */
+/*                                                                                            */
+/* Contrast (WCAG 2), light → dark:                                                           */
+/*   key on paper           15.63 → 16.17    key on paper-2      14.21 → 15.11                */
+/*   muted on paper          6.97 →  7.85    muted on paper-2     6.33 →  7.34                */
+/*   red (label) on paper    5.31 →  6.18    red on paper-2       4.83 →  5.77                */
+/*   paper on key (primary) 15.63 → 16.17    paper on ink        17.44 → 18.92 (on-ink text)   */
+/*   ink-muted on ink        7.60 →  8.24    ink-muted on ink-2   6.69 →  7.59                */
+/*   ink-fixed on yellow    13.88 (both)     focus (key) on paper 15.63 → 16.17 (≥ 3 needed)  */
+/* line and ink-line are decorative hairlines (no contrast requirement).                     */
+/* ------------------------------------------------------------------------------------------ */
+
+html {
+  color-scheme: light;
+}
+
+@media not print {
+  html[data-theme='dark'] {
+    color-scheme: dark;
+    --color-paper: #141311;
+    --color-paper-2: #1c1a18;
+    --color-line: #34312c;
+    --color-key: #f2efe8;
+    --color-muted: #ada89f;
+    --color-red: #f26a5b;
+    --color-ink: #0b0a09;
+    --color-ink-2: #171513;
+    --color-ink-line: #2e2a26;
+    --color-ink-muted: #aba79e;
+    --blend-ink: screen;
+    --grain: var(--grain-dark);
+  }
 }
 
 /* ------------------------------------------------------------------------------------------ */
@@ -193,14 +240,40 @@
     text-wrap: pretty;
   }
 
+  /* Yellow highlighter with the fixed key, in both themes (13.9:1). */
   ::selection {
     background: var(--color-yellow);
-    color: var(--color-key);
+    color: var(--ink-fixed);
   }
 
   :focus-visible {
     outline: 3px solid var(--focus);
     outline-offset: 3px;
+  }
+
+  /*
+   * `.tokens-light`: the subtree keeps its light-mode design in both themes (sections that are
+   * dark or yellow in either theme). It re-declares the light value of every flipping token,
+   * plus the ink blend, the grain and the focus colour, which resolve against them. Keep these
+   * values equal to @theme above (tests/theme.test.ts checks).
+   * `.on-ink` (solid ink sections) behaves the same way, so paper text, paper buttons and the
+   * paper wordmark stay as they are; its own focus colour stays yellow (below).
+   */
+  .tokens-light,
+  .on-ink {
+    --color-paper: #fafaf7;
+    --color-paper-2: #f1efe8;
+    --color-line: #dcd9cf;
+    --color-key: #221f20;
+    --color-muted: #5a5650;
+    --color-red: #c03529;
+    --color-ink: #161514;
+    --color-ink-2: #23211f;
+    --color-ink-line: #3a3733;
+    --color-ink-muted: #aba79e;
+    --blend-ink: multiply;
+    --grain: var(--grain-light);
+    --focus: var(--color-key);
   }
 
   .on-ink {
@@ -209,9 +282,23 @@
     color: var(--color-paper);
   }
 
+  /*
+   * Dark theme: solid ink sections sink below the dark paper (a deeper ink family) and carry a
+   * hairline edge, so they stay distinct from the page.
+   */
+  @media not print {
+    html[data-theme='dark'] .on-ink {
+      --color-ink: #0b0a09;
+      --color-ink-2: #171513;
+      --color-ink-line: #2e2a26;
+      --color-ink-muted: #aba79e;
+      box-shadow: inset 0 0 0 1px var(--color-ink-line);
+    }
+  }
+
   .on-ink ::selection {
     background: var(--color-yellow);
-    color: var(--color-key);
+    color: var(--ink-fixed);
   }
 
   img,
@@ -549,7 +636,7 @@
     color: var(--color-key);
     background-image: radial-gradient(circle at center, currentColor 0 1.1px, transparent 1.7px);
     background-size: 7px 7px;
-    mix-blend-mode: multiply;
+    mix-blend-mode: var(--blend-ink);
     opacity: 0;
     clip-path: inset(0 100% 0 0);
     transition:
@@ -583,7 +670,7 @@
     grid-area: 1 / 1;
     width: 100%;
     height: 100%;
-    mix-blend-mode: multiply;
+    mix-blend-mode: var(--blend-ink);
   }
   .plate-icon > .p-c {
     color: var(--color-cyan);
@@ -722,5 +809,38 @@
   from {
     opacity: 0;
     transform: translateY(14px);
+  }
+}
+
+/* ------------------------------------------------------------------------------------------ */
+/* Theme switch (theme.ts). While a change is applied (`html.theme-switching`, one frame),     */
+/* transitions are off, so every colour changes in one step; the toggle's icon morph          */
+/* (`.theme-anim`) is exempt. With the View Transitions API and motion allowed, the new theme  */
+/* is revealed in a circle growing from the toggle's centre (`html.theme-vt`, --theme-vt-*).   */
+/* The class outranks the cross-document page transition above, so the two never mix. Reduced */
+/* motion: theme.ts switches without a view transition.                                       */
+/* ------------------------------------------------------------------------------------------ */
+
+html.theme-switching :not(.theme-anim),
+html.theme-switching :not(.theme-anim)::before,
+html.theme-switching :not(.theme-anim)::after {
+  transition: none !important;
+}
+
+html.theme-vt::view-transition-old(root),
+html.theme-vt::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+html.theme-vt::view-transition-new(root) {
+  animation: theme-reveal 500ms var(--ease-out) both;
+}
+
+@keyframes theme-reveal {
+  from {
+    clip-path: circle(0 at var(--theme-vt-x, 50%) var(--theme-vt-y, 0));
+  }
+  to {
+    clip-path: circle(var(--theme-vt-r, 150vmax) at var(--theme-vt-x, 50%) var(--theme-vt-y, 0));
   }
 }

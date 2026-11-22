@@ -1,0 +1,297 @@
+---
+/**
+ * Section rail (≥ 1280px): a slim index fixed at the right edge that lists every
+ * `[data-section]` on the page (Section.astro), with its index and label. The section under the
+ * middle of the screen is marked (`aria-current="location"`, a C/M/Y/K tick); hovering or
+ * focusing an entry slides its label out to the left. The entries are real links to `#id`, so a
+ * click scrolls there (smoothly unless reduced motion; `scroll-padding-top` clears the header).
+ *
+ * The script builds the list from the page, so the markup is an empty, hidden <nav> without JS.
+ * It stays hidden when the page has fewer than three sections and below 80rem. Its width is
+ * measured against the gutter beside the sections' content: where the numbered rail does not
+ * fit, a compact rail of ticks only is used (the number then shows in the label chip), and where
+ * that does not fit either, the rail is hidden, so it never covers content. Above the first
+ * section and over the footer (no section under the middle of the screen) it fades out. Colours
+ * are theme tokens; the entries sit on a translucent paper chip, so they read over light, ink
+ * and yellow sections alike.
+ *
+ * Place it once per page, anywhere inside <main> or after it.
+ */
+---
+
+<nav class="section-rail" aria-label="Ενότητες σελίδας" data-section-rail hidden>
+  <ol class="rail-list" data-rail-list></ol>
+</nav>
+
+<script>
+  /** Fewest sections that make a rail worth showing. */
+  const MIN_SECTIONS = 3;
+  /** Space kept between the rail and the content edge, in px. */
+  const CLEARANCE = 8;
+  const wide = window.matchMedia('(min-width: 80rem)');
+
+  const initRail = (rail: HTMLElement): void => {
+    const list = rail.querySelector<HTMLOListElement>('[data-rail-list]');
+    const sections = Array.from(document.querySelectorAll<HTMLElement>('[data-section][id]'));
+    if (!list || sections.length < MIN_SECTIONS) return;
+
+    const links = new Map<Element, HTMLAnchorElement>();
+    sections.forEach((section) => {
+      const index = section.dataset.sectionIndex ?? '';
+      // A label that ends in a dash (“ΔΙΑΤΥΠΩΣΗ —”) reads better without it here.
+      const label = (section.dataset.sectionLabel ?? '').replace(/[\s–—-]+$/u, '');
+
+      const link = document.createElement('a');
+      link.className = 'rail-link';
+      link.href = `#${section.id}`;
+
+      const text = document.createElement('span');
+      text.className = 'rail-label';
+      if (index) {
+        const number = document.createElement('span');
+        number.className = 'rail-label-index';
+        number.setAttribute('aria-hidden', 'true');
+        number.textContent = index;
+        text.append(number);
+      }
+      text.append(label);
+
+      const mark = document.createElement('span');
+      mark.className = index ? 'rail-index' : 'rail-index rail-index--dot';
+      mark.setAttribute('aria-hidden', 'true');
+      mark.textContent = index;
+
+      const tick = document.createElement('span');
+      tick.className = 'rail-tick';
+      tick.setAttribute('aria-hidden', 'true');
+
+      link.append(text, mark, tick);
+      const item = document.createElement('li');
+      item.append(link);
+      list.append(item);
+      links.set(section, link);
+    });
+
+    // --- Room: show the rail only where it fits in the gutter beside the content. ----------
+    const contentRight = (): number =>
+      sections.reduce((right, section) => {
+        const wrap = section.querySelector<HTMLElement>('.sec-wrap') ?? section;
+        const padding = parseFloat(getComputedStyle(wrap).paddingRight) || 0;
+        return Math.max(right, wrap.getBoundingClientRect().right - padding);
+      }, 0);
+
+    const place = (): void => {
+      if (!wide.matches) {
+        rail.hidden = true;
+        return;
+      }
+      // Measured while shown; all of it happens before the next paint.
+      const limit = contentRight() + CLEARANCE;
+      rail.hidden = false;
+      rail.classList.remove('is-compact');
+      if (rail.getBoundingClientRect().left >= limit) return;
+      rail.classList.add('is-compact');
+      rail.hidden = rail.getBoundingClientRect().left < limit;
+    };
+
+    let queued = 0;
+    const queue = (): void => {
+      if (queued) return;
+      queued = requestAnimationFrame(() => {
+        queued = 0;
+        place();
+      });
+    };
+    place();
+    window.addEventListener('resize', queue, { passive: true });
+    wide.addEventListener('change', queue);
+    // Fonts and late layout can move the content edge.
+    if ('ResizeObserver' in window) new ResizeObserver(queue).observe(document.body);
+
+    // --- Current section: the one crossing a thin band at the middle of the screen. --------
+    const crossing = new Set<Element>();
+    let current: HTMLAnchorElement | null = null;
+    const markCurrent = (): void => {
+      const section = sections.find((s) => crossing.has(s));
+      const next = section ? (links.get(section) ?? null) : null;
+      if (next === current) return;
+      current?.removeAttribute('aria-current');
+      next?.setAttribute('aria-current', 'location');
+      current = next;
+      rail.toggleAttribute('data-active', Boolean(next));
+    };
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) crossing.add(entry.target);
+          else crossing.delete(entry.target);
+        });
+        markCurrent();
+      },
+      { rootMargin: '-45% 0px -50% 0px' },
+    );
+    sections.forEach((section) => observer.observe(section));
+
+    // Keep a focused entry visible even where the rail is faded out.
+    rail.addEventListener('focusin', () => rail.setAttribute('data-focus', ''));
+    rail.addEventListener('focusout', (event) => {
+      if (!rail.contains(event.relatedTarget as Node | null)) rail.removeAttribute('data-focus');
+    });
+  };
+
+  document.querySelectorAll<HTMLElement>('[data-section-rail]').forEach(initRail);
+</script>
+
+<style>
+  @layer components {
+    .section-rail {
+      position: fixed;
+      top: 50%;
+      right: 0.625rem;
+      z-index: 25;
+      display: none;
+      translate: 0 -50%;
+      opacity: 0;
+      visibility: hidden;
+      transition:
+        opacity var(--dur-base) var(--ease-out),
+        visibility 0s linear var(--dur-base);
+    }
+    @media (min-width: 80rem) {
+      .section-rail {
+        display: block;
+      }
+    }
+    .section-rail:is([data-active], [data-focus]) {
+      opacity: 1;
+      visibility: visible;
+      transition:
+        opacity var(--dur-base) var(--ease-out),
+        visibility 0s;
+    }
+
+    .rail-list {
+      display: flex;
+      flex-direction: column;
+      padding: 0.25rem;
+      background-color: color-mix(in srgb, var(--color-paper) 84%, transparent);
+      box-shadow: 0 0 0 1px var(--color-line);
+    }
+    @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+      .rail-list {
+        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(10px);
+      }
+    }
+
+    /* Entries are created by the script, so their rules are global (scoped to the rail). */
+    .section-rail :global(.rail-link) {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.375rem;
+      min-height: 2.75rem;
+      padding-inline: 0.25rem 0.125rem;
+      color: var(--color-muted);
+      text-decoration: none;
+      transition: color var(--dur-fast) linear;
+    }
+    .section-rail :global(.rail-link:is(:hover, :focus-visible, [aria-current])) {
+      color: var(--color-key);
+    }
+    .section-rail :global(.rail-link:focus-visible) {
+      outline-offset: 2px;
+    }
+
+    .section-rail :global(.rail-index) {
+      min-width: 1.125rem;
+      font-family: var(--font-display);
+      font-size: 0.6875rem;
+      font-weight: 780;
+      line-height: 1;
+      letter-spacing: 0.06em;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    /* A section without a number: a small registration square. */
+    .section-rail :global(.rail-index--dot) {
+      display: flex;
+      justify-content: flex-end;
+    }
+    .section-rail :global(.rail-index--dot)::before {
+      content: '';
+      width: 0.3125rem;
+      height: 0.3125rem;
+      background-color: currentColor;
+    }
+
+    /* The tick: a short hairline; the current section's prints as a C/M/Y/K strip. */
+    .section-rail :global(.rail-tick) {
+      width: 0.875rem;
+      height: 2px;
+      background-color: currentColor;
+      transform: scaleX(0.5);
+      transform-origin: right center;
+      transition: transform var(--dur-base) var(--ease-snap);
+    }
+    .section-rail :global(.rail-link:is(:hover, :focus-visible) .rail-tick) {
+      transform: none;
+    }
+    .section-rail :global(.rail-link[aria-current] .rail-tick) {
+      height: 3px;
+      transform: none;
+      background-image: linear-gradient(
+        90deg,
+        var(--color-cyan) 0 25%,
+        var(--color-magenta) 25% 50%,
+        var(--color-yellow) 50% 75%,
+        var(--color-key) 75% 100%
+      );
+    }
+
+    /* The label slides out to the left on hover and focus, over the page, as a key chip. */
+    .section-rail :global(.rail-label) {
+      position: absolute;
+      top: 50%;
+      right: calc(100% + 0.5rem);
+      translate: 0 -50%;
+      padding: 0.4375rem 0.75rem;
+      background-color: var(--color-key);
+      color: var(--color-paper);
+      font-family: var(--font-display);
+      font-size: 0.875rem;
+      font-weight: 700;
+      line-height: 1.2;
+      white-space: nowrap;
+      pointer-events: none;
+      clip-path: inset(0 0 0 100%);
+      transition: clip-path var(--dur-base) var(--ease-out);
+    }
+    .section-rail :global(.rail-link:is(:hover, :focus-visible) .rail-label) {
+      clip-path: inset(0);
+    }
+    /* The number travels with the label in the compact rail (ticks only). */
+    .section-rail :global(.rail-label-index) {
+      display: none;
+      margin-right: 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 780;
+      letter-spacing: 0.06em;
+      font-variant-numeric: tabular-nums;
+      opacity: 0.7;
+    }
+    .section-rail.is-compact :global(.rail-index) {
+      display: none;
+    }
+    .section-rail.is-compact :global(.rail-label-index) {
+      display: inline;
+    }
+
+    @media (forced-colors: active) {
+      .section-rail :global(.rail-link[aria-current] .rail-tick) {
+        background: CanvasText;
+      }
+    }
+  }
+</style>

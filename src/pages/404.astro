@@ -4,6 +4,8 @@
  * numerals, or hovering/focusing the home button, snaps the plates into register (CSS only).
  * On load the plates arrive from further out and settle into their misprint. With reduced
  * motion the plates stay out of register and nothing moves. The sheet sits on a parallax layer.
+ * The plates overprint with `--blend-ink`: multiply on paper; on the dark page they screen, so the
+ * misprint reads as light inks on dark paper (the K plate is the theme's key).
  */
 import BaseLayout from '~/layouts/BaseLayout.astro';
 import Icon from '~/components/Icon.astro';
@@ -89,7 +91,7 @@ const plates = ['c', 'm', 'y', 'k'] as const;
     }
     .np-plate {
       grid-area: 1 / 1;
-      mix-blend-mode: multiply;
+      mix-blend-mode: var(--blend-ink);
     }
     /* Out of register: each plate printed a little off. */
     .np-plate-c {

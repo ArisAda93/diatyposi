@@ -15,8 +15,13 @@
  * Section accents: `data-bg-accent="cyan|magenta|yellow|key"` on a section blends the field
  * towards that ink while the section holds the viewport centre (an IntersectionObserver on a thin
  * band at the centre). Without one there, the balanced CMYK mix shows.
+ *
+ * Theme (theme.ts contract): `html[data-theme]` is read at start and again right before the
+ * scene starts, and every `dt:themechange` on `document` is routed to it (scene.ts setTheme:
+ * new paper, inks, caps and blend, with a short cross-fade).
  */
-import { pickAccent, type Accent } from './math';
+import type { ThemeChangeDetail } from '~/scripts/theme';
+import { parseTheme, pickAccent, type Accent, type Theme } from './math';
 import type { GLContext, LivingBackground } from './scene';
 import { delay, nextFrame, yieldToMain } from './tasks';
 
@@ -30,6 +35,11 @@ const HERO_READY_EVENT = 'dt:hero-ready';
 const HERO_WAIT_MAX = 5000;
 /** The band at the viewport centre that decides the section accent (rootMargin). */
 const CENTRE_BAND = '-49% 0px -49% 0px';
+/** Sent on `document` after every theme switch (theme.ts THEME_EVENT). */
+const THEME_EVENT = 'dt:themechange';
+
+/** The theme on <html> now (light without the attribute). */
+const currentTheme = (): Theme => parseTheme(document.documentElement.dataset['theme']);
 
 /**
  * Context attributes for the probe; the scene draws with this context.
@@ -153,6 +163,7 @@ export const initLivingBackground = (): void => {
       const { createLivingBackground } = await import('./scene');
       built = await createLivingBackground(host, context, {
         reducedMotion: reduce.matches,
+        theme: currentTheme(),
         onLost: () => {
           scene = null;
         },
@@ -163,6 +174,7 @@ export const initLivingBackground = (): void => {
       // The preference may have flipped while the scene was built: start in the current state.
       // From here on (no await until `scene` is set) the listener below routes every change.
       built.setReducedMotion(reduce.matches);
+      built.setTheme(currentTheme());
       // start() reports false (and has already cleaned up) when the context died meanwhile.
       if (!built.start()) return;
     } catch {
@@ -177,6 +189,10 @@ export const initLivingBackground = (): void => {
   // Registered before the build, so no change of the preference is ever missed: before the scene
   // exists it is read again right before start(); afterwards it is routed to the scene.
   reduce.addEventListener('change', () => scene?.setReducedMotion(reduce.matches));
+  document.addEventListener(THEME_EVENT, (event: Event) => {
+    const detail = (event as CustomEvent<ThemeChangeDetail | undefined>).detail;
+    scene?.setTheme(detail ? parseTheme(detail.theme) : currentTheme());
+  });
 
   // Track the accent from the start, so the scene opens on the right ink.
   watchAccents((next) => {

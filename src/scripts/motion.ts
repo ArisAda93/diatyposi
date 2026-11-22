@@ -14,9 +14,10 @@
  * - Magnetic (`data-magnetic`, auto on `.btn`, fine pointers only): a pull of up to 6 px towards
  *   the pointer; the button's plate shadow points towards the pointer.
  * - Parallax (`data-parallax="<speed>"`, -0.4…0.4): the element is offset by
- *   (its centre − the viewport centre) × −speed, at most 18vh, smoothed. Positive speeds lag the
- *   scroll (the element recedes), negative ones lead it. Written to the `translate` property
- *   (`--px-y`), so it composes with any transform; only elements near the viewport are updated.
+ *   (its centre − the viewport centre) × −speed × PARALLAX_GAIN (1.6, an emphasized depth),
+ *   at most 26vh, smoothed. Positive speeds lag the scroll (the element recedes), negative ones
+ *   lead it. Written to the `translate` property (`--px-y`), so it composes with any transform;
+ *   only elements near the viewport are updated.
  *   It measures the element's box (minus its own offset), so it also works in sticky containers.
  * - Ink ripple (`.btn`, `.icon-btn`): on press, C/M/Y rings expand from the pointer and snap into
  *   register as they fade (touch included: it is press feedback, not a hover effect).
@@ -143,8 +144,16 @@ export const scrubRange = (
 
 /** Largest parallax speed either way (`data-parallax`). */
 export const PARALLAX_LIMIT = 0.4;
-/** Largest parallax offset, as a fraction of the viewport height. */
-export const PARALLAX_MAX = 0.18;
+/**
+ * Global parallax gain: every `data-parallax` speed is multiplied by it, so the layers separate
+ * more strongly while their relative order stays. (living-background/text-rects.ts mirrors it.)
+ */
+export const PARALLAX_GAIN = 1.6;
+/** Largest parallax offset, as a fraction of the viewport height (scaled with the gain). */
+export const PARALLAX_MAX = 0.26;
+
+/** The speed a `data-parallax` speed moves at, with the global gain. */
+export const effectiveParallax = (speed: number): number => speed * PARALLAX_GAIN;
 
 /** A `data-parallax` value as a speed, clamped to ±PARALLAX_LIMIT; null if missing, bad or 0. */
 export const parallaxSpeed = (value: string | null): number | null => {
@@ -996,7 +1005,7 @@ const setupParallax = (session: Session): void => {
         // The box carries the offset written last frame: take it out to get the layout centre.
         const box = item.el.getBoundingClientRect();
         const centre = box.top + box.height / 2 - item.written;
-        item.target = parallaxOffset(centre, viewport / 2, item.speed, max);
+        item.target = parallaxOffset(centre, viewport / 2, effectiveParallax(item.speed), max);
         if (item.entered) {
           item.entered = false;
           // Off screen: jump straight to the offset. On screen (at load): settle into it.

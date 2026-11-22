@@ -3,6 +3,10 @@
  * Shared page shell: head (SEO, Open Graph, JSON-LD, fonts), the living background, skip link,
  * header, footer and the mobile floating contact bar. Every page renders exactly one <h1> inside
  * the default slot.
+ *
+ * Theme: the inline head script sets `html[data-theme]` and both theme metas before first paint
+ * (stored choice, else the system); the module script wires every theme toggle (theme.ts).
+ * Without JS the metas and the page stay light.
  */
 import '~/styles/global.css';
 import '~/styles/motion.css';
@@ -13,6 +17,7 @@ import LivingBackground from '~/components/LivingBackground.astro';
 import { site } from '~/data/site';
 import { defaultLocale, localeTags, t, type Locale } from '~/i18n/ui';
 import { buildLocalBusiness } from '~/lib/seo';
+import { THEME_COLORS, THEME_STORAGE_KEY } from '~/scripts/theme';
 
 interface Props {
   /** Page title without the brand suffix. Omit on the home page. */
@@ -57,15 +62,36 @@ const jsonLd = structuredData ? JSON.stringify(buildLocalBusiness(siteUrl, local
     <meta name="description" content={metaDescription} />
     {noindex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical} />}
     <meta name="color-scheme" content="light" />
-    <meta name="theme-color" content="#FAFAF7" />
+    <meta name="theme-color" content={THEME_COLORS.light} />
     <meta name="generator" content={Astro.generator} />
 
-    <script is:inline>
-      // Runs before first paint. Marks JS support and decides whether the hero intro plays
-      // (once per session, never with reduced motion).
+    <script is:inline define:vars={{ themeKey: THEME_STORAGE_KEY, themeColors: THEME_COLORS }}>
+      // Runs before first paint. Marks JS support, sets the theme and decides whether the hero
+      // intro plays (once per session, never with reduced motion).
       (function () {
         const d = document.documentElement;
         d.classList.remove('no-js');
+
+        // Theme: a valid stored choice, else the system. Keep in sync with resolveTheme() in
+        // src/scripts/theme.ts (tests/theme.test.ts covers that decision).
+        let stored = null;
+        try {
+          stored = localStorage.getItem(themeKey);
+        } catch {
+          /* storage blocked: follow the system */
+        }
+        const theme =
+          stored === 'light' || stored === 'dark'
+            ? stored
+            : matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
+        d.setAttribute('data-theme', theme);
+        const themeColor = document.querySelector('meta[name="theme-color"]');
+        if (themeColor) themeColor.setAttribute('content', themeColors[theme]);
+        const colorScheme = document.querySelector('meta[name="color-scheme"]');
+        if (colorScheme) colorScheme.setAttribute('content', theme);
+
         try {
           if (
             !sessionStorage.getItem('dt-hero-played') &&
@@ -135,6 +161,9 @@ const jsonLd = structuredData ? JSON.stringify(buildLocalBusiness(siteUrl, local
     <FloatingContact locale={locale} />
     <script>
       import '~/scripts/motion';
+      import { initThemeToggle } from '~/scripts/theme';
+
+      initThemeToggle();
     </script>
   </body>
 </html>

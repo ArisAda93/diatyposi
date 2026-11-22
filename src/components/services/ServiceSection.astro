@@ -11,6 +11,10 @@
  * depths (`data-parallax`, site-wide motion layer). `data-bg-accent` tints the living background
  * with the chapter's ink while it holds the middle of the screen. Without JS or under reduced
  * motion everything rests flat.
+ *
+ * Dark mode: the ink strengths are re-balanced for dark paper (there yellow is the loudest ink,
+ * not the faintest), the photo frame gets a hairline edge and a deeper shadow, and the stand-in
+ * chip keeps fixed ink on yellow.
  */
 import Icon from '../Icon.astro';
 import PlateIcon from '../PlateIcon.astro';
@@ -132,6 +136,22 @@ const sizes = '(min-width: 1024px) min(35vw, 520px), (min-width: 768px) 46vw, ca
       --svcp-stroke: color-mix(in srgb, var(--color-key) 24%, transparent);
       --svcp-dots: 0.3;
     }
+    /* Dark paper: strength follows each ink's lightness against the dark ground (key is light
+       there and keeps its share). */
+    @media not print {
+      :global(html[data-theme='dark']) .svcp-ink-cyan {
+        --svcp-stroke: color-mix(in srgb, var(--color-cyan) 50%, transparent);
+        --svcp-dots: 0.42;
+      }
+      :global(html[data-theme='dark']) .svcp-ink-magenta {
+        --svcp-stroke: color-mix(in srgb, var(--color-magenta) 60%, transparent);
+        --svcp-dots: 0.5;
+      }
+      :global(html[data-theme='dark']) .svcp-ink-yellow {
+        --svcp-stroke: color-mix(in srgb, var(--color-yellow) 38%, transparent);
+        --svcp-dots: 0.4;
+      }
+    }
 
     /* The thin rule in the chapter's plate colour, across the top. */
     .svcp-rule {
@@ -238,6 +258,13 @@ const sizes = '(min-width: 1024px) min(35vw, 520px), (min-width: 768px) 46vw, ca
       aspect-ratio: 4 / 3;
       box-shadow: 0 1.75rem 3rem -2rem rgb(34 31 32 / 0.4);
     }
+    @media not print {
+      :global(html[data-theme='dark']) .svcp-media {
+        box-shadow:
+          0 0 0 1px var(--color-line),
+          0 1.75rem 3rem -1.75rem rgb(0 0 0 / 0.65);
+      }
+    }
     .svcp-media :global(picture) {
       display: block;
       height: 100%;
@@ -250,7 +277,7 @@ const sizes = '(min-width: 1024px) min(35vw, 520px), (min-width: 768px) 46vw, ca
       z-index: 1;
       padding: 0.3rem 0.55rem;
       background-color: var(--color-yellow);
-      color: var(--color-key);
+      color: var(--ink-fixed);
       font-family: var(--font-display);
       font-size: 0.75rem;
       font-weight: 720;

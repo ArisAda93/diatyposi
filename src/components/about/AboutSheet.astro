@@ -6,7 +6,8 @@
  * a colour bar and the solid mark as the proof. Decorative, no text.
  *
  * The arches sit on a parallax layer (`data-parallax`, motion.ts) and drift inside the sheet while
- * the page scrolls; hovering the sheet pulls the plates into register.
+ * the page scrolls; hovering the sheet pulls the plates into register. The inks overprint with
+ * `--blend-ink` (multiply on paper, screen on the dark sheet); the K plate is the theme's key.
  */
 import Photo from '../Photo.astro';
 import Logo from '../Logo.astro';
@@ -99,7 +100,7 @@ const plates = [...ARCH_PLATES].reverse().map((p) => {
       inset: 0;
       overflow: hidden;
       color: var(--plate-color);
-      mix-blend-mode: multiply;
+      mix-blend-mode: var(--blend-ink);
       -webkit-mask: var(--plate-mask) center / 100% 100% no-repeat;
       mask: var(--plate-mask) center / 100% 100% no-repeat;
       transform: translate(var(--plate-offset));

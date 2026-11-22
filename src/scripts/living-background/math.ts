@@ -44,10 +44,17 @@ export const hexToRgb = (hex: string): Rgb => {
   return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
 };
 
-/** A computed CSS colour ('rgb(250, 250, 247)', 'rgb(250 250 247)' or '#fafaf7'), or null. */
+/**
+ * A computed CSS colour or colour token ('rgb(250, 250, 247)', 'rgb(250 250 247)', '#fafaf7' or
+ * '#fff'), or null.
+ */
 export const parseCssColor = (value: string): Rgb | null => {
   const text = value.trim();
   if (/^#[0-9a-f]{6}$/i.test(text)) return hexToRgb(text);
+  if (/^#[0-9a-f]{3}$/i.test(text)) {
+    const [, r = '', g = '', b = ''] = text;
+    return hexToRgb(`#${r}${r}${g}${g}${b}${b}`);
+  }
   const match = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/i.exec(text);
   if (!match) return null;
   const channels = [match[1], match[2], match[3]].map((c) => Number(c) / 255);
@@ -78,7 +85,7 @@ export const contrastRatio = (a: Rgb, b: Rgb): number => {
 
 /**
  * Paper after one glyph of `ink` at `alpha` is printed on it: mix(white, ink, alpha) times the
- * paper, in encoded values as the GPU computes it. This is what each glyph writes.
+ * paper, in encoded values as the GPU computes it. This is what each glyph writes on light paper.
  */
 export const printOn = (paper: Rgb, ink: Rgb, alpha: number): Rgb => [
   paper[0] * (1 - alpha + alpha * ink[0]),
@@ -93,6 +100,13 @@ export const minRgb = (a: Rgb, b: Rgb): Rgb => [
   Math.min(a[2], b[2]),
 ];
 
+/** Per-channel maximum (the GPU's MAX blend equation: the dark-mode mirror of MIN). */
+export const maxRgb = (a: Rgb, b: Rgb): Rgb => [
+  Math.max(a[0], b[0]),
+  Math.max(a[1], b[1]),
+  Math.max(a[2], b[2]),
+];
+
 /**
  * Paper where two glyphs overlap under the MIN blend: each writes printOn(paper, ink, alpha) and
  * the darker value per channel stays. Same-ink overlaps look exactly like one glyph; different
@@ -102,10 +116,41 @@ export const printMin = (paper: Rgb, a: Rgb, alphaA: number, b: Rgb, alphaB: num
   minRgb(printOn(paper, a, alphaA), printOn(paper, b, alphaB));
 
 /**
- * How overlapping glyphs combine: 'min' (WebGL 2, or WebGL 1 with EXT_blend_minmax) or
- * 'multiply' (the fallback: the second glyph darkens the first).
+ * Light ink on dark paper, as each glyph writes it in dark mode: mix(paper, ink, alpha). Combined
+ * with the MAX blend, the lighter value per channel stays (the mirror of MIN on light paper).
  */
-export type GlyphBlend = 'min' | 'multiply';
+export const printLight = (paper: Rgb, ink: Rgb, alpha: number): Rgb => mixRgb(paper, ink, alpha);
+
+/**
+ * Dark-mode fallback without MAX: each glyph writes alpha × ink and screens the paper under it
+ * (gl.ONE_MINUS_DST_COLOR × gl.ONE): 1 − (1 − paper)(1 − alpha·ink). Only ever lightens.
+ */
+export const printScreen = (paper: Rgb, ink: Rgb, alpha: number): Rgb => [
+  1 - (1 - paper[0]) * (1 - alpha * ink[0]),
+  1 - (1 - paper[1]) * (1 - alpha * ink[1]),
+  1 - (1 - paper[2]) * (1 - alpha * ink[2]),
+];
+
+/**
+ * How overlapping glyphs combine. Light paper: 'min' (WebGL 2, or WebGL 1 with EXT_blend_minmax)
+ * or 'multiply' (the fallback: the second glyph darkens the first). Dark paper: 'max' (the same
+ * extension) or 'screen' (the fallback: the second glyph lightens the first).
+ */
+export type GlyphBlend = 'min' | 'multiply' | 'max' | 'screen';
+
+/** Whether a blend prints light ink on dark paper. */
+export const isDarkBlend = (blend: GlyphBlend): boolean => blend === 'max' || blend === 'screen';
+
+/** The blend for a theme, given whether the context has MIN/MAX blending. */
+export const blendFor = (theme: Theme, minMax: boolean): GlyphBlend =>
+  theme === 'dark' ? (minMax ? 'max' : 'screen') : minMax ? 'min' : 'multiply';
+
+/** Paper after one glyph of `ink` at `alpha`, for a blend. */
+export const printWith = (paper: Rgb, ink: Rgb, alpha: number, blend: GlyphBlend): Rgb => {
+  if (blend === 'max') return printLight(paper, ink, alpha);
+  if (blend === 'screen') return printScreen(paper, ink, alpha);
+  return printOn(paper, ink, alpha);
+};
 
 /** Paper where glyph `a` and glyph `b` overlap, for a blend. */
 export const printPair = (
@@ -115,19 +160,34 @@ export const printPair = (
   b: Rgb,
   alphaB: number,
   blend: GlyphBlend,
-): Rgb =>
-  blend === 'min'
-    ? printMin(paper, a, alphaA, b, alphaB)
-    : printOn(printOn(paper, a, alphaA), b, alphaB);
+): Rgb => {
+  switch (blend) {
+    case 'min':
+      return printMin(paper, a, alphaA, b, alphaB);
+    case 'max':
+      return maxRgb(printLight(paper, a, alphaA), printLight(paper, b, alphaB));
+    case 'screen':
+      return printScreen(printScreen(paper, a, alphaA), b, alphaB);
+    default:
+      return printOn(printOn(paper, a, alphaA), b, alphaB);
+  }
+};
 
 /**
  * Largest ink alpha (0–1) at which `text` on the printed paper still keeps `minContrast`. Printing
- * only ever darkens the paper, so the contrast of text darker than the paper falls monotonically
- * with alpha and a bisection finds the limit. 0 when the bare paper already fails.
+ * moves the paper away from where it was, towards the text (darker text on light paper, light
+ * text on dark paper), so the contrast falls monotonically with alpha and a bisection finds the
+ * limit. 0 when the bare paper already fails.
  */
-export const maxInkAlpha = (paper: Rgb, ink: Rgb, text: Rgb, minContrast: number): number => {
+export const maxInkAlpha = (
+  paper: Rgb,
+  ink: Rgb,
+  text: Rgb,
+  minContrast: number,
+  blend: GlyphBlend = 'min',
+): number => {
   const passes = (alpha: number): boolean =>
-    contrastRatio(text, printOn(paper, ink, alpha)) >= minContrast;
+    contrastRatio(text, printWith(paper, ink, alpha, blend)) >= minContrast;
   if (!passes(0)) return 0;
   if (passes(1)) return 1;
   let lo = 0;
@@ -143,6 +203,12 @@ export const maxInkAlpha = (paper: Rgb, ink: Rgb, text: Rgb, minContrast: number
 export const PLATES = ['k', 'c', 'm', 'y'] as const;
 export type Plate = (typeof PLATES)[number];
 export type InkCaps = Record<Plate, number>;
+
+/** The site theme (theme.ts contract: `html[data-theme]`, `dt:themechange`). */
+export type Theme = 'light' | 'dark';
+
+/** `html[data-theme]` (or the event's `detail.theme`) as a theme: light unless it says dark. */
+export const parseTheme = (value: unknown): Theme => (value === 'dark' ? 'dark' : 'light');
 
 /**
  * The colours a plate's glyphs can take: key also tinted towards each accent ink (half and full
@@ -174,7 +240,10 @@ export const plateColours = (
  *    factor (bisection) that makes it pass. Caps only ever fall, so a pair that passed stays
  *    passing and one pass over the pairs is enough.
  *
- * Texts are assumed darker than the paper (all of the site's text on paper is).
+ * Texts sit on one side of the paper: darker on light paper ('min', 'multiply'), lighter on dark
+ * paper ('max', 'screen'). Printing moves the paper towards them, so the text with the least
+ * contrast against the bare paper binds: the lightest text on light paper (e.g. the red label),
+ * the darkest on dark paper.
  */
 export const inkCaps = (
   paper: Rgb,
@@ -185,10 +254,10 @@ export const inkCaps = (
   maxTint: number,
   blend: GlyphBlend = 'min',
 ): InkCaps => {
-  // Darker text on a darkened paper: the lightest text has the least contrast and binds.
+  // The text with the least contrast against the paper binds (see above).
   const binding = texts.reduce<Rgb | null>(
-    (lightest, text) =>
-      !lightest || relativeLuminance(text) > relativeLuminance(lightest) ? text : lightest,
+    (weakest, text) =>
+      !weakest || contrastRatio(text, paper) < contrastRatio(weakest, paper) ? text : weakest,
     null,
   );
   const caps: InkCaps = { ...ceilings };
@@ -199,7 +268,7 @@ export const inkCaps = (
   PLATES.forEach((plate) => {
     caps[plate] = Math.min(
       ceilings[plate],
-      ...colours[plate].map((ink) => maxInkAlpha(paper, ink, binding, minContrast)),
+      ...colours[plate].map((ink) => maxInkAlpha(paper, ink, binding, minContrast, blend)),
     );
   });
 

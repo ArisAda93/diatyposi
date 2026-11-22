@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEPTH_TILT,
+  PARALLAX_GAIN,
   PARALLAX_LIMIT,
   PARALLAX_MAX,
   clamp,
   damp,
   depthAmplitude,
   depthStartScale,
+  effectiveParallax,
   fitScale,
   magneticPull,
   parallaxOffset,
@@ -250,6 +252,43 @@ describe('parallax', () => {
     const moved = (speed: number): number =>
       Math.abs(screen(600, 120, speed) - screen(600, 100, speed));
     expect(moved(0)).toBeCloseTo(20);
+    expect(moved(0.25)).toBeLessThan(20);
+    expect(moved(-0.25)).toBeGreaterThan(20);
+  });
+
+  it('emphasizes every speed by the global gain, keeping their order and direction', () => {
+    expect(PARALLAX_GAIN).toBeCloseTo(1.6);
+    // The maximum offset scales with the gain (18vh before it), rounded to 26vh.
+    expect(PARALLAX_MAX).toBeCloseTo(0.26);
+    expect(Math.abs(PARALLAX_MAX - 0.18 * PARALLAX_GAIN)).toBeLessThan(0.03);
+    const speeds = [-0.4, -0.14, -0.06, 0.08, 0.12, 0.22, 0.4];
+    const effective = speeds.map(effectiveParallax);
+    effective.forEach((value, i) => {
+      const speed = speeds[i] ?? 0;
+      expect(Math.sign(value)).toBe(Math.sign(speed));
+      expect(Math.abs(value)).toBeGreaterThan(Math.abs(speed));
+      const next = effective[i + 1];
+      if (next !== undefined) expect(next).toBeGreaterThan(value);
+    });
+    expect(effectiveParallax(0)).toBe(0);
+  });
+
+  it('moves a layer further than before the gain, still within the maximum', () => {
+    // 200 px below the centre, speed 0.2: 40 px before the gain, 64 px with it.
+    expect(Math.abs(parallaxOffset(650, 450, effectiveParallax(0.2), max))).toBeCloseTo(64);
+    expect(Math.abs(parallaxOffset(650, 450, effectiveParallax(0.2), max))).toBeGreaterThan(
+      Math.abs(parallaxOffset(650, 450, 0.2, max)),
+    );
+    // The strongest speed at the edge of a tall page still stops at the maximum.
+    expect(parallaxOffset(10_000, 450, effectiveParallax(PARALLAX_LIMIT), max)).toBe(-max);
+    // Lag and lead keep their sense with the gain.
+    const moved = (speed: number): number =>
+      Math.abs(
+        650 -
+          120 +
+          parallaxOffset(650 - 120, 450, effectiveParallax(speed), max) -
+          (650 - 100 + parallaxOffset(650 - 100, 450, effectiveParallax(speed), max)),
+      );
     expect(moved(0.25)).toBeLessThan(20);
     expect(moved(-0.25)).toBeGreaterThan(20);
   });

@@ -51,7 +51,24 @@ import {
   smoothstep,
   type HandoffInput,
 } from '../src/scripts/hero-scene/math';
+import {
+  HERO_HANDOFF_EVENT,
+  handoffChanged,
+  latestHeroHandoff,
+  publishHeroHandoff,
+  type HeroHandoffDetail,
+} from '../src/scripts/hero-scene/handoff-signal';
 import { precompile, yieldToMain } from '../src/scripts/hero-scene/startup';
+import {
+  DARK_KEY_HEX,
+  inkModel,
+  keyInkFor,
+  luminance,
+  parseCssColor,
+  sceneThemeOf,
+  type BlendFactor,
+  type Rgb,
+} from '../src/scripts/hero-scene/theme';
 
 const triangleArea = (a: Point, b: Point, c: Point): number =>
   ((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)) / 2;
@@ -667,5 +684,186 @@ describe('start-up (short tasks, shaders linked in the background)', () => {
     await precompile(stuck.gl, sources, 60);
     expect(performance.now() - started).toBeGreaterThanOrEqual(55);
     expect(stuck.calls.deletedPrograms).toBe(2);
+  });
+});
+
+describe('theme (light ink on paper, light on a dark sheet)', () => {
+  /** A WebGL blend factor for one channel (source s, target d). */
+  const factor = (name: BlendFactor, s: number, d: number): number => {
+    switch (name) {
+      case 'ZERO':
+        return 0;
+      case 'ONE':
+        return 1;
+      case 'DST_COLOR':
+        return d;
+      case 'ONE_MINUS_SRC_COLOR':
+        return 1 - s;
+    }
+  };
+  /** What gl.blendFunc(src, dst) with the default gl.FUNC_ADD makes of one channel. */
+  const blendChannel = (blend: { src: BlendFactor; dst: BlendFactor }, s: number, d: number) =>
+    s * factor(blend.src, s, d) + d * factor(blend.dst, s, d);
+  const print = (theme: 'light' | 'dark', inks: readonly Rgb[]): number[] => {
+    const model = inkModel(theme);
+    return inks.reduce<number[]>(
+      (target, ink) => target.map((d, i) => blendChannel(model.blend, ink[i] ?? 0, d)),
+      [...model.paper],
+    );
+  };
+  const cyan = parseCssColor('#00AEEF');
+  const magenta = parseCssColor('#ED008C');
+  const rgbOf = (value: Rgb | null): Rgb => {
+    if (!value) throw new Error('colour did not parse');
+    return value;
+  };
+
+  it('reads the theme from html[data-theme], light by default', () => {
+    expect(sceneThemeOf('dark')).toBe('dark');
+    expect(sceneThemeOf('light')).toBe('light');
+    expect(sceneThemeOf(undefined)).toBe('light');
+    expect(sceneThemeOf(null)).toBe('light');
+    expect(sceneThemeOf('sepia')).toBe('light');
+  });
+
+  it('multiplies on white in light and screens on black in dark, canvas and page alike', () => {
+    expect(inkModel('light')).toMatchObject({
+      paper: [1, 1, 1],
+      cssBlend: 'multiply',
+      blend: { src: 'DST_COLOR', dst: 'ZERO' },
+    });
+    expect(inkModel('dark')).toMatchObject({
+      paper: [0, 0, 0],
+      cssBlend: 'screen',
+      blend: { src: 'ONE', dst: 'ONE_MINUS_SRC_COLOR' },
+    });
+  });
+
+  it('leaves the page untouched where nothing prints (paper is neutral under the blend)', () => {
+    for (const theme of ['light', 'dark'] as const) {
+      const { paper } = inkModel(theme);
+      // A plate faded to nothing prints the paper colour (shaders.ts uPaper).
+      expect(print(theme, [paper, paper])).toEqual([...paper]);
+    }
+  });
+
+  it('overprints C + M towards blue in light and combines them towards light in dark', () => {
+    const c = rgbOf(cyan);
+    const m = rgbOf(magenta);
+    const light = print('light', [c, m]);
+    const dark = print('dark', [c, m]);
+    // Multiply: darker than either ink in every channel; screen: lighter than either.
+    light.forEach((value, i) => {
+      expect(value).toBeLessThanOrEqual(Math.min(c[i] ?? 0, m[i] ?? 0) + 1e-9);
+    });
+    dark.forEach((value, i) => {
+      expect(value).toBeGreaterThanOrEqual(Math.max(c[i] ?? 0, m[i] ?? 0) - 1e-9);
+      // Screen: s + d − s·d.
+      expect(value).toBeCloseTo((c[i] ?? 0) + (m[i] ?? 0) - (c[i] ?? 0) * (m[i] ?? 0), 9);
+    });
+    // Blue on paper; a light lavender on the dark sheet.
+    expect(light[2]).toBeGreaterThan(light[0] ?? 1);
+    expect(luminance(dark as unknown as Rgb)).toBeGreaterThan(luminance(c));
+    // The order of printing does not change the result in either theme.
+    expect(print('dark', [m, c])).toEqual(dark.map((v) => expect.closeTo(v, 9)));
+    expect(print('light', [m, c])).toEqual(light.map((v) => expect.closeTo(v, 9)));
+  });
+
+  it('keeps the shadow faint in both themes (a glow in dark)', () => {
+    expect(inkModel('light').shadowAlpha).toBe(0.07);
+    expect(inkModel('dark').shadowAlpha).toBeGreaterThan(0);
+    expect(inkModel('dark').shadowAlpha).toBeLessThanOrEqual(inkModel('light').shadowAlpha);
+  });
+
+  it('parses the colours getComputedStyle reports', () => {
+    expect(parseCssColor('#221F20')).toEqual([0x22 / 255, 0x1f / 255, 0x20 / 255]);
+    expect(parseCssColor('  #f2efe8 ')).toEqual([0xf2 / 255, 0xef / 255, 0xe8 / 255]);
+    expect(parseCssColor('#fff')).toEqual([1, 1, 1]);
+    expect(parseCssColor('#0008')).toEqual([0, 0, 0]);
+    expect(parseCssColor('#F2EFE8CC')).toEqual([0xf2 / 255, 0xef / 255, 0xe8 / 255]);
+    expect(parseCssColor('rgb(242, 239, 232)')).toEqual([242 / 255, 239 / 255, 232 / 255]);
+    expect(parseCssColor('rgba(242,239,232,0.5)')).toEqual([242 / 255, 239 / 255, 232 / 255]);
+    expect(parseCssColor('rgb(242 239 232 / 50%)')).toEqual([242 / 255, 239 / 255, 232 / 255]);
+    expect(parseCssColor('rgb(100% 50% 0%)')).toEqual([1, 0.5, 0]);
+    expect(parseCssColor('rgb(300, -4, 0)')).toEqual([1, 0, 0]);
+    for (const bad of [
+      '',
+      'white',
+      '#12',
+      '#12345',
+      'oklch(0.95 0.01 90)',
+      'rgb(1, 2)',
+      'rgb(a, b, c)',
+    ]) {
+      expect(parseCssColor(bad)).toBeNull();
+    }
+  });
+
+  it('prints the key plate in the logo key in light and in the page’s light key in dark', () => {
+    const logoKey = parseCssColor('#221F20');
+    // Light: the logo's key black, whatever the page says.
+    expect(keyInkFor('light', null)).toEqual(logoKey);
+    expect(keyInkFor('light', '#ffffff')).toEqual(logoKey);
+    // Dark: the computed --color-key.
+    expect(keyInkFor('dark', ' #F4F1EA')).toEqual(parseCssColor('#F4F1EA'));
+    expect(keyInkFor('dark', 'rgb(240, 238, 230)')).toEqual([240 / 255, 238 / 255, 230 / 255]);
+    // Unreadable, missing, or not light (the token has not flipped): the contract's light key.
+    const fallback = parseCssColor(DARK_KEY_HEX);
+    expect(keyInkFor('dark', null)).toEqual(fallback);
+    expect(keyInkFor('dark', '')).toEqual(fallback);
+    expect(keyInkFor('dark', 'oklch(0.95 0.01 90)')).toEqual(fallback);
+    expect(keyInkFor('dark', '#221F20')).toEqual(fallback);
+    expect(luminance(rgbOf(fallback))).toBeGreaterThan(0.8);
+  });
+});
+
+describe('hand-over signal to the floating plates', () => {
+  const detail = (overrides: Partial<HeroHandoffDetail> = {}): HeroHandoffDetail => ({
+    live: true,
+    progress: 0.4,
+    ink: 1,
+    rect: { left: 700, top: 120, width: 640, height: 441 },
+    mark: { x: 1020, y: 340, scale: 0.71 },
+    ...overrides,
+  });
+
+  it('sends only real changes, beyond rounding noise', () => {
+    const base = detail();
+    expect(handoffChanged(null, base)).toBe(true);
+    expect(handoffChanged(base, detail())).toBe(false);
+    expect(handoffChanged(base, detail({ progress: 0.4004 }))).toBe(false);
+    expect(handoffChanged(base, detail({ progress: 0.402 }))).toBe(true);
+    expect(handoffChanged(base, detail({ ink: 0.99 }))).toBe(true);
+    expect(handoffChanged(base, detail({ live: false }))).toBe(true);
+    expect(handoffChanged(base, detail({ rect: { ...base.rect, top: 120.1 } }))).toBe(false);
+    expect(handoffChanged(base, detail({ rect: { ...base.rect, top: 118 } }))).toBe(true);
+    expect(handoffChanged(base, detail({ rect: { ...base.rect, width: 600 } }))).toBe(true);
+    expect(handoffChanged(base, detail({ mark: { ...base.mark, y: 300 } }))).toBe(true);
+    expect(handoffChanged(base, detail({ mark: { ...base.mark, scale: 0.7 } }))).toBe(true);
+  });
+
+  it('dispatches dt:hero-handoff with the detail and keeps it as the latest', () => {
+    const target = new EventTarget();
+    const received: HeroHandoffDetail[] = [];
+    target.addEventListener(HERO_HANDOFF_EVENT, (event) => {
+      received.push((event as CustomEvent<HeroHandoffDetail>).detail);
+    });
+    expect(HERO_HANDOFF_EVENT).toBe('dt:hero-handoff');
+
+    const first = detail({ progress: 0.1 });
+    expect(publishHeroHandoff(first, target)).toBe(true);
+    expect(latestHeroHandoff()).toBe(first);
+    // The same frame again (the plates breathe at the top): nothing sent.
+    expect(publishHeroHandoff(detail({ progress: 0.1 }), target)).toBe(false);
+    const gone = detail({ progress: 1, ink: 0 });
+    expect(publishHeroHandoff(gone, target)).toBe(true);
+    expect(publishHeroHandoff({ ...gone, live: false }, target)).toBe(true);
+
+    expect(received.map((d) => [d.live, d.progress, d.ink])).toEqual([
+      [true, 0.1, 1],
+      [true, 1, 0],
+      [false, 1, 0],
+    ]);
+    expect(latestHeroHandoff()?.live).toBe(false);
   });
 });

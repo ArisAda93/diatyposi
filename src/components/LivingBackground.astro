@@ -5,8 +5,11 @@
  *
  * - Always: the paper grain, drawn above the canvas and below the content (::after).
  * - After first paint, where hardware WebGL is usable: the receding halftone sheet of arch glyphs
- *   (src/scripts/living-background/), faded in over the paper. It is cleared to the paper colour,
- *   so it never shifts anything and the page looks the same until it arrives.
+ *   and the floating 3D logo plates (src/scripts/living-background/), faded in over the paper. It
+ *   is cleared to the paper colour (dark paper in the dark theme), so it never shifts anything
+ *   and the page looks the same until it arrives.
+ * - Theme switch: the canvas fades out (`is-switching`), swaps inks and paper, and fades back in;
+ *   `is-theme-fade` keeps both fades short.
  *
  * The layer is 100lvh tall, so mobile toolbars showing or hiding never resize the canvas. The
  * paper itself is <html>'s background and <body> stays transparent (global.css), so this layer
@@ -46,6 +49,12 @@
     }
     .living-bg :global(.living-bg-canvas.is-live) {
       opacity: 1;
+    }
+    .living-bg :global(.living-bg-canvas.is-live.is-theme-fade) {
+      transition-duration: 180ms;
+    }
+    .living-bg :global(.living-bg-canvas.is-live.is-switching) {
+      opacity: 0;
     }
     /* The paper grain (it used to sit on <body>): above the sheet, below the content. */
     .living-bg::after {

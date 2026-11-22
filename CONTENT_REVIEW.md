@@ -34,6 +34,9 @@ Every Greek string on the site that is **not** the owner’s own wording, for th
 | `footerPrivacy`      | Πολιτική απορρήτου                                                                                                                                                     |
 | `copyright`          | Με επιφύλαξη παντός δικαιώματος.                                                                                                                                       |
 | `floatingLabel`      | Γρήγορη επικοινωνία                                                                                                                                                    |
+| `themeToggle`        | Σκούρο θέμα                                                                                                                                                            |
+| `themeOn`            | Ενεργό                                                                                                                                                                 |
+| `themeOff`           | Ανενεργό                                                                                                                                                               |
 | `newTab`             | (ανοίγει σε νέα καρτέλα)                                                                                                                                               |
 | `standInLabel`       | Ενδεικτική εικόνα                                                                                                                                                      |
 | `defaultDescription` | ΔΙΑΤΥΠΩΣΗ, διαφήμιση και εκτυπώσεις: διαφημιστικά δώρα, ρουχισμός, γραφιστικός σχεδιασμός και λογότυπα, banners, επιγραφές, ψηφιακές και offset εκτυπώσεις και κάρτες. |

@@ -73,6 +73,16 @@ export const icons = {
   external: s('<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v6H4V6h6"/>', '0 0 24 24'),
   /** Corner brackets: "open larger" on gallery tiles. */
   expand: s('<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>', '0 0 24 24'),
+  /** Light theme (ThemeToggle). */
+  sun: s(
+    '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
+    '0 0 24 24',
+  ),
+  /** Dark theme (ThemeToggle): a crescent, the outer disc bitten by a second circle. */
+  moon: s(
+    '<path d="M10.57 4.12A8.5 8.5 0 1 0 20.38 13.93A7.5 7.5 0 0 1 10.57 4.12z"/>',
+    '0 0 24 24',
+  ),
 
   // --- Brands (Simple Icons, CC0) ---
   facebook: f(

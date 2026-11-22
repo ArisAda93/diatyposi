@@ -1,13 +1,26 @@
 ---
 /**
- * Header block for inner pages: the red spaced label (after a registration mark), the page's
- * single <h1>, an optional intro, and extra content (chips, notes) from the default slot.
+ * Header block for inner pages, set as the logo's own lock-up: the four arches stand on a rule
+ * and the page's single <h1> hangs under it, as the wordmark sits under the arches in the logo.
  *
- * Beside it the four logo arches are printed as C/M/Y/K plates (multiply) that arrive out of
- * register and settle (CSS, once, never under reduced motion), on a parallax layer that recedes
- * as the page scrolls (`data-parallax`, motion.ts). The foot is the press colour bar and a
- * hairline. The block paints no background: the living background shows through, tinted by
- * `accent` (`data-bg-accent`). Decoration is aria-hidden.
+ * - The masthead rule (decorative): the press colour bar, a key hairline across the content
+ *   width and a registration mark at its end. It is the same strip that opens every section
+ *   (Section.astro), set heavier here, so the header and the sections read as one system.
+ * - The arches (decorative): drawn as four C/M/Y/K hairline outlines whose feet stand on the
+ *   rule, right-aligned to where the hairline ends. They are sized from the title's type
+ *   (7 × the display-l size, capped by the content width), so they scale with the h1.
+ * - The red spaced label sits on the rule to the left of the arches from 48rem (on phones, under
+ *   it), then the h1, the optional intro and the default slot (chips, notes).
+ *
+ * Printing (CSS scroll-driven, where supported, never under reduced motion): at the top of the
+ * page only the outlines show; as the page scrolls, a halftone screen of each ink prints into its
+ * outline plate by plate in Y, M, C, K order, slightly out of register, then snaps into register.
+ * Without support, or under reduced motion, the header shows the finished print, still. The inks
+ * overprint with `--blend-ink` (multiply on paper, screen on the dark page); the K plate is the
+ * theme's key. The h1 is plain text in the flow and paints at first paint (LCP).
+ *
+ * The block paints no background: the living background shows through, tinted by `accent`
+ * (`data-bg-accent`). Decoration is aria-hidden.
  */
 import RegMark from './RegMark.astro';
 import ColorBar from './ColorBar.astro';
@@ -27,165 +40,232 @@ const { label, title, intro, accent = 'cyan', class: className } = Astro.props;
 
 /** Back to front (key, yellow, magenta, cyan), as in the logo. */
 const plates = [...ARCH_PLATES].reverse();
+/** Halftone screen angles, as on press (C 15°, M 75°, Y 0°, K 45°). */
+const screenAngle = { c: 15, m: 75, y: 0, k: 45 } as const;
+/**
+ * Tight box of the four arches in logo space (feet on y = 248), so the feet stand on the rule.
+ * Strokes overflow it by half their width (`overflow: visible`).
+ */
+const VIEW_BOX = '699 60 825 188';
+const hasExtra = Astro.slots.has('default');
 ---
 
 <header class:list={['page-header', className]} data-bg-accent={accent}>
   <div class="wrap ph-inner">
-    <div class="ph-art" aria-hidden="true">
-      <div class="ph-plx" data-parallax="0.18">
-        <svg
-          class="ph-arches"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="690 50 840 205"
-          focusable="false"
-        >
+    <div class="ph-mast" aria-hidden="true">
+      <svg
+        class="ph-arches"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox={VIEW_BOX}
+        focusable="false"
+      >
+        <defs>
           {plates.map((p) => (
+            <pattern
+              id={`ph-screen-${p.id}`}
+              width="8"
+              height="8"
+              patternUnits="userSpaceOnUse"
+              patternTransform={`rotate(${screenAngle[p.id]})`}
+            >
+              <circle cx="4" cy="4" r="2.5" fill={p.color} />
+            </pattern>
+          ))}
+        </defs>
+        {plates.map((p) => (
+          <g class={`ph-plate ph-plate-${p.id}`}>
             <path
+              class="ph-ink"
               d={ARCH}
               transform={`translate(${p.x} 0)`}
-              class={`ph-plate ph-plate-${p.id}`}
-              fill={p.color}
+              fill={`url(#ph-screen-${p.id})`}
             />
-          ))}
-        </svg>
+            <path
+              class="ph-outline"
+              d={ARCH}
+              transform={`translate(${p.x} 0)`}
+              fill="none"
+              stroke={p.color}
+              stroke-width="1.25"
+              stroke-linejoin="round"
+              vector-effect="non-scaling-stroke"
+            />
+          </g>
+        ))}
+      </svg>
+    </div>
+
+    <div class="ph-rule" aria-hidden="true">
+      <ColorBar tints={3} class="ph-bar" />
+      <span class="ph-line"></span>
+      <RegMark size={18} class="ph-reg" />
+    </div>
+
+    <p class="label ph-label">{capsEl(label)}</p>
+    <h1 class="display-l ph-title">{title}</h1>
+    {intro && <p class="lead muted ph-intro">{intro}</p>}
+    {hasExtra && (
+      <div class="ph-extra">
+        <slot />
       </div>
-    </div>
-
-    <div class="ph-copy">
-      <p class="label ph-label">
-        <RegMark size={18} class="ph-reg" />
-        <span>{capsEl(label)}</span>
-      </p>
-      <h1 class="display-l ph-title">{title}</h1>
-      {intro && <p class="lead muted ph-intro">{intro}</p>}
-      <slot />
-    </div>
-
-    <div class="ph-foot" aria-hidden="true">
-      <ColorBar tints={3} />
-      <span class="ph-rule"></span>
-    </div>
+    )}
   </div>
 </header>
 
 <style>
   @layer components {
     .page-header {
+      /* The registration mark at the end of the rule, and the gap before it. */
+      --ph-reg: 18px;
+      --ph-reg-gap: 0.75rem;
       position: relative;
       overflow-x: clip;
-      padding-top: clamp(3rem, 2rem + 5vw, 7rem);
+      padding-top: clamp(2rem, 1rem + 3.5vw, 5rem);
+      padding-bottom: clamp(2.5rem, 1.5rem + 3vw, 4.5rem);
     }
     .ph-inner {
-      position: relative;
       display: grid;
       grid-template-columns: repeat(12, minmax(0, 1fr));
       column-gap: var(--grid-gap);
     }
-    .ph-copy {
-      position: relative;
+    .ph-mast,
+    .ph-rule,
+    .ph-label,
+    .ph-title,
+    .ph-intro,
+    .ph-extra {
       grid-column: 1 / -1;
-      grid-row: 2;
-    }
-    .ph-label {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.75rem;
-      margin-bottom: 1.5rem;
-    }
-    .ph-label :global(.ph-reg) {
-      flex: none;
-      color: var(--color-key);
-    }
-    .ph-title {
-      max-width: 18ch;
-    }
-    .ph-intro {
-      max-width: 58ch;
-      margin-top: clamp(1.5rem, 1rem + 1.5vw, 2rem);
+      min-width: 0;
     }
 
-    /* The arches: a small corner print on phones, a large plate stack beside the title from lg. */
-    .ph-art {
-      grid-column: 7 / -1;
-      grid-row: 1;
+    /* The arches: right-aligned to the end of the hairline, sized from the title's type. */
+    .ph-mast {
       justify-self: end;
-      align-self: start;
-      width: min(100%, 11rem);
-      margin-bottom: 1.5rem;
+      width: min(100% - var(--ph-reg) - var(--ph-reg-gap), var(--text-display-l) * 7);
+      margin-right: calc(var(--ph-reg) + var(--ph-reg-gap));
       pointer-events: none;
     }
     .ph-arches {
+      display: block;
       width: 100%;
       height: auto;
       overflow: visible;
       isolation: isolate;
     }
     .ph-plate {
-      mix-blend-mode: multiply;
+      mix-blend-mode: var(--blend-ink);
     }
 
-    .ph-foot {
-      grid-column: 1 / -1;
+    /* The rule: its hairline runs through the middle of the row, which is pulled up by half its
+       height, so the hairline lies exactly under the arches' feet. */
+    .ph-rule {
       display: flex;
       align-items: center;
-      gap: 1rem;
-      margin-top: clamp(3rem, 2rem + 4vw, 5rem);
+      gap: var(--ph-reg-gap);
+      height: var(--ph-reg);
+      margin-top: calc(var(--ph-reg) / -2);
     }
-    .ph-rule {
+    .ph-rule :global(.ph-bar) {
+      flex: none;
+    }
+    .ph-line {
       flex: 1;
       height: 1px;
-      background-color: var(--color-line);
+      background-color: var(--color-key);
+    }
+    .ph-rule :global(.ph-reg) {
+      flex: none;
+      color: var(--color-key);
     }
 
-    @media (min-width: 40rem) {
-      .ph-art {
-        width: min(100%, 15rem);
-      }
+    .ph-label {
+      justify-self: start;
+      margin-top: 1.5rem;
     }
-    @media (min-width: 64rem) {
-      .ph-art {
-        grid-column: 10 / -1;
+    .ph-title {
+      max-width: 18ch;
+      margin-top: 1rem;
+    }
+    .ph-intro {
+      max-width: 58ch;
+      margin-top: clamp(1.25rem, 1rem + 1vw, 1.75rem);
+    }
+
+    /* From 48rem the label sits on the rule, left of the arches: one shared baseline. */
+    @media (min-width: 48rem) {
+      .ph-mast {
         grid-row: 1;
+      }
+      .ph-label {
+        grid-row: 1;
+        grid-column: 1 / span 6;
         align-self: end;
-        width: calc(100% + var(--gutter));
-        margin: 0 calc(var(--gutter) * -1) 0.75rem 0;
+        margin: 0 0 1.25rem;
       }
-      .ph-copy {
-        grid-column: 1 / span 9;
-        grid-row: 1;
+      .ph-rule {
+        grid-row: 2;
+      }
+      .ph-title {
+        grid-row: 3;
+        margin-top: clamp(1.5rem, 1rem + 1.5vw, 2.25rem);
+      }
+      .ph-intro {
+        grid-row: 4;
+      }
+      .ph-extra {
+        grid-row: 5;
       }
     }
 
-    /* Out of register at first, then the plates settle (once, on load). */
-    @media (prefers-reduced-motion: no-preference) {
-      .ph-plate {
-        animation: ph-register 1100ms var(--ease-snap) 180ms both;
-      }
-      .ph-plate-c {
-        --ph-dx: -26px;
-        --ph-dy: -14px;
-      }
-      .ph-plate-m {
-        --ph-dx: 22px;
-        --ph-dy: -8px;
-      }
-      .ph-plate-y {
-        --ph-dx: -10px;
-        --ph-dy: 18px;
-      }
-      .ph-plate-k {
-        --ph-dx: 6px;
-        --ph-dy: 4px;
-        animation-delay: 60ms;
+    /*
+     * Printing on scroll: each plate's halftone prints into its outline in Y, M, C, K order,
+     * arriving out of register and snapping into it. Offsets are in logo units (about 0.7 px
+     * each on a wide screen). Where unsupported, or under reduced motion, the print is finished.
+     */
+    @supports (animation-timeline: scroll()) {
+      @media (prefers-reduced-motion: no-preference) {
+        .ph-ink {
+          animation: ph-print linear both;
+          animation-timeline: scroll(root block);
+        }
+        .ph-plate-y .ph-ink {
+          --ph-dx: -12px;
+          --ph-dy: 16px;
+          animation-range: 0rem 10rem;
+        }
+        .ph-plate-m .ph-ink {
+          --ph-dx: 22px;
+          --ph-dy: -10px;
+          animation-range: 2.5rem 12.5rem;
+        }
+        .ph-plate-c .ph-ink {
+          --ph-dx: -24px;
+          --ph-dy: -12px;
+          animation-range: 5rem 15rem;
+        }
+        .ph-plate-k .ph-ink {
+          --ph-dx: 8px;
+          --ph-dy: 6px;
+          animation-range: 7.5rem 17.5rem;
+        }
       }
     }
   }
 
-  @keyframes ph-register {
-    from {
+  @keyframes ph-print {
+    0% {
+      opacity: 0;
       translate: var(--ph-dx, 0) var(--ph-dy, 0);
     }
-    to {
+    45% {
+      opacity: 1;
+      translate: calc(var(--ph-dx, 0px) * 0.7) calc(var(--ph-dy, 0px) * 0.7);
+    }
+    80% {
+      translate: calc(var(--ph-dx, 0px) * -0.12) calc(var(--ph-dy, 0px) * -0.12);
+    }
+    100% {
+      opacity: 1;
       translate: 0 0;
     }
   }

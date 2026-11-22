@@ -24,6 +24,11 @@
  * the static composition), `data-hero-ready="1"` is set on <html> and `dt:hero-ready` is
  * dispatched on document, once. The living background waits for it on the home page, so the two
  * WebGL scenes never start up at the same time.
+ *
+ * Hand-over: while the live scene runs it publishes the scroll hand-off and where its plates are
+ * (`dt:hero-handoff`, hero-scene/handoff-signal.ts), so the living background's floating plates
+ * can take over from the art box `[data-hero-art]`. It follows the theme (`dt:themechange`) on its
+ * own (hero-scene/theme.ts).
  */
 import type { HeroScene, SceneElements } from './hero-scene/scene';
 
@@ -133,6 +138,7 @@ export const initHero = (): void => {
     stage,
     markBox,
     mark,
+    art: hero.querySelector<HTMLElement>('[data-hero-art]'),
     copy: hero.querySelector<HTMLElement>('[data-hero-copy]'),
     header,
   };

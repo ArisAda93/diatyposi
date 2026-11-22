@@ -1,7 +1,9 @@
 ---
 /**
- * Home work teaser: the featured portfolio items in an editorial, staggered layout of different
- * sizes on the 12-column grid. Each tile links to /erga/; stand-in images carry a visible label.
+ * Home work teaser (section 03, a `plain` Section: index, label, heading and the “see all” link
+ * in the shared head): the featured portfolio items in an editorial, staggered layout of
+ * different sizes on the 12-column grid. Each tile links to /erga/; stand-in images carry a
+ * visible label (ink on yellow in both themes). Phones also close the set with a full-width link.
  *
  * Depth: every tile sits on its own parallax layer (`data-parallax`, motion.ts) with a different
  * speed, so the set separates into planes while scrolling. The speeds stay small (neighbours
@@ -11,6 +13,7 @@
  */
 import Icon from '~/components/Icon.astro';
 import Photo from '~/components/Photo.astro';
+import Section from '~/components/Section.astro';
 import { portfolio, routes, serviceBySlug } from '~/data/site';
 import { homeText } from '~/i18n/pages/home';
 import { t } from '~/i18n/ui';
@@ -30,80 +33,54 @@ const sizes = [
 const speeds = ['0', '-0.06', '0.02', '-0.05'];
 ---
 
-<section class="section work" aria-labelledby="work-title" data-bg-accent="magenta">
-  <div class="wrap">
-    <div class="work-head">
-      <div>
-        <p class="label mb-5">{capsEl(copy.label)}</p>
-        <h2 id="work-title" class="h2">
-          {copy.heading}
-        </h2>
-      </div>
-      <a href={routes.work} class="link work-all">
-        <span>{copy.allLink}</span>
-        <Icon name="arrow-right" size={20} class="work-all-arrow" />
-      </a>
-    </div>
+<Section
+  id="work"
+  index="03"
+  label={copy.label}
+  title={copy.heading}
+  link={{ href: routes.work, text: copy.allLink }}
+  accent="magenta"
+  class="work"
+>
+  <ul class="work-grid" role="list">
+    {featured.map((item, i) => {
+      const category = serviceBySlug(item.service)?.text.el.short;
+      return (
+        <li class={`work-item work-pos-${i % 4}`} data-reveal="depth">
+          <div class="work-plx" data-parallax={speeds[i % 4] ?? '0'}>
+            <a href={routes.work} class="work-link" data-tilt>
+              <div class="media media-halftone work-media">
+                <Photo image={item.image} alt={item.text.el.alt} sizes={sizes[i % 4] ?? '92vw'} />
+                {item.standIn && <span class="work-chip">{t('standInLabel')}</span>}
+              </div>
+              <div class="work-cap">
+                <p class="work-meta">
+                  <span class="work-num" aria-hidden="true">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  {category && <span class="label">{capsEl(category)}</span>}
+                </p>
+                <h3 class="h3 work-title">
+                  <span>{item.text.el.title}</span>
+                  <Icon name="arrow-up-right" size={22} class="work-title-arrow" />
+                </h3>
+              </div>
+            </a>
+          </div>
+        </li>
+      );
+    })}
+  </ul>
 
-    <ul class="work-grid" role="list">
-      {featured.map((item, i) => {
-        const category = serviceBySlug(item.service)?.text.el.short;
-        return (
-          <li class={`work-item work-pos-${i % 4}`} data-reveal="depth">
-            <div class="work-plx" data-parallax={speeds[i % 4] ?? '0'}>
-              <a href={routes.work} class="work-link" data-tilt>
-                <div class="media media-halftone work-media">
-                  <Photo image={item.image} alt={item.text.el.alt} sizes={sizes[i % 4] ?? '92vw'} />
-                  {item.standIn && <span class="work-chip">{t('standInLabel')}</span>}
-                </div>
-                <div class="work-cap">
-                  <p class="work-meta">
-                    <span class="work-num" aria-hidden="true">
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
-                    {category && <span class="label">{capsEl(category)}</span>}
-                  </p>
-                  <h3 class="h3 work-title">
-                    <span>{item.text.el.title}</span>
-                    <Icon name="arrow-up-right" size={22} class="work-title-arrow" />
-                  </h3>
-                </div>
-              </a>
-            </div>
-          </li>
-        );
-      })}
-    </ul>
-
-    <a href={routes.work} class="btn btn-secondary work-all-end">
-      <span>{copy.allLink}</span>
-      <Icon name="arrow-right" size={20} />
-    </a>
-  </div>
-</section>
+  <a href={routes.work} class="btn btn-secondary work-all-end">
+    <span>{copy.allLink}</span>
+    <Icon name="arrow-right" size={20} />
+  </a>
+</Section>
 
 <style>
   @layer components {
-    .work-head {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 1.5rem 3rem;
-      margin-bottom: clamp(2.5rem, 5vw, 4.5rem);
-    }
-    .work-all {
-      display: none;
-      align-items: center;
-      gap: 0.5rem;
-      min-height: 2.75rem;
-      font-family: var(--font-display);
-      font-weight: 700;
-    }
-    .work-all :global(.work-all-arrow) {
-      transition: transform var(--dur-base) var(--ease-out);
-    }
-    /* Phones: the link closes the set as a full-width button instead. */
+    /* Phones: besides the link under the heading, a full-width button closes the set. */
     .work-all-end {
       width: 100%;
       margin-top: clamp(2.5rem, 6vw, 3.5rem);
@@ -133,7 +110,7 @@ const speeds = ['0', '-0.06', '0.02', '-0.05'];
       z-index: 1;
       padding: 0.3rem 0.6rem;
       background-color: var(--color-yellow);
-      color: var(--color-key);
+      color: var(--ink-fixed);
       font-family: var(--font-display);
       font-size: 0.75rem;
       font-weight: 720;
@@ -196,12 +173,6 @@ const speeds = ['0', '-0.06', '0.02', '-0.05'];
     .work-link:focus-visible {
       outline-offset: 6px;
     }
-    @media (prefers-reduced-motion: no-preference) {
-      .work-all:hover :global(.work-all-arrow),
-      .work-all:focus-visible :global(.work-all-arrow) {
-        transform: translateX(4px);
-      }
-    }
 
     .work-pos-0 {
       --ar: 4 / 3;
@@ -220,9 +191,6 @@ const speeds = ['0', '-0.06', '0.02', '-0.05'];
     }
 
     @media (min-width: 48rem) {
-      .work-all {
-        display: inline-flex;
-      }
       .work-all-end {
         display: none;
       }

@@ -19,11 +19,18 @@
  * `data-docked`, `data-scene`, `--dock`, `--dock-reg` (hero-scene/scene.ts),
  * `.site-header-logo .logo-plate-*` (Hero.astro), `.site-header .logo-plate` and
  * `[data-scroll-progress]` (motion.ts), `data-menu`, `data-menu-open`, `data-menu-close` (script
- * below).
+ * below), `[data-theme-toggle]` (theme.ts).
+ *
+ * Theme: the dark-theme toggle (ThemeToggle.astro) sits first among the header actions at every
+ * width, and as a labelled row in the menu foot. In the dark theme the bar is translucent dark
+ * paper (the same tokens), with a deeper shadow. To make room on narrow phones (under 25rem, with
+ * JS) the header's phone icon gives way: the floating call bar and the menu carry the number
+ * there. Between 64rem and 72rem the nav and action gaps tighten a little for the extra button.
  */
 import Logo from './Logo.astro';
 import Icon from './Icon.astro';
 import ColorBar from './ColorBar.astro';
+import ThemeToggle from './ThemeToggle.astro';
 import { nav, routes, site } from '~/data/site';
 import { t, type Locale } from '~/i18n/ui';
 import { telHref } from '~/lib/links';
@@ -48,7 +55,7 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
     </a>
 
     <nav aria-label={t('navLabel', locale)} class="header-nav hidden lg:block">
-      <ul class="flex items-center gap-7 xl:gap-9">
+      <ul class="flex items-center gap-5 min-[72rem]:gap-7 xl:gap-9">
         {nav.map((item) => (
           <li>
             <a
@@ -64,6 +71,7 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
     </nav>
 
     <div class="header-actions">
+      <ThemeToggle locale={locale} />
       <a
         href={telHref(site.contact.phone)}
         class="btn btn-secondary header-btn header-phone hidden xl:inline-flex"
@@ -76,7 +84,7 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
       </a>
       <a
         href={telHref(site.contact.phone)}
-        class="icon-btn xl:hidden"
+        class="icon-btn header-call xl:hidden"
         aria-label={`${t('callUs', locale)}: ${site.contact.phoneDisplay}`}
       >
         <Icon name="phone" size={22} />
@@ -143,6 +151,7 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
           {t('callUs', locale)}: {site.contact.phoneDisplay}
         </span>
       </a>
+      <ThemeToggle locale={locale} variant="row" class="menu-theme" />
       <div class="menu-meta">
         <p class="voice menu-tagline">{site.tagline[locale]}</p>
         <div class="flex gap-2">
@@ -198,6 +207,21 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
         margin-left: 0.5rem;
       }
     }
+    /* Room for the theme toggle between 64rem and 72rem (the nav gap tightens in the markup). */
+    @media (min-width: 64rem) and (max-width: 71.99rem) {
+      .header-actions {
+        gap: 0.5rem;
+      }
+      .header-actions .header-btn {
+        padding-inline: 0.875rem;
+      }
+    }
+    /* Narrow phones: the theme toggle takes the phone icon's place (FloatingContact calls). */
+    @media (max-width: 24.99rem) {
+      :global(html:not(.no-js)) .header-call {
+        display: none;
+      }
+    }
 
     /* Scrolled: hairline and a soft paper shadow (never over the transparent hero state). */
     .site-header[data-scrolled] {
@@ -206,6 +230,11 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
     .site-header[data-scrolled]:not([data-over-hero]),
     .site-header[data-over-hero]:is([data-solid], [data-docked]) {
       box-shadow: 0 14px 32px -26px rgb(34 31 32 / 0.45);
+    }
+    /* Dark theme: a soft shadow must be darker than the dark paper to read. */
+    :global(html[data-theme='dark']) .site-header[data-scrolled]:not([data-over-hero]),
+    :global(html[data-theme='dark']) .site-header[data-over-hero]:is([data-solid], [data-docked]) {
+      box-shadow: 0 16px 36px -24px rgb(0 0 0 / 0.85);
     }
 
     /*
@@ -511,6 +540,9 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
       flex-direction: column;
       gap: 0.75rem;
       padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
+    }
+    .menu-foot :global(.menu-theme) {
+      margin-top: 0.25rem;
     }
     .menu-meta {
       display: flex;

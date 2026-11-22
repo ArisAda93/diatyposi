@@ -27,10 +27,19 @@
  * Start-up runs in short steps that yield to the main thread (startup.ts): createHeroScene is
  * async, and the canvas is only shown (and faded in) by start(), after the first real frame.
  *
- * The canvas scrolls with the hero and sits under the header (z-index), composited with
- * `mix-blend-mode: multiply`, so only ink shows and the paper, the living background, the grain
- * and the text stay as they are. One draw loop; it stops when the hero is off-screen, once docked,
- * and while the tab is hidden.
+ * - Themes (theme.ts): in light the plates multiply on a white canvas composited with
+ *   `mix-blend-mode: multiply`; in dark they screen on a black canvas composited with
+ *   `mix-blend-mode: screen`, and the key plate, the hairlines and the shadow (a faint glow in
+ *   dark) take the light key colour. `dt:themechange` switches the blend state, the uniforms and
+ *   the canvas's blend mode together and redraws at once, in the same task, without rebuilding
+ *   anything.
+ * - Hand-over to the site-wide floating plates (handoff-signal.ts): every frame in which the
+ *   hand-off progress, the art box or the plates' place changed, the scene publishes them
+ *   (`dt:hero-handoff` on document, and latestHeroHandoff()).
+ *
+ * The canvas scrolls with the hero and sits under the header (z-index), composited so that only
+ * ink shows and the paper, the living background, the grain and the text stay as they are. One
+ * draw loop; it stops when the hero is off-screen, once docked, and while the tab is hidden.
  */
 import { Camera, Geometry, Mesh, Program, Renderer, Transform } from 'ogl';
 import { ARCH, ARCH_PLATES } from '~/components/logo-paths';
@@ -64,6 +73,7 @@ import {
   guardY,
   handoffDistance,
   placeInBox,
+  type Box,
   type Placement,
   type ViewBox,
 } from './math';
@@ -75,7 +85,9 @@ import {
   quadVertex,
   shadowFragment,
 } from './shaders';
+import { latestHeroHandoff, publishHeroHandoff } from './handoff-signal';
 import { precompile, yieldToMain } from './startup';
+import { inkModel, keyInkFor, sceneThemeOf, type SceneTheme } from './theme';
 
 export interface SceneElements {
   hero: HTMLElement;
@@ -85,6 +97,8 @@ export interface SceneElements {
   markBox: HTMLElement;
   /** The static SVG mark: its box is the rest position and size of the plates. */
   mark: SVGSVGElement;
+  /** The art box (`[data-hero-art]`), published for the hand-over (handoff-signal.ts). */
+  art: HTMLElement | null;
   /** Hero copy: when it sits below the art, the plates never reach it while they fade. */
   copy: HTMLElement | null;
   /** Receives `--dock`, `--dock-reg`, `data-scene` and `data-docked`. */
@@ -134,11 +148,11 @@ const INTRO_FROM: Record<PlateId, { x: number; y: number; rz: number }> = {
  */
 const HAIRLINE = { width: 1.5, alpha: 1, scrollFade: 8 };
 /**
- * Contact shadow: ink strength, size relative to the plates' bounds, offset towards the lower
- * right (share of the bounds; light from the upper left), and depth below the rearmost plate
- * (raster units). Set alpha to 0 to remove it.
+ * Contact shadow: size relative to the plates' bounds, offset towards the lower right (share of
+ * the bounds; light from the upper left), and depth below the rearmost plate (raster units). Its
+ * strength per theme is theme.ts `shadowAlpha` (0 removes it).
  */
-const SHADOW = { alpha: 0.07, spread: 1.3, offset: { x: 0.04, y: -0.1 }, depth: 40 };
+const SHADOW = { spread: 1.3, offset: { x: 0.04, y: -0.1 }, depth: 40 };
 /**
  * Hand-off: gap kept below the header and above the copy (px), the mark's half-height with slack
  * for breathing, tilt and misregistration (raster units), and slack on the measured extent of the
@@ -178,6 +192,8 @@ interface Metrics {
   heroLeft: number;
   /** Plates at rest, in hero coordinates. */
   rest: Placement;
+  /** The art box in hero coordinates (the mark's box if there is none). */
+  art: Box;
   /** Lowest edge the plates keep below (header bottom + gap), viewport px (the header is fixed). */
   bandBottom: number;
   /** Highest edge the plates keep above (copy top − gap) in hero coordinates; null beside it. */
@@ -200,7 +216,8 @@ export const createHeroScene = async (
   canvas: HTMLCanvasElement,
   onLost: () => void,
 ): Promise<HeroScene> => {
-  const { hero, stage, markBox, mark, copy, header } = els;
+  const { hero, stage, markBox, mark, art, copy, header } = els;
+  const root = document.documentElement;
   const markViewBox = viewBoxOf(mark);
   if (!markViewBox) throw new Error('Hero mark has no viewBox');
   // The group pivots on the centre of the mark.
@@ -230,7 +247,6 @@ export const createHeroScene = async (
   const ensureContext = (): void => {
     if (gl.isContextLost()) throw new Error('Hero scene lost its WebGL context while building');
   };
-  gl.clearColor(1, 1, 1, 1);
   const camera = new Camera(gl, { fov: FOV, near: 1, far: 10_000 });
 
   // Shaders: linked in the background where the browser can, then one OGL program per task.
@@ -254,8 +270,12 @@ export const createHeroScene = async (
   };
 
   await yieldToMain();
+  // The colour that leaves the page untouched (white in light, black in dark), shared by every
+  // colour pass; set with the blend state by applyTheme.
+  const paper = { value: new Float32Array(3) };
   const plateUniforms = {
     uInk: { value: new Float32Array(3) },
+    uPaper: paper,
     uAlpha: { value: 1 },
   };
   const colorProgram = linked(
@@ -268,7 +288,6 @@ export const createHeroScene = async (
       cullFace: gl.BACK,
     }),
   );
-  colorProgram.setBlendFunc(gl.DST_COLOR, gl.ZERO);
 
   await yieldToMain();
   const depthProgram = linked(
@@ -282,8 +301,9 @@ export const createHeroScene = async (
   );
 
   await yieldToMain();
-  const keyInk = hexToRgb(hexOf('k'));
-  const lineUniforms = { uInk: { value: keyInk }, uAlpha: { value: 0 } };
+  // Key ink of the hairlines and the shadow (and of the key plate): set by applyTheme.
+  const keyInk = new Float32Array(3);
+  const lineUniforms = { uInk: { value: keyInk }, uPaper: paper, uAlpha: { value: 0 } };
   const lineProgram = linked(
     new Program(gl, {
       vertex: quadVertex,
@@ -294,10 +314,9 @@ export const createHeroScene = async (
       cullFace: false,
     }),
   );
-  lineProgram.setBlendFunc(gl.DST_COLOR, gl.ZERO);
 
   await yieldToMain();
-  const shadowUniforms = { uInk: { value: keyInk }, uAlpha: { value: 0 } };
+  const shadowUniforms = { uInk: { value: keyInk }, uPaper: paper, uAlpha: { value: 0 } };
   const shadowProgram = linked(
     new Program(gl, {
       vertex: quadVertex,
@@ -308,7 +327,6 @@ export const createHeroScene = async (
       cullFace: false,
     }),
   );
-  shadowProgram.setBlendFunc(gl.DST_COLOR, gl.ZERO);
 
   // Buffers and meshes.
   await yieldToMain();
@@ -355,6 +373,37 @@ export const createHeroScene = async (
   shadow.setParent(group);
 
   // ---------------------------------------------------------------------------------------------
+  // Theme (theme.ts): blend state, neutral colour, key ink and the canvas's CSS blend mode.
+  // ---------------------------------------------------------------------------------------------
+
+  const keyPlate = plates.find((p) => p.layout.id === 'k');
+  const colorPasses = [colorProgram, lineProgram, shadowProgram];
+  let theme: SceneTheme = sceneThemeOf(root.dataset['theme']);
+  let shadowAlpha = 0;
+
+  const applyTheme = (next: SceneTheme): void => {
+    theme = next;
+    const look = inkModel(next);
+    paper.value.set(look.paper);
+    gl.clearColor(look.paper[0], look.paper[1], look.paper[2], 1);
+    for (const program of colorPasses) {
+      program.setBlendFunc(gl[look.blend.src], gl[look.blend.dst]);
+    }
+    // Dark: the light key colour of the page (a style read, no layout); light: the logo's key.
+    const key = keyInkFor(
+      next,
+      next === 'dark' ? getComputedStyle(root).getPropertyValue('--color-key') : null,
+    );
+    keyInk.set(key);
+    keyPlate?.ink.set(key);
+    // Rescale the shadow of the frame already set up, for a redraw before the next frame.
+    if (shadowAlpha > 0) shadowUniforms.uAlpha.value *= look.shadowAlpha / shadowAlpha;
+    shadowAlpha = look.shadowAlpha;
+    canvas.style.mixBlendMode = look.cssBlend;
+  };
+  applyTheme(theme);
+
+  // ---------------------------------------------------------------------------------------------
   // Measurements (on start, on resize, when fonts settle). Reads only; no writes in between.
   // ---------------------------------------------------------------------------------------------
 
@@ -363,6 +412,7 @@ export const createHeroScene = async (
   const measure = (): Metrics => {
     const heroRect = hero.getBoundingClientRect();
     const markRect = mark.getBoundingClientRect();
+    const artRect = art?.getBoundingClientRect();
     const headerRect = header?.getBoundingClientRect();
     const copyRect = copy?.getBoundingClientRect();
     const scrollY = window.scrollY;
@@ -409,12 +459,19 @@ export const createHeroScene = async (
     camera.perspective({ aspect: width / height, near: distance * 0.05, far: distance * 6 });
     camera.position.set(0, 0, distance);
 
+    const artBox = artRect && artRect.width > 0 ? artRect : markRect;
     return {
       width,
       height,
       heroTop: heroRect.top + scrollY,
       heroLeft: heroRect.left,
       rest,
+      art: {
+        left: artBox.left - heroRect.left,
+        top: artBox.top - heroRect.top,
+        width: artBox.width,
+        height: artBox.height,
+      },
       bandBottom,
       copyTop,
       // Hero coordinates are viewport coordinates with the hero at the top.
@@ -656,7 +713,7 @@ export const createHeroScene = async (
 
     // Contact shadow: under the plates' current footprint, offset away from the light.
     const ink = inkSum / plates.length;
-    shadowUniforms.uAlpha.value = SHADOW.alpha * explode * fadeIn * ink * out.ink;
+    shadowUniforms.uAlpha.value = shadowAlpha * explode * fadeIn * ink * out.ink;
     if (shadowUniforms.uAlpha.value > 0.002) {
       const w = b.maxX - b.minX;
       const h = b.maxY - b.minY;
@@ -682,6 +739,20 @@ export const createHeroScene = async (
       }
     }
     setHeaderDock(out.dock);
+    // Hand-over to the floating plates (handoff-signal.ts): sent only when something changed.
+    // Viewport coordinates: the hero's top is at −scrolled; the plates' pivot is at y.
+    publishHeroHandoff({
+      live: true,
+      progress,
+      ink: out.ink,
+      rect: {
+        left: m.heroLeft + m.art.left,
+        top: m.art.top - scrolled,
+        width: m.art.width,
+        height: m.art.height,
+      },
+      mark: { x: m.heroLeft + m.rest.x, y, scale },
+    });
 
     if (progress >= 1 && introDone && handedOver) {
       // Handed off: the header logo has taken over; nothing to draw until the user scrolls back.
@@ -754,6 +825,22 @@ export const createHeroScene = async (
     onLost();
   };
 
+  const onThemeChange = (): void => {
+    if (destroyed) return;
+    const next = sceneThemeOf(root.dataset['theme']);
+    if (next === theme) return;
+    applyTheme(next);
+    // Redraw now, in the same task as the switch, so the new blend mode never shows a frame drawn
+    // for the old one (a white or black box). The pose is the last frame's; the loop goes on.
+    if (!started || !m) return;
+    try {
+      render();
+    } catch {
+      destroy();
+      onLost();
+    }
+  };
+
   const resizeObserver = new ResizeObserver(onResize);
   const intersectionObserver = new IntersectionObserver(([entry]) => {
     visible = entry?.isIntersecting ?? true;
@@ -773,6 +860,7 @@ export const createHeroScene = async (
     document.removeEventListener('pointerout', onPointerOut);
     document.removeEventListener('visibilitychange', onVisibility);
     canvas.removeEventListener('webglcontextlost', onContextLost);
+    document.removeEventListener('dt:themechange', onThemeChange);
 
     canvas.remove();
     hero.removeAttribute('data-scene');
@@ -783,6 +871,9 @@ export const createHeroScene = async (
     header?.style.removeProperty('--dock');
     header?.style.removeProperty('--dock-reg');
     if (!gl.isContextLost()) gl.getExtension('WEBGL_lose_context')?.loseContext();
+    // The floating plates stop following a scene that is gone (the static mark shows).
+    const lastSent = latestHeroHandoff();
+    if (started && lastSent?.live) publishHeroHandoff({ ...lastSent, live: false });
   };
 
   /**
@@ -816,6 +907,7 @@ export const createHeroScene = async (
 
   // Listen from creation on: a prepared scene may wait (SVG intro, reduced motion) before start().
   canvas.addEventListener('webglcontextlost', onContextLost);
+  document.addEventListener('dt:themechange', onThemeChange);
 
   const start = ({ intro: withIntro }: { intro: boolean }): boolean => {
     if (started || destroyed) return false;
@@ -823,6 +915,8 @@ export const createHeroScene = async (
       onContextLost();
       return false;
     }
+    // A switch the event did not report (none expected): draw the first frame in the right theme.
+    onThemeChange();
     started = true;
     intro = withIntro;
 

@@ -4,7 +4,8 @@
  * placeholder (halftone sheet, out-of-register pin) and nothing loads from Google
  * (src/scripts/map-consent.ts swaps in the iframe). Without JS only the external link shows.
  * Hovering or focusing the button pulls the pin's plates into register; while the map loads a
- * halftone screen sweeps over the box (`data-loading`).
+ * halftone screen sweeps over the box (`data-loading`). Theme tokens throughout; the pin's
+ * plates overprint with `--blend-ink` (multiply on paper, screen on the dark page).
  */
 import Icon from '~/components/Icon.astro';
 import { site } from '~/data/site';
@@ -154,7 +155,7 @@ const plates = ['c', 'm', 'y', 'k'] as const;
       grid-area: 1 / 1;
       width: 100%;
       height: auto;
-      mix-blend-mode: multiply;
+      mix-blend-mode: var(--blend-ink);
       transition: transform var(--dur-slow) var(--ease-snap);
     }
     .map-plate-c {

@@ -1,18 +1,23 @@
 ---
 /**
  * The “Μία ιδέα. Παντού.” illustrations: press-room line art (key hairlines on paper) and one
- * sample brand mark printed in C, M, Y and K plates that overprint with multiply. Decorative.
+ * sample brand mark printed in C, M, Y and K plates that overprint like inks
+ * (`mix-blend-mode: var(--blend-ink)`: multiply on light paper, screen on dark). Decorative.
  *
- * mode="stage": one SVG with every object and one mark (desktop sticky stage). An ancestor's
- *   `data-stage` (a step id, or `blank`) picks what shows; CSS transitions draw the sketch, print
- *   the plates (Y → M → C → K), move and scale the same mark onto each object and draw it in.
+ * mode="stage": one SVG with every object and one mark (desktop sticky stage), driven frame by
+ *   frame by src/scripts/idea-journey.ts: each object's `--draw` (0…1) draws its strokes in or
+ *   out and fades its fills; the sketch's `--sk` draws its strokes in turn; the plates and the
+ *   mark get inline transforms and opacity. Until the script runs the stage is blank paper.
  * mode="still": one step in its final state (phones, reduced motion, no JS): the sketch for
  *   `idea`, the printed mark on its object for every other step. Nothing animates.
  *
- * The mark is drawn around (0, 0); MARK_AT places it on each object in the 600 × 600 view box.
+ * Objects are drawn to real proportions: a 9 × 12 sketchbook, an 85 × 55 business card, a
+ * T-shirt, a shop front, a mug and a generic 9 : 19.5 phone with a square post. The mark is drawn
+ * around (0, 0); MARK_AT (src/scripts/idea-journey.ts) places it on each object in the 600 × 600
+ * view box.
  */
 import { homeText } from '~/i18n/pages/home';
-import { JOURNEY_STEPS, type JourneyStepId } from '~/scripts/idea-journey';
+import { MARK_AT, MARK_PLATES, type JourneyStepId } from '~/scripts/idea-journey';
 
 interface Props {
   mode: 'stage' | 'still';
@@ -23,34 +28,21 @@ interface Props {
 const { mode, step = 'idea' } = Astro.props;
 const name = homeText.el.journey.sampleName;
 
-const MARK_AT: Record<JourneyStepId, { x: number; y: number; s: number }> = {
-  idea: { x: 300, y: 292, s: 1.7 },
-  mark: { x: 300, y: 292, s: 1.7 },
-  card: { x: 228, y: 306, s: 0.6 },
-  shirt: { x: 300, y: 262, s: 0.56 },
-  sign: { x: 300, y: 214, s: 0.42 },
-  gift: { x: 290, y: 320, s: 0.6 },
-  social: { x: 300, y: 258, s: 0.62 },
-};
-
-const placeCss = (id: JourneyStepId): string => {
-  const { x, y, s } = MARK_AT[id];
-  return `translate(${x}px, ${y}px) scale(${s})`;
-};
-const placeAttr = (id: JourneyStepId): string => {
-  const { x, y, s } = MARK_AT[id];
-  return `translate(${x} ${y}) scale(${s})`;
-};
-
 const stage = mode === 'stage';
 const show = (id: JourneyStepId): boolean => stage || step === id;
 const showSketch = stage || step === 'idea';
 const showPlates = stage || step !== 'idea';
-/** Stage mode: one custom property per placement, picked by the data-stage rules below. */
-const markVars = stage ? JOURNEY_STEPS.map(({ id }) => `--at-${id}:${placeCss(id)}`).join(';') : '';
+
+const placeAttr = (id: JourneyStepId): string => {
+  const { x, y, s } = MARK_AT[id];
+  return `translate(${x} ${y}) scale(${s})`;
+};
+/** Stage mode starts on the sketch's place; the script takes over from the first frame. */
+const start = MARK_AT.idea;
+const stageStart = `transform:translate(${start.x}px, ${start.y}px) scale(${start.s})`;
 
 // Sketchbook spiral and press-sheet furniture.
-const rings = Array.from({ length: 11 }, (_, i) => `M${150 + i * 30} 98V118`).join('');
+const rings = Array.from({ length: 11 }, (_, i) => `M${150 + i * 30} 54V74`).join('');
 const cropMarks =
   'M84 100H100M110 74V90M500 100H516M490 74V90M84 500H100M110 510V526M500 500H516M490 510V526';
 /** Registration target: a small circle and a cross. */
@@ -69,18 +61,24 @@ const colourBar = [
 ];
 const awningStripes = Array.from({ length: 7 }, (_, i) => `M${174 + i * 50} 266V300`).join('');
 
-// The mark: Y disc, M arch, C square, K wordmark.
+// T-shirt: 228 wide at the hem, 352 from shoulder to hem (about 0.65, as a real tee).
+const SHIRT =
+  'M255 126C270 152 330 152 345 126L406 148L476 222L436 256L414 236V500H186V236L164 256L124 222L194 148Z';
+// Mug: 180 wide, 214 tall (about 8 × 9.5 cm).
+const MUG_BODY = 'M200 200V414A90 18 0 0 0 380 414V200';
+const MUG_TOP = 'M200 200A90 18 0 1 0 380 200A90 18 0 1 0 200 200';
+// Phone: 180 × 390 (9 : 19.5), corners 24 (13 % of the width), a 6-unit bezel.
+const PHONE =
+  'M234 105H366A24 24 0 0 1 390 129V471A24 24 0 0 1 366 495H234A24 24 0 0 1 210 471V129A24 24 0 0 1 234 105Z';
+const SCREEN =
+  'M234 111H366A18 18 0 0 1 384 129V471A18 18 0 0 1 366 489H234A18 18 0 0 1 216 471V129A18 18 0 0 1 234 111Z';
+const HEART =
+  'M228 357C220 351.5 219.5 343 224.5 343C226.5 343 228 345 228 346.5C228 345 229.5 343 231.5 343C236.5 343 236 351.5 228 357Z';
+
+// The mark: Y disc, M arch, C square, K wordmark (offsets in MARK_PLATES, print order).
 const ARCH_M = 'M-46 22A46 46 0 0 1 46 22H22A22 22 0 0 0 -22 22Z';
-const plates = [
-  { id: 'y', ox: -10, oy: 8, delay: 0 },
-  { id: 'm', ox: 9, oy: -7, delay: 0.18 },
-  { id: 'c', ox: -7, oy: -9, delay: 0.36 },
-  { id: 'k', ox: 6, oy: 9, delay: 0.54 },
-] as const;
-const plateStyle = (p: (typeof plates)[number]): string | undefined =>
-  stage ? `--ox:${p.ox}px;--oy:${p.oy}px;--pd:${p.delay}s` : undefined;
-const sketchDelay = (seconds: number): string | undefined =>
-  stage ? `--d:${seconds}s` : undefined;
+/** Stage mode: each sketch stroke starts a fifth of the sketch later than the one before. */
+const sketchStroke = (k: number): string | undefined => (stage ? `--k:${k}` : undefined);
 ---
 
 <svg
@@ -91,13 +89,13 @@ const sketchDelay = (seconds: number): string | undefined =>
   focusable="false"
 >
   {show('idea') && (
-    <g class="ij-obj ij-obj-idea">
-      <g transform="rotate(-2 300 300)">
-        <rect class="ij-paper" x="118" y="108" width="364" height="384" />
-        <path class="ij-line ij-draw" pathLength="1" d="M118 108H482V492H118Z" />
+    <g class="ij-obj ij-obj-idea" data-journey-obj="idea">
+      <g transform="rotate(-2 300 312)">
+        <rect class="ij-paper" x="114" y="64" width="372" height="496" />
+        <path class="ij-line ij-draw" pathLength="1" d="M114 64H486V560H114Z" />
         <path class="ij-line ij-hair ij-draw" pathLength="1" d={rings} />
       </g>
-      <g transform="translate(436 500) rotate(-24)">
+      <g transform="translate(436 512) rotate(-24)">
         <rect class="ij-paper" x="-64" y="-7" width="120" height="14" />
         <rect class="ij-tint" x="56" y="-7" width="14" height="14" />
         <path class="ij-ink" d="M-80 -2.2L-86 0L-80 2.2Z" />
@@ -112,7 +110,7 @@ const sketchDelay = (seconds: number): string | undefined =>
   )}
 
   {show('mark') && (
-    <g class="ij-obj ij-obj-mark">
+    <g class="ij-obj ij-obj-mark" data-journey-obj="mark">
       <rect class="ij-paper" x="110" y="100" width="380" height="400" />
       <path class="ij-line ij-hair ij-draw" pathLength="1" d="M110 100H490V500H110Z" />
       <path class="ij-line ij-hair ij-draw" pathLength="1" d={cropMarks} />
@@ -128,10 +126,10 @@ const sketchDelay = (seconds: number): string | undefined =>
   )}
 
   {show('card') && (
-    <g class="ij-obj ij-obj-card">
+    <g class="ij-obj ij-obj-card" data-journey-obj="card">
       <g transform="rotate(8 330 300)">
-        <rect class="ij-tint" x="150" y="200" width="340" height="200" />
-        <path class="ij-line ij-hair ij-draw" pathLength="1" d="M150 200H490V400H150Z" />
+        <rect class="ij-tint" x="150" y="190" width="340" height="220" />
+        <path class="ij-line ij-hair ij-draw" pathLength="1" d="M150 190H490V410H150Z" />
       </g>
       <rect class="ij-paper" x="130" y="190" width="340" height="220" />
       <path class="ij-line ij-draw" pathLength="1" d="M130 190H470V410H130Z" />
@@ -146,26 +144,19 @@ const sketchDelay = (seconds: number): string | undefined =>
   )}
 
   {show('shirt') && (
-    <g class="ij-obj ij-obj-shirt">
-      <path
-        class="ij-paper"
-        d="M262 128C275 150 325 150 338 128L410 152L470 228L426 258L396 232V500H204V232L174 258L130 228L190 152Z"
-      />
-      <path
-        class="ij-line ij-draw"
-        pathLength="1"
-        d="M262 128C275 150 325 150 338 128L410 152L470 228L426 258L396 232V500H204V232L174 258L130 228L190 152Z"
-      />
+    <g class="ij-obj ij-obj-shirt" data-journey-obj="shirt">
+      <path class="ij-paper" d={SHIRT} />
+      <path class="ij-line ij-draw" pathLength="1" d={SHIRT} />
       <path
         class="ij-line ij-hair ij-draw"
         pathLength="1"
-        d="M254 131C268 162 332 162 346 131M137 219L181 249M463 219L419 249M204 486H396"
+        d="M247 129C263 166 337 166 353 129M131 215L171 249M469 215L429 249M186 486H414"
       />
     </g>
   )}
 
   {show('sign') && (
-    <g class="ij-obj ij-obj-sign">
+    <g class="ij-obj ij-obj-sign" data-journey-obj="sign">
       <rect class="ij-tint" x="100" y="132" width="400" height="390" />
       <rect class="ij-paper" x="124" y="156" width="352" height="100" />
       <path class="ij-paper" d="M124 266H476L462 300H138Z" />
@@ -195,92 +186,81 @@ const sketchDelay = (seconds: number): string | undefined =>
   )}
 
   {show('gift') && (
-    <g class="ij-obj ij-obj-gift">
-      <path class="ij-paper" d="M190 214V430A100 20 0 0 0 390 430V214Z" />
-      <path class="ij-tint" d="M190 214A100 20 0 1 0 390 214A100 20 0 1 0 190 214Z" />
+    <g class="ij-obj ij-obj-gift" data-journey-obj="gift">
+      <path class="ij-paper" d={`${MUG_BODY}Z`} />
+      <path class="ij-tint" d={`${MUG_TOP}Z`} />
+      <path class="ij-line ij-draw" pathLength="1" d={`${MUG_BODY}${MUG_TOP}`} />
       <path
         class="ij-line ij-draw"
         pathLength="1"
-        d="M190 214V430A100 20 0 0 0 390 430V214M190 214A100 20 0 1 0 390 214A100 20 0 1 0 190 214"
-      />
-      <path
-        class="ij-line ij-draw"
-        pathLength="1"
-        d="M390 252C446 252 458 276 458 314C458 356 432 380 390 384M390 278C424 278 434 292 434 315C434 340 420 356 390 358"
+        d="M380 240C436 240 448 266 448 304C448 346 422 370 380 374M380 266C414 266 424 280 424 303C424 328 410 344 380 346"
       />
       <path
         class="ij-line ij-hair ij-draw"
         pathLength="1"
-        d="M202 216A88 15 0 1 0 378 216A88 15 0 1 0 202 216M150 462H430"
+        d="M211 202A79 13 0 1 0 369 202A79 13 0 1 0 211 202M140 446H440"
       />
       <path
         class="ij-line ij-hair ij-draw"
         pathLength="1"
-        d="M262 176C250 154 274 142 262 118M300 180C288 158 312 146 300 122M338 176C326 154 350 142 338 118"
+        d="M252 166C240 144 264 132 252 108M290 170C278 148 302 136 290 112M328 166C316 144 340 132 328 108"
       />
     </g>
   )}
 
   {show('social') && (
-    <g class="ij-obj ij-obj-social">
+    <g class="ij-obj ij-obj-social" data-journey-obj="social">
+      <path class="ij-paper" d={PHONE} />
+      <rect class="ij-tint" x="216" y="166" width="168" height="168" />
+      <path class="ij-line ij-draw" pathLength="1" d={PHONE} />
+      <path class="ij-line ij-hair ij-draw" pathLength="1" d={SCREEN} />
+      <circle class="ij-ink" cx="300" cy="122" r="3.5" />
       <path
-        class="ij-paper"
-        d="M230 84H370A26 26 0 0 1 396 110V490A26 26 0 0 1 370 516H230A26 26 0 0 1 204 490V110A26 26 0 0 1 230 84Z"
-      />
-      <rect class="ij-tint" x="216" y="170" width="168" height="168" />
-      <path
-        class="ij-line ij-draw"
+        class="ij-line ij-hair ij-draw"
         pathLength="1"
-        d="M230 84H370A26 26 0 0 1 396 110V490A26 26 0 0 1 370 516H230A26 26 0 0 1 204 490V110A26 26 0 0 1 230 84Z"
+        d="M393 186V230M393 246V274M226 122H240M360 122H374"
       />
       <path
         class="ij-line ij-hair ij-draw"
         pathLength="1"
-        d="M216 112V488A14 14 0 0 0 230 502H370A14 14 0 0 0 384 488V112A14 14 0 0 0 370 98H230A14 14 0 0 0 216 112Z"
+        d="M223 149A9 9 0 1 0 241 149A9 9 0 1 0 223 149M250 155H282M216 166H384M216 334H384"
       />
-      <path class="ij-line ij-draw" pathLength="1" d="M284 91H316" />
+      <path class="ij-line ij-bold ij-draw" pathLength="1" d="M250 144H302M282 478H318" />
+      <path class="ij-m ij-overprint" d={HEART} />
       <path
         class="ij-line ij-hair ij-draw"
         pathLength="1"
-        d="M224 146A12 12 0 1 0 248 146A12 12 0 1 0 224 146M258 153H300M216 170H384M216 338H384"
-      />
-      <path class="ij-line ij-bold ij-draw" pathLength="1" d="M258 141H330M272 492H328" />
-      <path
-        class="ij-m ij-multiply"
-        d="M232 372C219 363 220 351 227 351C230 351 232 354 232 356C232 354 234 351 237 351C244 351 245 363 232 372Z"
-      />
-      <path
-        class="ij-line ij-hair ij-draw"
-        pathLength="1"
-        d="M232 372C219 363 220 351 227 351C230 351 232 354 232 356C232 354 234 351 237 351C244 351 245 363 232 372ZM254 354H274V367H264L258 373V367H254ZM222 392H370M222 406H346M222 420H300"
+        d={`${HEART}M243 343H258V352H250L246 356V352H243ZM222 374H372M222 386H342M222 398H296M216 458H384`}
       />
     </g>
   )}
 
   <g
     class="ij-mark"
-    style={stage ? markVars : undefined}
+    data-journey-mark={stage ? '' : undefined}
+    style={stage ? stageStart : undefined}
     transform={stage ? undefined : placeAttr(step)}
   >
+    {stage && <circle class="ij-mark-hit" cx="0" cy="-8" r="96" />}
     {showSketch && (
-      <g class="ij-sketch">
+      <g class="ij-sketch" data-journey-sketch={stage ? '' : undefined}>
         <path class="ij-line ij-hair ij-guide" d="M-104 -28H104M0 -100V44" />
         <path
           class="ij-line ij-draw"
           pathLength="1"
-          style={sketchDelay(0)}
+          style={sketchStroke(0)}
           d="M-52 -42A36 36 0 1 1 20 -42A36 36 0 1 1 -52 -42M-49 -48A35 37 -8 0 1 18 -35"
         />
         <path
           class="ij-line ij-draw"
           pathLength="1"
-          style={sketchDelay(0.35)}
+          style={sketchStroke(0.2)}
           d="M-20 -56H49M44 -61V7M50 2H-19M-14 8V-61"
         />
         <path
           class="ij-line ij-draw"
           pathLength="1"
-          style={sketchDelay(0.7)}
+          style={sketchStroke(0.4)}
           d="M-46 22A46 46 0 0 1 46 22M22 22A22 22 0 0 0 -22 22M-52 22H-18M18 22H52"
         />
         <text class="ij-sketch-word" x="0" y="58" text-anchor="middle">
@@ -289,14 +269,14 @@ const sketchDelay = (seconds: number): string | undefined =>
         <path
           class="ij-line ij-draw"
           pathLength="1"
-          style={sketchDelay(1.1)}
+          style={sketchStroke(0.6)}
           d="M-74 70C-30 75 30 66 76 70"
         />
       </g>
     )}
     {showPlates &&
-      plates.map((p) => (
-        <g class={`ij-plate ij-plate-${p.id}`} style={plateStyle(p)}>
+      MARK_PLATES.map((p) => (
+        <g class={`ij-plate ij-plate-${p.id}`} data-journey-plate={stage ? p.id : undefined}>
           {p.id === 'y' && <circle class="ij-y" cx="-16" cy="-42" r="36" />}
           {p.id === 'm' && <path class="ij-m" d={ARCH_M} />}
           {p.id === 'c' && <rect class="ij-c" x="-14" y="-56" width="58" height="58" />}
@@ -313,11 +293,21 @@ const sketchDelay = (seconds: number): string | undefined =>
 <style>
   @layer components {
     .ij-art {
+      /* Object surfaces: paper and its shade in light mode; in dark mode the objects are raised
+         a step above the page, so they read as objects and not as holes. */
+      --ij-surface: var(--color-paper);
+      --ij-shade: var(--color-paper-2);
       display: block;
       width: 100%;
       height: auto;
       overflow: visible;
       isolation: isolate;
+    }
+    @media not print {
+      :global(html[data-theme='dark']) .ij-art {
+        --ij-surface: color-mix(in srgb, var(--color-key) 8%, var(--color-paper-2));
+        --ij-shade: var(--color-paper-2);
+      }
     }
 
     /* Line art: key hairlines on paper. Stills are drawn smaller, so their lines are heavier. */
@@ -338,10 +328,10 @@ const sketchDelay = (seconds: number): string | undefined =>
       stroke-width: calc(var(--sw, 1.5) * 2.4);
     }
     .ij-paper {
-      fill: var(--color-paper);
+      fill: var(--ij-surface);
     }
     .ij-tint {
-      fill: var(--color-paper-2);
+      fill: var(--ij-shade);
     }
     .ij-ink {
       fill: var(--color-key);
@@ -370,8 +360,8 @@ const sketchDelay = (seconds: number): string | undefined =>
       opacity: 0.15;
     }
     .ij-plate,
-    .ij-multiply {
-      mix-blend-mode: multiply;
+    .ij-overprint {
+      mix-blend-mode: var(--blend-ink);
     }
     .ij-word {
       font-family: var(--font-display);
@@ -396,109 +386,47 @@ const sketchDelay = (seconds: number): string | undefined =>
     }
 
     /* ---------------------------------------------------------------------------------------- */
-    /* Stage: everything follows the ancestor's data-stage                                      */
+    /* Stage: idea-journey.ts writes the frame                                                   */
     /* ---------------------------------------------------------------------------------------- */
 
-    /* Lines draw in along their length (pathLength 1): dash 1, gap 2, offset 1.5 = not drawn. */
-    .ij-art-stage .ij-draw {
-      stroke-dasharray: 1 2;
-      stroke-dashoffset: 1.5;
-    }
-
-    /* Objects: hidden until their step; then they fade in and their lines draw. */
+    /* Lines draw along their length (pathLength 1, dash 1, gap 2): offset 1 − draw. Drawing out
+       runs the same way back, so the strokes retract. An object is hidden at draw 0, so no
+       round cap is left behind as a dot. */
     .ij-art-stage .ij-obj {
-      opacity: 0;
-      transition: opacity 0.3s linear;
+      opacity: min(1, calc(var(--draw, 0) * 20));
     }
     .ij-art-stage .ij-obj .ij-draw {
-      transition: stroke-dashoffset 0.4s var(--ease-out);
+      stroke-dasharray: 1 2;
+      stroke-dashoffset: calc(1 - var(--draw, 0));
     }
-    :global([data-stage='idea']) .ij-art-stage .ij-obj-idea,
-    :global([data-stage='mark']) .ij-art-stage .ij-obj-mark,
-    :global([data-stage='card']) .ij-art-stage .ij-obj-card,
-    :global([data-stage='shirt']) .ij-art-stage .ij-obj-shirt,
-    :global([data-stage='sign']) .ij-art-stage .ij-obj-sign,
-    :global([data-stage='gift']) .ij-art-stage .ij-obj-gift,
-    :global([data-stage='social']) .ij-art-stage .ij-obj-social {
-      opacity: 1;
-      transition: opacity 0.35s linear 0.2s;
-    }
-    :global([data-stage='idea']) .ij-art-stage .ij-obj-idea .ij-draw,
-    :global([data-stage='mark']) .ij-art-stage .ij-obj-mark .ij-draw,
-    :global([data-stage='card']) .ij-art-stage .ij-obj-card .ij-draw,
-    :global([data-stage='shirt']) .ij-art-stage .ij-obj-shirt .ij-draw,
-    :global([data-stage='sign']) .ij-art-stage .ij-obj-sign .ij-draw,
-    :global([data-stage='gift']) .ij-art-stage .ij-obj-gift .ij-draw,
-    :global([data-stage='social']) .ij-art-stage .ij-obj-social .ij-draw {
-      stroke-dashoffset: 0;
-      transition: stroke-dashoffset 1.1s var(--ease-out) 0.2s;
+    /* Fills arrive in the second half of the draw-in and leave in the first half of the
+       draw-out. */
+    .ij-art-stage .ij-obj :is(.ij-paper, .ij-tint, .ij-ink, .ij-c, .ij-m, .ij-y, .ij-k) {
+      fill-opacity: clamp(0, calc(var(--draw, 0) * 2 - 0.8), 1);
     }
 
-    /* The one mark travels from object to object. */
-    .ij-art-stage .ij-mark {
-      transform: var(--at-idea);
-      transition: transform 0.9s var(--ease-in-out);
-    }
-    :global([data-stage='mark']) .ij-art-stage .ij-mark {
-      transform: var(--at-mark);
-    }
-    :global([data-stage='card']) .ij-art-stage .ij-mark {
-      transform: var(--at-card);
-    }
-    :global([data-stage='shirt']) .ij-art-stage .ij-mark {
-      transform: var(--at-shirt);
-    }
-    :global([data-stage='sign']) .ij-art-stage .ij-mark {
-      transform: var(--at-sign);
-    }
-    :global([data-stage='gift']) .ij-art-stage .ij-mark {
-      transform: var(--at-gift);
-    }
-    :global([data-stage='social']) .ij-art-stage .ij-mark {
-      transform: var(--at-social);
-    }
-
-    /* Sketch: drawn stroke by stroke on the idea step, then it fades under the printed plates. */
+    /* The sketch: four strokes in turn, each over 40 % of the sketch (`--k` is its start). */
     .ij-art-stage .ij-sketch {
       opacity: 0;
-      transition: opacity 0.8s linear 0.35s;
     }
     .ij-art-stage .ij-sketch .ij-draw {
-      transition: stroke-dashoffset 0.4s var(--ease-out) 1.1s;
+      --sd: clamp(0, calc((var(--sk, 0) - var(--k, 0)) * 2.5), 1);
+      stroke-dasharray: 1 2;
+      stroke-dashoffset: calc(1 - var(--sd));
+      opacity: min(1, calc(var(--sd) * 20));
     }
     .ij-art-stage .ij-sketch-word {
-      opacity: 0;
-      transition: opacity 0.3s linear;
-    }
-    :global([data-stage='idea']) .ij-art-stage .ij-sketch {
-      opacity: 1;
-      transition: opacity 0.2s linear;
-    }
-    :global([data-stage='idea']) .ij-art-stage .ij-sketch .ij-draw {
-      stroke-dashoffset: 0;
-      transition: stroke-dashoffset 1.2s var(--ease-in-out) var(--d, 0s);
-    }
-    :global([data-stage='idea']) .ij-art-stage .ij-sketch-word {
-      opacity: 1;
-      transition: opacity 0.6s linear 1s;
+      opacity: clamp(0, calc((var(--sk, 0) - 0.7) * 3.4), 1);
     }
 
-    /* Plates: off and out of register on the sketch, printed Y → M → C → K on every later step. */
+    /* Plates: off until the mark is printed. */
     .ij-art-stage .ij-plate {
       opacity: 0;
-      transform: translate(var(--ox, 0), var(--oy, 0));
-      transition:
-        opacity 0.2s linear,
-        transform 0.3s var(--ease-out);
     }
-    :global([data-stage]:not([data-stage='idea']):not([data-stage='blank']))
-      .ij-art-stage
-      .ij-plate {
-      opacity: 1;
-      transform: none;
-      transition:
-        opacity 0.2s linear var(--pd, 0s),
-        transform 0.7s var(--ease-snap) var(--pd, 0s);
+    /* A wide, invisible target for hovering the mark (fine pointers; the plates split). */
+    .ij-mark-hit {
+      fill: none;
+      pointer-events: all;
     }
   }
 </style>

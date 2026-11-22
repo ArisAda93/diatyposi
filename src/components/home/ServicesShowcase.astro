@@ -1,6 +1,8 @@
 ---
 /**
- * Home services overview, "the plate and the index".
+ * Home services overview, "the plate and the index". Section 01 of the home page, in the shared
+ * section shell (src/components/Section.astro: index, label, the owner's heading and the link to
+ * every service).
  *
  * Desktop (from 64rem): two columns. Left, a sticky press plate in perspective inside crop marks,
  * showing the active service's photo, plate icon, number and lead sentence, edged in that service's
@@ -13,9 +15,14 @@
  * plate shows the first service. The other plates wait in <template>s, so nothing loads until a
  * service is first shown. The plate repeats what the rows say, so it is hidden from assistive
  * technology; the rows carry the content. The section paints no background of its own, so the
- * site-wide living background (tinted by `data-bg-accent`) shows through.
+ * site-wide living background (tinted by the shell's `data-bg-accent`) shows through.
+ *
+ * Dark mode: the plate card is a raised surface with a hairline edge and a deep, soft shadow; the
+ * numerals' C, M and Y ghosts overprint with `var(--blend-ink)` (screen on dark); the stand-in
+ * chips keep fixed ink on yellow.
  */
 import ColorBar from '~/components/ColorBar.astro';
+import Section from '~/components/Section.astro';
 import Icon from '~/components/Icon.astro';
 import Photo from '~/components/Photo.astro';
 import PlateIcon from '~/components/PlateIcon.astro';
@@ -23,7 +30,6 @@ import RegMark from '~/components/RegMark.astro';
 import { ownerCopy, portfolio, routes, services } from '~/data/site';
 import { homeText } from '~/i18n/pages/home';
 import { t } from '~/i18n/ui';
-import { capsEl } from '~/lib/text';
 import { plateInk } from '~/scripts/services-page';
 import { leadSentence } from '~/scripts/services-showcase';
 
@@ -52,26 +58,16 @@ const thumbSizes = '(min-width: 48rem) 10rem, 7.5rem';
 const thumbWidths = [160, 320, 480];
 ---
 
-<section
-  class="section svc-show"
-  aria-labelledby="services-title"
-  data-svc-show
-  data-bg-accent="cyan"
+<Section
+  id="ypiresies-home"
+  index="01"
+  label={copy.label}
+  title={ownerCopy.el.servicesHeading}
+  titleId="services-title"
+  link={{ href: routes.services, text: copy.allLink }}
+  accent="cyan"
 >
-  <div class="wrap">
-    <div class="svc-show-head">
-      <div>
-        <p class="label mb-5">{capsEl(copy.label)}</p>
-        <h2 id="services-title" class="h2">
-          {ownerCopy.el.servicesHeading}
-        </h2>
-      </div>
-      <a href={routes.services} class="link svc-show-all">
-        <span>{copy.allLink}</span>
-        <Icon name="arrow-right" size={20} />
-      </a>
-    </div>
-
+  <div class="svc-show" data-svc-show>
     <div class="svc-show-grid">
       {first && (
         <div class="svc-show-stage" aria-hidden="true">
@@ -153,18 +149,22 @@ const thumbWidths = [160, 320, 480];
         ))}
       </ol>
     </div>
-  </div>
 
-  {items.slice(1).map((item) => (
-    <template data-svc-tpl={item.index}>
-      <div class="svc-plate-layer" data-svc-layer>
-        <Photo image={item.service.image} alt={item.service.text.el.imageAlt} sizes={plateSizes} />
-        {item.standIn && <span class="svc-plate-chip">{t('standInLabel')}</span>}
-      </div>
-      <PlateIcon name={item.service.icon} size={44} />
-    </template>
-  ))}
-</section>
+    {items.slice(1).map((item) => (
+      <template data-svc-tpl={item.index}>
+        <div class="svc-plate-layer" data-svc-layer>
+          <Photo
+            image={item.service.image}
+            alt={item.service.text.el.imageAlt}
+            sizes={plateSizes}
+          />
+          {item.standIn && <span class="svc-plate-chip">{t('standInLabel')}</span>}
+        </div>
+        <PlateIcon name={item.service.icon} size={44} />
+      </template>
+    ))}
+  </div>
+</Section>
 
 <script>
   import { initServicesShowcase } from '~/scripts/services-showcase';
@@ -192,26 +192,6 @@ const thumbWidths = [160, 320, 480];
     [data-ink='key'] {
       --svc-ink: var(--color-key);
       --svc-ink-shade: color-mix(in srgb, var(--color-key) 30%, transparent);
-    }
-
-    .svc-show-head {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 1.5rem 3rem;
-      margin-bottom: clamp(2.5rem, 5vw, 4.5rem);
-    }
-    .svc-show-all {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      min-height: 2.75rem;
-      font-family: var(--font-display);
-      font-weight: 700;
-    }
-    .svc-show-all :global(svg) {
-      transition: transform var(--dur-base) var(--ease-out);
     }
 
     /* ---------------------------------------------------------------------------------------- */
@@ -275,10 +255,11 @@ const thumbWidths = [160, 320, 480];
     }
     /* The numeral as four plates, in register at rest. Only the key plate is text; the C, M and Y
        ghosts are empty spans that draw the numeral from `data-num`, so neither assistive
-       technology nor contrast checks see them as (yellow-on-paper) text. */
+       technology nor contrast checks see them as (yellow-on-paper) text. They overprint as inks:
+       multiply on light paper, screen on dark. */
     .svc-row-plate {
       grid-area: 1 / 1;
-      mix-blend-mode: multiply;
+      mix-blend-mode: var(--blend-ink);
       transition: transform var(--dur-base) var(--ease-snap);
     }
     .svc-row-plate[data-num]::before {
@@ -349,7 +330,7 @@ const thumbWidths = [160, 320, 480];
       bottom: 0.25rem;
       padding: 0.15rem 0.3rem;
       background-color: var(--color-yellow);
-      color: var(--color-key);
+      color: var(--ink-fixed);
       font-family: var(--font-display);
       max-width: calc(100% - 0.5rem);
       font-size: 0.625rem;
@@ -392,9 +373,6 @@ const thumbWidths = [160, 320, 480];
       color: var(--color-paper);
     }
     @media (prefers-reduced-motion: no-preference) {
-      .svc-show-all:hover :global(svg) {
-        transform: translateX(3px);
-      }
       .svc-row:hover .svc-row-plate-c,
       .svc-row.is-active .svc-row-plate-c {
         transform: translate(-3px, -2px);
@@ -569,6 +547,12 @@ const thumbWidths = [160, 320, 480];
       .svc-plate[data-ink='yellow'] .svc-plate-under {
         opacity: 1;
       }
+      /* On dark paper yellow is the loudest ink, not the faintest: held back like the others. */
+      @media not print {
+        :global(html[data-theme='dark']) .svc-plate[data-ink='yellow'] .svc-plate-under {
+          opacity: 0.5;
+        }
+      }
 
       /* Registration targets centred over and under the sheet, as on a press sheet's margins. */
       .svc-plate-marks {
@@ -594,6 +578,16 @@ const thumbWidths = [160, 320, 480];
         box-shadow:
           0 0 0 1px var(--color-line),
           0 2.5rem 4rem -2.5rem rgb(34 31 32 / 0.45);
+      }
+      /* Dark mode: a raised surface on the dark page, edged by a hairline; the shadow is deeper
+         and softer, since a light-mode shadow would not read on dark paper. */
+      @media not print {
+        :global(html[data-theme='dark']) .svc-plate-card {
+          background-color: var(--color-paper-2);
+          box-shadow:
+            0 0 0 1px var(--color-line),
+            0 2.5rem 4rem -2rem rgb(0 0 0 / 0.7);
+        }
       }
       /* The active service's plate ink along the card's top edge. */
       .svc-plate-card::before {
@@ -673,16 +667,18 @@ const thumbWidths = [160, 320, 480];
         z-index: 1;
         padding: 0.3rem 0.55rem;
         background-color: var(--color-yellow);
-        color: var(--color-key);
+        color: var(--ink-fixed);
         font-family: var(--font-display);
         font-size: 0.75rem;
         font-weight: 720;
         line-height: 1.2;
       }
       /* Separations: each is the photo in grey, screened over one ink (a duotone of that ink),
-         and the three multiply together on paper, so in register they read as the plain photo. */
+         and the three multiply together on paper, so in register they read as the plain photo.
+         The paper is fixed white in both themes: the separations rebuild a photo, which keeps its
+         own colours in dark mode too. */
       .svc-plate-media :global(.svc-plate-ghosts) {
-        background-color: var(--color-paper);
+        background-color: var(--paper-fixed);
         isolation: isolate;
       }
       .svc-plate-media :global(.svc-plate-ghost) {

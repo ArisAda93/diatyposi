@@ -1,26 +1,28 @@
 ---
 /**
  * Home “Μία ιδέα. Παντού.”: one partner takes the visitor's idea from a sketch to a brand on
- * everything they need. Replaces the old four-step process section.
+ * everything they need. Section 02 of the home page, in the shared section shell
+ * (src/components/Section.astro: index, label, heading, lead).
  *
  * Desktop (from 64rem, JS on, motion allowed): two columns. Left, a sticky stage (CSS
  * `position: sticky`, nothing pinned) where one sample mark is sketched, printed plate by plate
- * and carried onto a card, a T-shirt, a shop front, a mug and a phone. Right, the seven steps;
- * the one crossing the middle of the viewport sets the stage (src/scripts/idea-journey.ts).
- * Otherwise (phones, reduced motion, no JS) each step shows its own still illustration in its
- * final state and nothing is hidden. The illustrations repeat what the steps say, so they are
- * hidden from assistive technology.
+ * and carried along an arc onto a card, a T-shirt, a shop front, a mug and a phone, scrubbed by
+ * the scroll (src/scripts/idea-journey.ts). Right, the seven steps on one spine that fills in the
+ * steps' plate inks up to the middle of the viewport, with a node per step; each title links to
+ * its step. Otherwise (phones, reduced motion, no JS) each step shows its own still illustration
+ * in its final state and nothing is hidden. The illustrations repeat what the steps say, so they
+ * are hidden from assistive technology.
  *
  * Closing block: toggle chips for the products in the story; the button links to the quote form
  * with every picked service pre-selected and counts them. Without JS the chips are hidden and the
  * button links to the plain quote form.
  */
 import Icon from '~/components/Icon.astro';
+import Section from '~/components/Section.astro';
 import JourneyArt from './journey/JourneyArt.astro';
 import { routes, serviceBySlug, services } from '~/data/site';
 import { homeText } from '~/i18n/pages/home';
-import { capsEl } from '~/lib/text';
-import { JOURNEY_STEPS, journeyChoices } from '~/scripts/idea-journey';
+import { JOURNEY_STEPS, journeyChoices, journeyInk } from '~/scripts/idea-journey';
 
 const copy = homeText.el.journey;
 const pad = (n: number): string => String(n).padStart(2, '0');
@@ -29,6 +31,8 @@ const total = pad(JOURNEY_STEPS.length);
 const steps = JOURNEY_STEPS.map((step, index) => ({
   ...step,
   num: pad(index + 1),
+  anchor: `journey-${step.id}`,
+  ink: journeyInk(index),
   text: copy.steps[step.id],
   href: `${routes.services}#${step.service}`,
   linkLabel: serviceBySlug(step.service)?.text.el.short ?? copy.steps[step.id].title,
@@ -43,29 +47,32 @@ const promiseInks = ['c', 'm', 'y'] as const;
 const readoutInks = ['y', 'm', 'c', 'k'] as const;
 ---
 
-<section class="section ij" aria-labelledby="journey-title" data-journey data-bg-accent="magenta">
-  <div class="wrap">
-    <div class="ij-head">
-      <p class="label mb-5">{capsEl(copy.label)}</p>
-      <h2 id="journey-title" class="h2 ij-title">
-        {copy.heading}
-      </h2>
-      <p class="lead muted mt-6 max-w-[48ch]">{copy.lead}</p>
-      <div class="ij-deco" aria-hidden="true">
-        <span class="ij-deco-dots halftone" data-parallax="-0.12"></span>
-        <span class="ij-deco-target" data-parallax="0.18">
-          <svg viewBox="0 0 100 100" focusable="false">
-            <circle cx="50" cy="50" r="22"></circle>
-            <circle cx="50" cy="50" r="9"></circle>
-            <path d="M50 4V96M4 50H96"></path>
-          </svg>
-        </span>
-      </div>
-    </div>
+<Section
+  id="apo-tin-idea"
+  index="02"
+  label={copy.label}
+  titleId="journey-title"
+  lead={copy.lead}
+  accent="magenta"
+>
+  <h2 slot="title" id="journey-title" class="h2 ij-title">
+    {copy.heading}
+  </h2>
+  <div slot="head-extra" class="ij-deco" aria-hidden="true">
+    <span class="ij-deco-dots halftone" data-parallax="-0.12"></span>
+    <span class="ij-deco-target" data-parallax="0.18">
+      <svg viewBox="0 0 100 100" focusable="false">
+        <circle cx="50" cy="50" r="22"></circle>
+        <circle cx="50" cy="50" r="9"></circle>
+        <path d="M50 4V96M4 50H96"></path>
+      </svg>
+    </span>
+  </div>
 
-    <div class="ij-grid" data-motion="off">
+  <div class="ij" data-journey>
+    <div class="ij-grid" data-journey-grid data-motion="off">
       <div class="ij-stage-col" aria-hidden="true">
-        <div class="ij-stage" data-journey-stage data-stage="idea">
+        <div class="ij-stage" data-journey-stage data-stage="blank">
           <div class="ij-stage-art crop-frame" data-journey-art>
             <JourneyArt mode="stage" />
           </div>
@@ -82,26 +89,41 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
         </div>
       </div>
 
-      <ol class="ij-steps" role="list">
-        {steps.map((step) => (
-          <li class="ij-step" data-journey-step={step.id}>
-            <div class="ij-still" aria-hidden="true">
-              <JourneyArt mode="still" step={step.id} />
-            </div>
-            <div class="ij-step-body">
-              <p class="ij-step-num" aria-hidden="true">
-                {step.num} / {total}
-              </p>
-              <h3 class="h3 ij-step-title">{step.text.title}</h3>
-              <p class="muted ij-step-text">{step.text.text}</p>
-              <a href={step.href} class="ij-step-link">
-                <span class="link">{step.linkLabel}</span>
-                <Icon name="arrow-up-right" size={18} />
-              </a>
-            </div>
-          </li>
-        ))}
-      </ol>
+      <div class="ij-steps-col" data-journey-steps>
+        <span class="ij-spine" aria-hidden="true">
+          <span class="ij-spine-fill" data-journey-fill></span>
+        </span>
+        <ol class="ij-steps" role="list">
+          {steps.map((step) => (
+            <li
+              class="ij-step"
+              id={step.anchor}
+              data-journey-step={step.id}
+              style={`--ij-ink: var(--color-${step.ink})`}
+            >
+              <div class="ij-still" aria-hidden="true">
+                <JourneyArt mode="still" step={step.id} />
+              </div>
+              <div class="ij-step-body">
+                <span class="ij-node" aria-hidden="true" data-journey-node />
+                <p class="ij-step-num" aria-hidden="true">
+                  {step.num} / {total}
+                </p>
+                <h3 class="h3 ij-step-title">
+                  <a href={`#${step.anchor}`} class="ij-step-goto" data-journey-goto>
+                    {step.text.title}
+                  </a>
+                </h3>
+                <p class="muted ij-step-text">{step.text.text}</p>
+                <a href={step.href} class="ij-step-link">
+                  <span class="link">{step.linkLabel}</span>
+                  <Icon name="arrow-up-right" size={18} />
+                </a>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
     </div>
 
     <div class="ij-choose">
@@ -147,7 +169,7 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
       </ul>
     </div>
   </div>
-</section>
+</Section>
 
 <script>
   import { initIdeaJourney } from '~/scripts/idea-journey';
@@ -158,17 +180,14 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
 <style>
   @layer components {
     /* ---------------------------------------------------------------------------------------- */
-    /* Head                                                                                     */
+    /* Head (in the section shell's head)                                                       */
     /* ---------------------------------------------------------------------------------------- */
 
-    .ij-head {
-      position: relative;
-      margin-bottom: clamp(2.5rem, 5vw, 4.5rem);
-    }
     .ij-title {
       max-width: 18ch;
     }
-    /* Decorative: a registration target over a magenta halftone patch, on wide screens only. */
+    /* Decorative: a registration target over a magenta halftone patch, on wide screens only. It
+       sits in the shell's head aside (in flow, on the right of the heading). */
     .ij-deco {
       display: none;
     }
@@ -180,7 +199,7 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
       aspect-ratio: 4 / 3;
       color: var(--color-magenta);
       opacity: 0.55;
-      mix-blend-mode: multiply;
+      mix-blend-mode: var(--blend-ink);
       -webkit-mask-image: radial-gradient(closest-side, #000 35%, transparent);
       mask-image: radial-gradient(closest-side, #000 35%, transparent);
     }
@@ -202,7 +221,9 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
     /* Steps: still illustrations by default (phones, reduced motion, no JS)                     */
     /* ---------------------------------------------------------------------------------------- */
 
-    .ij-stage-col {
+    .ij-stage-col,
+    .ij-spine,
+    .ij-node {
       display: none;
     }
     .ij-steps {
@@ -225,10 +246,26 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
       letter-spacing: 0.08em;
       font-variant-numeric: tabular-nums;
       color: var(--color-muted);
+      transition: color var(--dur-base) var(--ease-out);
     }
     .ij-step-title {
       margin-bottom: 0.625rem;
-      transition: color var(--dur-base) linear;
+      transition: color var(--dur-base) var(--ease-out);
+    }
+    /* The title links to its own step; its underline draws under every line on hover. */
+    .ij-step-goto {
+      color: inherit;
+      text-decoration: none;
+      background-image: linear-gradient(currentColor, currentColor);
+      background-repeat: no-repeat;
+      background-position: 0 100%;
+      background-size: 0 2px;
+      box-decoration-break: clone;
+      -webkit-box-decoration-break: clone;
+      transition: background-size var(--dur-base) var(--ease-out);
+    }
+    .ij-step-goto:is(:hover, :focus-visible) {
+      background-size: 100% 2px;
     }
     .ij-step-text {
       max-width: 42ch;
@@ -282,8 +319,14 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
         display: block;
         grid-column: 1 / span 6;
       }
-      :global(html:not(.no-js)) .ij-steps {
+      :global(html:not(.no-js)) .ij-steps-col {
+        /* The spine's x and the steps' indent from it. */
+        --ij-spine-x: 0.4375rem;
+        --ij-indent: 2.25rem;
+        position: relative;
         grid-column: 8 / span 5;
+      }
+      :global(html:not(.no-js)) .ij-steps {
         border-top: 0;
       }
       :global(html:not(.no-js)) .ij-step {
@@ -293,15 +336,58 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
         justify-content: center;
         min-height: 68svh;
         padding-block: 2rem;
+        padding-left: var(--ij-indent);
         border-bottom: 0;
       }
       :global(html:not(.no-js)) .ij-step-body {
-        padding-left: 1.5rem;
-        border-left: 2px solid var(--color-line);
-        transition: border-color var(--dur-base) linear;
+        position: relative;
       }
       :global(html:not(.no-js)) .ij-still {
         display: none;
+      }
+
+      /* The spine: a hairline from the first node to the last (measured by the script), filled
+         in the steps' plate inks up to the reading line. */
+      .ij.is-live .ij-spine {
+        position: absolute;
+        top: var(--ij-spine-top, 0);
+        left: var(--ij-spine-x);
+        display: block;
+        width: 2px;
+        height: var(--ij-spine-h, 0);
+        background-color: var(--color-line);
+        pointer-events: none;
+      }
+      .ij-spine-fill {
+        position: absolute;
+        inset: 0;
+        clip-path: inset(0 0 calc(100% - var(--ij-fill, 0) * 100%) 0);
+      }
+      /* A node per step, on the spine beside the step number. Ahead: an empty square. Passed:
+         printed in the step's ink. Current: inked, key-edged and a little larger. */
+      .ij.is-live .ij-node {
+        position: absolute;
+        top: 0.72rem;
+        left: calc(var(--ij-spine-x) + 1px - var(--ij-indent));
+        display: block;
+        width: 0.75rem;
+        height: 0.75rem;
+        background-color: var(--color-paper);
+        box-shadow: inset 0 0 0 2px var(--color-line);
+        transform: translate(-50%, -50%);
+        transition:
+          background-color var(--dur-base) var(--ease-out),
+          box-shadow var(--dur-base) var(--ease-out),
+          transform var(--dur-base) var(--ease-snap);
+      }
+      .ij.is-live .ij-step.is-read .ij-node {
+        background-color: var(--ij-ink);
+        box-shadow: inset 0 0 0 1px var(--color-key);
+      }
+      .ij.is-live .ij-step.is-active .ij-node {
+        background-color: var(--ij-ink);
+        box-shadow: inset 0 0 0 2px var(--color-key);
+        transform: translate(-50%, -50%) scale(1.3);
       }
     }
 
@@ -312,6 +398,8 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
     .ij-stage-art {
       width: min(100% - 2.5rem, 100svh - var(--header-h) - 10rem);
       margin-inline: auto;
+      transform-origin: 50% 50%;
+      will-change: transform;
     }
     .ij-readout {
       display: flex;
@@ -368,12 +456,9 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
       transition-delay: 0s;
     }
 
-    /* Active step (idea-journey.ts adds .is-live and .is-active). Muted stays at 6.9:1. */
+    /* Active step (idea-journey.ts adds .is-live, .is-active and .is-read). Muted stays AA. */
     .ij.is-live .ij-step:not(.is-active) .ij-step-title {
       color: var(--color-muted);
-    }
-    .ij.is-live .ij-step.is-active .ij-step-body {
-      border-left-color: var(--color-key);
     }
     .ij.is-live .ij-step.is-active .ij-step-num {
       color: var(--color-red);
@@ -448,6 +533,12 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
       background-color: var(--color-yellow);
       box-shadow: none;
     }
+    /* Dark mode: the pressed chip is light, so the yellow tick keeps a dark edge to read. */
+    @media not print {
+      :global(html[data-theme='dark']) .ij-chip[aria-pressed='true']::before {
+        box-shadow: inset 0 0 0 1.5px currentColor;
+      }
+    }
     .ij-chip:disabled {
       cursor: default;
     }
@@ -487,7 +578,11 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
         grid-column: 9 / span 4;
       }
       .ij-deco {
+        position: relative;
         display: block;
+        width: clamp(12rem, 15vw, 14.5rem);
+        height: 9.5rem;
+        pointer-events: none;
       }
     }
   }
