@@ -3,7 +3,12 @@
  * One gallery tile. Without JS it is a plain link to the large image; the gallery script turns it
  * into a lightbox trigger. The large image URLs ride along as data attributes and are only
  * requested when the lightbox shows this item.
+ *
+ * Hover and keyboard focus: the image zooms in its frame, the job-ticket caption lifts on a
+ * C/M/Y plate shadow and an "open larger" corner mark appears. When a filter brings the tile back
+ * into view, the gallery script sets `data-entering` and the tile prints in (a short wipe).
  */
+import Icon from '../Icon.astro';
 import Photo from '../Photo.astro';
 import type { PortfolioItem } from '~/data/site';
 import { t } from '~/i18n/ui';
@@ -54,6 +59,9 @@ const copy = item.text.el;
       />
     </span>
     {item.standIn && <span class="work-standin">{t('standInLabel')}</span>}
+    <span class="work-open" aria-hidden="true">
+      <Icon name="expand" size={20} />
+    </span>
     <span class="work-caption">
       <span class="work-title">{copy.title}</span>
       {category && <span class="work-category">{category}</span>}
@@ -142,6 +150,49 @@ const copy = item.text.el;
       outline-offset: 4px;
     }
 
+    /* "Open larger" corner mark. */
+    .work-open {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      z-index: 1;
+      display: grid;
+      place-items: center;
+      width: 2.5rem;
+      height: 2.5rem;
+      background-color: var(--color-paper);
+      color: var(--color-key);
+      opacity: 0;
+      transform: scale(0.8);
+      transition:
+        opacity var(--dur-base) var(--ease-out),
+        transform var(--dur-base) var(--ease-snap);
+    }
+    .work-tile:hover .work-open,
+    .work-tile:focus-visible .work-open {
+      opacity: 1;
+      transform: none;
+    }
+    /* Touch screens have no hover: show the mark at rest so the tile reads as openable. */
+    @media (hover: none) {
+      .work-open {
+        opacity: 1;
+        transform: none;
+      }
+    }
+    .work-tile:active .work-caption {
+      box-shadow: 0 0 0 transparent;
+    }
+
+    /* Printed back in after a filter change (data-entering, set and cleared by gallery.ts). */
+    @media (prefers-reduced-motion: no-preference) {
+      .work-item[data-entering] .work-tile {
+        /* Backwards only: the start state covers the stagger delay, the clip ends with it. */
+        animation: tile-print 460ms var(--ease-out) backwards;
+        animation-delay: calc(var(--enter-i, 0) * 45ms);
+      }
+    }
+
     @media (min-width: 48rem) {
       .work-item {
         grid-column: span 3;
@@ -167,6 +218,17 @@ const copy = item.text.el;
       .work-item[data-shape='tall'] {
         grid-row: span 4;
       }
+    }
+  }
+
+  @keyframes tile-print {
+    from {
+      opacity: 0;
+      clip-path: inset(0 0 100% 0);
+    }
+    to {
+      opacity: 1;
+      clip-path: inset(0 0 0 0);
     }
   }
 </style>

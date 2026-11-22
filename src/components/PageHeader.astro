@@ -1,10 +1,17 @@
 ---
 /**
- * Header block for inner pages: red spaced label, the page's single <h1>, optional intro.
- * Extra content (chips, actions) goes in the default slot under the intro.
+ * Header block for inner pages: the red spaced label (after a registration mark), the page's
+ * single <h1>, an optional intro, and extra content (chips, notes) from the default slot.
+ *
+ * Beside it the four logo arches are printed as C/M/Y/K plates (multiply) that arrive out of
+ * register and settle (CSS, once, never under reduced motion), on a parallax layer that recedes
+ * as the page scrolls (`data-parallax`, motion.ts). The foot is the press colour bar and a
+ * hairline. The block paints no background: the living background shows through, tinted by
+ * `accent` (`data-bg-accent`). Decoration is aria-hidden.
  */
 import RegMark from './RegMark.astro';
 import ColorBar from './ColorBar.astro';
+import { ARCH, ARCH_PLATES } from './logo-paths';
 import { capsEl } from '~/lib/text';
 
 interface Props {
@@ -12,27 +19,51 @@ interface Props {
   label: string;
   title: string;
   intro?: string;
+  /** Ink that tints the living background while this header is on screen. */
+  accent?: 'cyan' | 'magenta' | 'yellow' | 'key';
   class?: string;
 }
-const { label, title, intro, class: className } = Astro.props;
+const { label, title, intro, accent = 'cyan', class: className } = Astro.props;
+
+/** Back to front (key, yellow, magenta, cyan), as in the logo. */
+const plates = [...ARCH_PLATES].reverse();
 ---
 
-<header class:list={['page-header', className]}>
-  <div class="wrap">
-    <div class="grid-12 items-end gap-y-8">
-      <div class="col-span-12 lg:col-span-9">
-        <p class="label mb-6">{capsEl(label)}</p>
-        <h1 class="display-l max-w-[18ch]">{title}</h1>
-        {intro && <p class="lead muted mt-8 max-w-[58ch]">{intro}</p>}
-        <slot />
-      </div>
-      <div class="col-span-12 hidden justify-end lg:col-span-3 lg:flex" aria-hidden="true">
-        <RegMark size={36} class="text-key" />
+<header class:list={['page-header', className]} data-bg-accent={accent}>
+  <div class="wrap ph-inner">
+    <div class="ph-art" aria-hidden="true">
+      <div class="ph-plx" data-parallax="0.18">
+        <svg
+          class="ph-arches"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="690 50 840 205"
+          focusable="false"
+        >
+          {plates.map((p) => (
+            <path
+              d={ARCH}
+              transform={`translate(${p.x} 0)`}
+              class={`ph-plate ph-plate-${p.id}`}
+              fill={p.color}
+            />
+          ))}
+        </svg>
       </div>
     </div>
-    <div class="mt-14 flex items-center gap-4 lg:mt-20">
+
+    <div class="ph-copy">
+      <p class="label ph-label">
+        <RegMark size={18} class="ph-reg" />
+        <span>{capsEl(label)}</span>
+      </p>
+      <h1 class="display-l ph-title">{title}</h1>
+      {intro && <p class="lead muted ph-intro">{intro}</p>}
+      <slot />
+    </div>
+
+    <div class="ph-foot" aria-hidden="true">
       <ColorBar tints={3} />
-      <span class="h-px flex-1 bg-(--color-line)"></span>
+      <span class="ph-rule"></span>
     </div>
   </div>
 </header>
@@ -40,7 +71,122 @@ const { label, title, intro, class: className } = Astro.props;
 <style>
   @layer components {
     .page-header {
+      position: relative;
+      overflow-x: clip;
       padding-top: clamp(3rem, 2rem + 5vw, 7rem);
+    }
+    .ph-inner {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: var(--grid-gap);
+    }
+    .ph-copy {
+      position: relative;
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+    .ph-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .ph-label :global(.ph-reg) {
+      flex: none;
+      color: var(--color-key);
+    }
+    .ph-title {
+      max-width: 18ch;
+    }
+    .ph-intro {
+      max-width: 58ch;
+      margin-top: clamp(1.5rem, 1rem + 1.5vw, 2rem);
+    }
+
+    /* The arches: a small corner print on phones, a large plate stack beside the title from lg. */
+    .ph-art {
+      grid-column: 7 / -1;
+      grid-row: 1;
+      justify-self: end;
+      align-self: start;
+      width: min(100%, 11rem);
+      margin-bottom: 1.5rem;
+      pointer-events: none;
+    }
+    .ph-arches {
+      width: 100%;
+      height: auto;
+      overflow: visible;
+      isolation: isolate;
+    }
+    .ph-plate {
+      mix-blend-mode: multiply;
+    }
+
+    .ph-foot {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-top: clamp(3rem, 2rem + 4vw, 5rem);
+    }
+    .ph-rule {
+      flex: 1;
+      height: 1px;
+      background-color: var(--color-line);
+    }
+
+    @media (min-width: 40rem) {
+      .ph-art {
+        width: min(100%, 15rem);
+      }
+    }
+    @media (min-width: 64rem) {
+      .ph-art {
+        grid-column: 10 / -1;
+        grid-row: 1;
+        align-self: end;
+        width: calc(100% + var(--gutter));
+        margin: 0 calc(var(--gutter) * -1) 0.75rem 0;
+      }
+      .ph-copy {
+        grid-column: 1 / span 9;
+        grid-row: 1;
+      }
+    }
+
+    /* Out of register at first, then the plates settle (once, on load). */
+    @media (prefers-reduced-motion: no-preference) {
+      .ph-plate {
+        animation: ph-register 1100ms var(--ease-snap) 180ms both;
+      }
+      .ph-plate-c {
+        --ph-dx: -26px;
+        --ph-dy: -14px;
+      }
+      .ph-plate-m {
+        --ph-dx: 22px;
+        --ph-dy: -8px;
+      }
+      .ph-plate-y {
+        --ph-dx: -10px;
+        --ph-dy: 18px;
+      }
+      .ph-plate-k {
+        --ph-dx: 6px;
+        --ph-dy: 4px;
+        animation-delay: 60ms;
+      }
+    }
+  }
+
+  @keyframes ph-register {
+    from {
+      translate: var(--ph-dx, 0) var(--ph-dy, 0);
+    }
+    to {
+      translate: 0 0;
     }
   }
 </style>

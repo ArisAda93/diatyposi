@@ -16,7 +16,7 @@ describe('buildLocalBusiness', () => {
     const catalog = data.hasOfferCatalog as { itemListElement: { itemOffered: { url: string } }[] };
     expect(catalog.itemListElement).toHaveLength(9);
     expect(catalog.itemListElement[0]?.itemOffered.url).toBe(
-      'https://www.diatyposi.gr/ypiresies/#grafistikos-sxediasmos',
+      'https://www.diatyposi.gr/ypiresies/#diafimistika-dora',
     );
   });
 

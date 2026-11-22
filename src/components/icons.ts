@@ -71,6 +71,8 @@ export const icons = {
   ),
   copy: s('<rect x="8" y="8" width="13" height="13"/><path d="M16 8V3H3v13h5"/>', '0 0 24 24'),
   external: s('<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v6H4V6h6"/>', '0 0 24 24'),
+  /** Corner brackets: "open larger" on gallery tiles. */
+  expand: s('<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>', '0 0 24 24'),
 
   // --- Brands (Simple Icons, CC0) ---
   facebook: f(

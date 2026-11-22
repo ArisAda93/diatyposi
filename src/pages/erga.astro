@@ -1,4 +1,8 @@
 ---
+/**
+ * Έργα: page header, then the filterable gallery with its lightbox (WorkGallery). The section
+ * paints no background; it tints the living background through `data-bg-accent`.
+ */
 import BaseLayout from '~/layouts/BaseLayout.astro';
 import PageHeader from '~/components/PageHeader.astro';
 import WorkGallery from '~/components/portfolio/WorkGallery.astro';
@@ -10,11 +14,16 @@ const hasStandIns = portfolio.some((item) => item.standIn);
 ---
 
 <BaseLayout title={text.metaTitle} description={text.metaDescription}>
-  <PageHeader label={text.headerLabel} title={text.headerTitle} intro={text.headerIntro}>
+  <PageHeader
+    label={text.headerLabel}
+    title={text.headerTitle}
+    intro={text.headerIntro}
+    accent="magenta"
+  >
     {hasStandIns && <p class="muted mt-5 max-w-[58ch] text-small">{text.standInNote}</p>}
   </PageHeader>
 
-  <section class="wrap work-section" aria-labelledby="work-heading">
+  <section class="wrap work-section" aria-labelledby="work-heading" data-bg-accent="cyan">
     <h2 id="work-heading" class="sr-only">
       {text.headerLabel}
     </h2>

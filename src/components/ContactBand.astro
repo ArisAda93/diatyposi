@@ -1,9 +1,17 @@
 ---
 /**
- * Yellow contact band (home and /etaireia/): a short heading and line, then the quote and call
- * buttons. Takes no props; strings live in src/i18n/pages/home.ts (contactBand).
+ * Yellow contact band (home and /etaireia/): the page's confident close. Opaque yellow, ink text.
+ * Left (8 of 12 columns): label, the heading in display type, one line, then the two actions
+ * (quote, call). Right: a proof sheet with the arches mark, lying on the band with a C/M plate
+ * shadow printed on the yellow, in the colours the overprint gives on press (C×Y green, M×Y red,
+ * C×M×Y near black where they overlap); it sits on a parallax layer (`data-parallax`, motion.ts)
+ * and tilts towards the pointer (`data-tilt`).
+ * Hovering or focusing the quote button pulls the plates into register. Decoration is
+ * aria-hidden. Takes no props; strings live in src/i18n/pages/home.ts (contactBand).
  */
 import Icon from './Icon.astro';
+import Logo from './Logo.astro';
+import ColorBar from './ColorBar.astro';
 import RegMark from './RegMark.astro';
 import { routes, site } from '~/data/site';
 import { homeText } from '~/i18n/pages/home';
@@ -16,30 +24,45 @@ const copy = homeText.el.contactBand;
 
 <section class="contact-band" aria-labelledby="contact-band-title">
   <div class="wrap cb-inner">
-    <div class="cb-copy" data-reveal="depth">
-      <p class="label cb-label">{capsEl(copy.label)}</p>
-      <h2 id="contact-band-title" class="h2 cb-title">
+    <div class="cb-copy">
+      <p class="label cb-label">
+        <span class="cb-label-mark" aria-hidden="true"></span>
+        <span>{capsEl(copy.label)}</span>
+      </p>
+      <h2 id="contact-band-title" class="display-l cb-title">
         {copy.heading}
       </h2>
       <p class="lead cb-text">{copy.text}</p>
+      <div class="cb-actions">
+        <a href={routes.quote} class="btn btn-primary cb-primary">
+          <span>{t('requestQuote')}</span>
+          <Icon name="arrow-right" size={20} class="cb-arrow" />
+        </a>
+        <a href={telHref(site.contact.phone)} class="btn btn-secondary cb-phone">
+          <Icon name="phone" size={18} />
+          <span>
+            <span class="sr-only">{t('callUs')}: </span>
+            {site.contact.phoneDisplay}
+          </span>
+        </a>
+      </div>
     </div>
-    <div class="cb-actions">
-      <a href={routes.quote} class="btn btn-primary">
-        <span>{t('requestQuote')}</span>
-        <Icon name="arrow-right" size={20} />
-      </a>
-      <a href={telHref(site.contact.phone)} class="btn btn-secondary cb-phone">
-        <Icon name="phone" size={18} />
-        <span>
-          <span class="sr-only">{t('callUs')}: </span>
-          {site.contact.phoneDisplay}
-        </span>
-      </a>
+
+    <div class="cb-art" aria-hidden="true">
+      <div class="cb-plx" data-parallax="-0.14">
+        <div class="cb-proof" data-tilt>
+          <span class="cb-plate cb-plate-c"></span>
+          <span class="cb-plate cb-plate-m"></span>
+          <div class="cb-sheet">
+            <RegMark size={18} class="cb-sheet-reg cb-sheet-reg-tl" />
+            <RegMark size={18} class="cb-sheet-reg cb-sheet-reg-br" />
+            <Logo variant="mark" id="cb-mark" class="cb-mark" />
+            <ColorBar tints={2} class="cb-sheet-bar" />
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-  <span class="cb-reg" aria-hidden="true">
-    <RegMark size={200} />
-  </span>
 </section>
 
 <style>
@@ -50,41 +73,124 @@ const copy = homeText.el.contactBand;
       background-color: var(--color-yellow);
       color: var(--color-key);
     }
+    /* The site's selection colour is yellow: invert it here so a selection stays visible. */
+    .contact-band ::selection {
+      background: var(--color-key);
+      color: var(--color-yellow);
+    }
     .cb-inner {
       position: relative;
-      z-index: 1;
       display: grid;
-      gap: 2rem;
-      padding-block: clamp(3.5rem, 2rem + 5vw, 6.5rem);
+      gap: clamp(3rem, 2rem + 4vw, 4.5rem);
+      padding-block: clamp(4rem, 2.5rem + 6vw, 8rem);
     }
+
     .contact-band .cb-label {
-      margin-bottom: 1.25rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
       color: var(--color-key);
     }
+    .cb-label-mark {
+      width: 1.75rem;
+      height: 0.5rem;
+      background-color: var(--color-key);
+    }
     .cb-title {
-      max-width: 20ch;
+      max-width: 16ch;
     }
     .cb-text {
-      max-width: 48ch;
-      margin-top: 1.25rem;
+      max-width: 46ch;
+      margin-top: clamp(1.25rem, 1rem + 1vw, 2rem);
     }
     .cb-actions {
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
+      margin-top: clamp(2rem, 1.5rem + 2vw, 3rem);
     }
     .cb-phone {
       font-variant-numeric: tabular-nums;
     }
-    .cb-reg {
+    /* The arrow leads the way on hover and focus. */
+    .cb-primary :global(.cb-arrow) {
+      transition: transform var(--dur-base) var(--ease-out);
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .cb-primary:hover :global(.cb-arrow),
+      .cb-primary:focus-visible :global(.cb-arrow) {
+        transform: translateX(4px);
+      }
+    }
+
+    /* ---- Proof sheet with a plate shadow ---------------------------------------------------- */
+    .cb-art {
+      justify-self: end;
+      width: min(78%, 22rem);
+      /* Room for the plate shadow (offset 10px and 20px). */
+      padding: 0 20px 20px 0;
+    }
+    .cb-proof {
+      position: relative;
+      isolation: isolate;
+    }
+    /*
+     * The plates. The proof is an isolated group (and the parallax layer a stacking context), so
+     * a blend cannot reach the yellow behind: the plates carry the overprinted colours instead
+     * (cyan × yellow, magenta × yellow), and the cyan plate multiplies onto the magenta one, which
+     * gives the near-black of C+M+Y where they overlap.
+     */
+    .cb-plate {
       position: absolute;
-      top: 50%;
-      right: -3.5rem;
-      display: none;
+      inset: 0;
+      z-index: -1;
+      transition: transform 620ms var(--ease-snap);
+    }
+    .cb-plate-c {
+      z-index: -1;
+      background-color: #00a400;
+      mix-blend-mode: multiply;
+      transform: translate(10px, 10px);
+    }
+    .cb-plate-m {
+      z-index: -2;
+      background-color: #ed0000;
+      transform: translate(20px, 20px);
+    }
+    .contact-band:has(.cb-primary:hover, .cb-primary:focus-visible) .cb-plate {
+      transform: translate(0, 0);
+    }
+    .cb-sheet {
+      position: relative;
+      display: grid;
+      place-items: center;
+      aspect-ratio: 5 / 4;
+      padding: 14% 12%;
+      background-color: var(--color-paper);
+      background-image: var(--grain);
+      background-size: 160px 160px;
+    }
+    .cb-sheet :global(.cb-mark) {
+      width: 100%;
+      height: auto;
+    }
+    .cb-sheet :global(.cb-sheet-reg) {
+      position: absolute;
       color: var(--color-key);
-      opacity: 0.18;
-      transform: translateY(-50%);
-      pointer-events: none;
+    }
+    .cb-sheet :global(.cb-sheet-reg-tl) {
+      top: 6%;
+      left: 5%;
+    }
+    .cb-sheet :global(.cb-sheet-reg-br) {
+      right: 5%;
+      bottom: 6%;
+    }
+    .cb-sheet :global(.cb-sheet-bar) {
+      position: absolute;
+      bottom: 7%;
+      left: 12%;
     }
 
     @media (min-width: 40rem) {
@@ -96,16 +202,17 @@ const copy = homeText.el.contactBand;
 
     @media (min-width: 64rem) {
       .cb-inner {
-        grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-        align-items: end;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        align-items: center;
         gap: var(--grid-gap);
       }
-      .cb-actions {
-        justify-content: flex-end;
-        padding-right: 7rem;
+      .cb-copy {
+        grid-column: 1 / span 7;
       }
-      .cb-reg {
-        display: block;
+      .cb-art {
+        grid-column: 9 / span 4;
+        width: 100%;
+        max-width: 26rem;
       }
     }
   }

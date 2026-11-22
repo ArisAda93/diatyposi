@@ -6,7 +6,13 @@
  * With JS, src/scripts/halftone-field.ts draws an interactive halftone field on the canvas (dots
  * print in on scroll, swell around the pointer, ripple on touch) and sets `.is-field`, which hides
  * the static SVG print. Without JS the SVG print shows.
+ *
+ * Solid ink, opaque, so it paints over the living background (no `data-bg-accent`). The brand
+ * name sits on a short CMYK rule above the line; the foot carries the press colour bar and a
+ * registration mark, closing the sheet. The script reads `.statement-text` (keep the class).
  */
+import ColorBar from '~/components/ColorBar.astro';
+import RegMark from '~/components/RegMark.astro';
 import { ARCH, ARCH_PLATES } from '~/components/logo-paths';
 import { ownerCopy } from '~/data/site';
 
@@ -52,6 +58,11 @@ const line = at >= 0 ? closing.slice(at + sep.length) : closing;
       {brand && ' '}
       <span class="display-l statement-line">{line}</span>
     </h2>
+    <div class="statement-foot" aria-hidden="true">
+      <ColorBar tints={4} />
+      <span class="statement-rule"></span>
+      <RegMark size={22} class="statement-reg" />
+    </div>
   </div>
 </section>
 
@@ -89,18 +100,58 @@ const line = at >= 0 ? closing.slice(at + sep.length) : closing;
     }
     .statement-inner {
       position: relative;
+      padding-block: clamp(5.5rem, 3rem + 10vw, 12rem);
     }
     .statement-text {
       display: flex;
       flex-direction: column;
-      gap: clamp(1.25rem, 2.5vw, 2rem);
+      gap: clamp(1.5rem, 1rem + 2vw, 2.5rem);
     }
+    /* The brand name on a short C/M/Y/K rule, like the strip at the edge of a press sheet. */
     .statement-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 1rem;
       font-size: clamp(0.8125rem, 0.75rem + 0.3vw, 1rem);
+    }
+    .statement-brand::before {
+      content: '';
+      flex: none;
+      width: 3rem;
+      height: 0.375rem;
+      background-image: linear-gradient(
+        90deg,
+        var(--color-cyan) 0 25%,
+        var(--color-magenta) 25% 50%,
+        var(--color-yellow) 50% 75%,
+        var(--color-paper) 75% 100%
+      );
     }
     .statement-line {
       max-width: 17ch;
       color: var(--color-paper);
+      text-wrap: balance;
+    }
+    @media (min-width: 64rem) {
+      .statement-line {
+        font-size: clamp(3.5rem, 1.5rem + 4.2vw, 6rem);
+      }
+    }
+    .statement-foot {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      max-width: 40rem;
+      margin-top: clamp(3rem, 2rem + 4vw, 5.5rem);
+    }
+    .statement-rule {
+      flex: 1;
+      height: 1px;
+      background-color: var(--color-ink-line);
+    }
+    .statement-foot :global(.statement-reg) {
+      flex: none;
+      color: var(--color-ink-muted);
     }
   }
 </style>

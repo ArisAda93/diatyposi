@@ -1,13 +1,15 @@
 ---
 /**
- * Shared page shell: head (SEO, Open Graph, JSON-LD, fonts), skip link, header, footer and the
- * mobile floating contact bar. Every page renders exactly one <h1> inside the default slot.
+ * Shared page shell: head (SEO, Open Graph, JSON-LD, fonts), the living background, skip link,
+ * header, footer and the mobile floating contact bar. Every page renders exactly one <h1> inside
+ * the default slot.
  */
 import '~/styles/global.css';
 import '~/styles/motion.css';
 import Header from '~/components/Header.astro';
 import Footer from '~/components/Footer.astro';
 import FloatingContact from '~/components/FloatingContact.astro';
+import LivingBackground from '~/components/LivingBackground.astro';
 import { site } from '~/data/site';
 import { defaultLocale, localeTags, t, type Locale } from '~/i18n/ui';
 import { buildLocalBusiness } from '~/lib/seo';
@@ -121,6 +123,7 @@ const jsonLd = structuredData ? JSON.stringify(buildLocalBusiness(siteUrl, local
     <slot name="head" />
   </head>
   <body class="flex min-h-dvh flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+    <LivingBackground />
     <a href="#main" class="skip-link">
       {t('skipLink', locale)}
     </a>

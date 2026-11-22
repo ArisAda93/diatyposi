@@ -1,7 +1,45 @@
 import { describe, expect, it } from 'vitest';
 import { services } from '../src/data/site';
 import { closestIndex, leadSentence, stepDirection } from '../src/scripts/services-showcase';
-import { plateInk, railGradient, stepProgress } from '../src/scripts/services-page';
+import {
+  centredScroll,
+  indexState,
+  plateInk,
+  railGradient,
+  stepProgress,
+} from '../src/scripts/services-page';
+
+describe('services (owner order)', () => {
+  it('lists the nine services in the order the owner asked for', () => {
+    expect(services.map((s) => s.slug)).toEqual([
+      'diafimistika-dora',
+      'mplouzakia-rouxismos',
+      'grafistikos-sxediasmos',
+      'banners-afises-mousamades',
+      'epigrafes-aftokollita-vitrines',
+      'social-media',
+      'psifiakes-offset-ektyposeis',
+      'kartes-fylladia-entypa',
+      'prosklitiria-kartes',
+    ]);
+    expect(services.map((s) => s.text.el.title)).toEqual([
+      'Διαφημιστικά δώρα & προσωποποιημένα προϊόντα',
+      'Εκτυπώσεις σε μπλουζάκια & επαγγελματικό ρουχισμό',
+      'Γραφιστικός σχεδιασμός & δημιουργία λογοτύπων',
+      'Διαφημιστικά banners, αφίσες & μουσαμάδες',
+      'Επιγραφές, αυτοκόλλητα & βιτρίνες καταστημάτων',
+      'Σχεδιασμός διαφημιστικού υλικού για τα social media',
+      'Ψηφιακές & offset εκτυπώσεις',
+      'Επαγγελματικές κάρτες, φυλλάδια & έντυπα',
+      'Προσκλητήρια, κάρτες & ειδικές κατασκευές',
+    ]);
+  });
+  it('has nine unique slugs', () => {
+    const slugs = services.map((s) => s.slug);
+    expect(slugs).toHaveLength(9);
+    expect(new Set(slugs).size).toBe(9);
+  });
+});
 
 describe('leadSentence', () => {
   it('keeps the first sentence of a longer description', () => {
@@ -75,6 +113,32 @@ describe('stepProgress (rail fill without scroll motion)', () => {
   it('is empty with no active chapter or no chapters', () => {
     expect(stepProgress(-1, 9)).toBe(0);
     expect(stepProgress(0, 0)).toBe(0);
+  });
+});
+
+describe('indexState (index entries while reading)', () => {
+  it('marks chapters before the one in view as read, it as current, the rest as ahead', () => {
+    expect([0, 1, 2, 3].map((i) => indexState(i, 2))).toEqual(['read', 'read', 'current', 'ahead']);
+  });
+  it('marks everything ahead with no chapter in view or an unknown chapter', () => {
+    expect(indexState(0, -1)).toBe('ahead');
+    expect(indexState(-1, 3)).toBe('ahead');
+  });
+});
+
+describe('centredScroll (current chip in the middle of the chip row)', () => {
+  it('centres the item in the visible width', () => {
+    // Item 100 wide at 500 in a 300-wide view of 1200: (300 - 100) / 2 = 100 either side.
+    expect(centredScroll(500, 100, 300, 1200)).toBe(400);
+  });
+  it('stays at the start for an item near the start', () => {
+    expect(centredScroll(20, 100, 300, 1200)).toBe(0);
+  });
+  it('stops at the end of the scroll range for an item near the end', () => {
+    expect(centredScroll(1150, 50, 300, 1200)).toBe(900);
+  });
+  it('does not scroll when everything fits', () => {
+    expect(centredScroll(100, 80, 600, 500)).toBe(0);
   });
 });
 

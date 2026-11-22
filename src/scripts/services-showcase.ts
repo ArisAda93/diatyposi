@@ -8,10 +8,13 @@
  * applies, the row crossing the middle of the viewport as the visitor scrolls. Below 64rem there
  * is no plate; the row in the middle of the viewport only gets a subtle emphasis (CSS).
  *
- * A plate change is a registration move: the number flips, the card turns slightly in 3D, and the
- * new photo arrives as offset cyan, magenta and yellow separations that snap into register before
- * the colour photo prints over them. The photo of each service waits in a <template> until it is
- * first shown, so a change costs at most one image request (the separations reuse the loaded file).
+ * A plate change is a registration move: the number flips, the card turns slightly in 3D, the
+ * plate takes the new service's ink (its top edge, numeral shadow and halftone under-plate, from
+ * the row's `data-ink`), and the new photo arrives as offset cyan, magenta and yellow separations
+ * that snap into register before the colour photo prints over them. The photo of each service
+ * waits in a <template> until it is first shown, so a change costs at most one image request (the
+ * separations reuse the loaded file). The under-plate's scroll depth (`data-parallax`) belongs to
+ * the site-wide motion layer, not to this script.
  *
  * Web Animations only (transform and opacity), no animation library. Without JS the list is a
  * plain list of links and the plate shows the first service. Under reduced motion nothing moves:
@@ -91,14 +94,15 @@ export const initServicesShowcase = (): void => {
   const rows = Array.from(list.querySelectorAll<HTMLAnchorElement>('[data-svc-row]'));
   if (rows.length === 0) return;
 
+  const sheet = root.querySelector<HTMLElement>('[data-svc-plate]');
   const card = root.querySelector<HTMLElement>('[data-svc-plate-card]');
   const media = root.querySelector<HTMLElement>('[data-svc-plate-media]');
   const numBox = root.querySelector<HTMLElement>('[data-svc-plate-num]');
   const iconSlot = root.querySelector<HTMLElement>('[data-svc-plate-icon]');
   const leads = Array.from(root.querySelectorAll<HTMLElement>('[data-svc-plate-lead]'));
   const stage =
-    card && media && numBox && iconSlot && leads.length === rows.length
-      ? { card, media, numBox, iconSlot, leads }
+    sheet && card && media && numBox && iconSlot && leads.length === rows.length
+      ? { sheet, card, media, numBox, iconSlot, leads }
       : null;
 
   const templates = new Map<number, HTMLTemplateElement>();
@@ -203,6 +207,12 @@ export const initServicesShowcase = (): void => {
     }
   };
 
+  /** The plate takes the service's ink; CSS keys the colours on `data-ink` (and fades them). */
+  const setInk = (next: number): void => {
+    const ink = rows[next]?.dataset.ink;
+    if (stage && ink) stage.sheet.dataset.ink = ink;
+  };
+
   /** The new icon's C, M and Y plates part and snap back into register. */
   const splitIcon = (icon: Element): void => {
     ICON_SHIFTS.forEach(([plate, x, y]) => {
@@ -249,6 +259,7 @@ export const initServicesShowcase = (): void => {
 
     setNumber(next, dir, instant);
     setCaption(next, instant);
+    setInk(next);
     if (entry.icon) {
       stage.iconSlot.replaceChildren(entry.icon);
       if (!instant) splitIcon(entry.icon);

@@ -1,7 +1,13 @@
 ---
 /**
  * Home work teaser: the featured portfolio items in an editorial, staggered layout of different
- * sizes. Each tile links to /erga/; stand-in images carry a visible label.
+ * sizes on the 12-column grid. Each tile links to /erga/; stand-in images carry a visible label.
+ *
+ * Depth: every tile sits on its own parallax layer (`data-parallax`, motion.ts) with a different
+ * speed, so the set separates into planes while scrolling. The speeds stay small (neighbours
+ * differ by at most 0.08) so stacked tiles on phones never meet. The layer is a wrapper because
+ * the item itself carries the depth entry (`transform`) and the link the pointer tilt.
+ * Captions: index number, category label, title with an arrow that slides in on hover and focus.
  */
 import Icon from '~/components/Icon.astro';
 import Photo from '~/components/Photo.astro';
@@ -20,9 +26,11 @@ const sizes = [
   '(min-width: 96rem) 460px, (min-width: 64rem) 30vw, (min-width: 48rem) 46vw, 76vw',
   '(min-width: 96rem) 580px, (min-width: 64rem) 37vw, (min-width: 48rem) 46vw, 92vw',
 ];
+/** Parallax speed per position: the anchor tile still, the others leading or lagging a little. */
+const speeds = ['0', '-0.06', '0.02', '-0.05'];
 ---
 
-<section class="section work" aria-labelledby="work-title">
+<section class="section work" aria-labelledby="work-title" data-bg-accent="magenta">
   <div class="wrap">
     <div class="work-head">
       <div>
@@ -33,7 +41,7 @@ const sizes = [
       </div>
       <a href={routes.work} class="link work-all">
         <span>{copy.allLink}</span>
-        <Icon name="arrow-right" size={20} />
+        <Icon name="arrow-right" size={20} class="work-all-arrow" />
       </a>
     </div>
 
@@ -42,20 +50,39 @@ const sizes = [
         const category = serviceBySlug(item.service)?.text.el.short;
         return (
           <li class={`work-item work-pos-${i % 4}`} data-reveal="depth">
-            <a href={routes.work} class="work-link" data-tilt>
-              <div class="media media-halftone work-media">
-                <Photo image={item.image} alt={item.text.el.alt} sizes={sizes[i % 4] ?? '92vw'} />
-                {item.standIn && <span class="work-chip">{t('standInLabel')}</span>}
-              </div>
-              <div class="work-cap">
-                {category && <p class="label">{capsEl(category)}</p>}
-                <h3 class="h3">{item.text.el.title}</h3>
-              </div>
-            </a>
+            <div class="work-plx" data-parallax={speeds[i % 4] ?? '0'}>
+              <a href={routes.work} class="work-link" data-tilt>
+                <div class="media media-halftone work-media">
+                  <Photo
+                    image={item.image}
+                    alt={item.text.el.alt}
+                    sizes={sizes[i % 4] ?? '92vw'}
+                  />
+                  {item.standIn && <span class="work-chip">{t('standInLabel')}</span>}
+                </div>
+                <div class="work-cap">
+                  <p class="work-meta">
+                    <span class="work-num" aria-hidden="true">
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                    {category && <span class="label">{capsEl(category)}</span>}
+                  </p>
+                  <h3 class="h3 work-title">
+                    <span>{item.text.el.title}</span>
+                    <Icon name="arrow-up-right" size={22} class="work-title-arrow" />
+                  </h3>
+                </div>
+              </a>
+            </div>
           </li>
         );
       })}
     </ul>
+
+    <a href={routes.work} class="btn btn-secondary work-all-end">
+      <span>{copy.allLink}</span>
+      <Icon name="arrow-right" size={20} />
+    </a>
   </div>
 </section>
 
@@ -70,22 +97,31 @@ const sizes = [
       margin-bottom: clamp(2.5rem, 5vw, 4.5rem);
     }
     .work-all {
-      display: inline-flex;
+      display: none;
       align-items: center;
       gap: 0.5rem;
       min-height: 2.75rem;
       font-family: var(--font-display);
       font-weight: 700;
     }
+    .work-all :global(.work-all-arrow) {
+      transition: transform var(--dur-base) var(--ease-out);
+    }
+    /* Phones: the link closes the set as a full-width button instead. */
+    .work-all-end {
+      width: 100%;
+      margin-top: clamp(2.5rem, 6vw, 3.5rem);
+    }
 
     .work-grid {
       display: grid;
       grid-template-columns: minmax(0, 1fr);
-      gap: clamp(2.5rem, 5vw, 4rem) var(--grid-gap);
+      gap: 3rem var(--grid-gap);
     }
     .work-link {
       display: block;
       text-decoration: none;
+      color: var(--color-key);
     }
     .work-media {
       aspect-ratio: var(--ar, 4 / 3);
@@ -100,24 +136,75 @@ const sizes = [
       left: 0.75rem;
       z-index: 1;
       padding: 0.3rem 0.6rem;
-      border: 1px solid var(--color-key);
-      background-color: var(--color-paper);
+      background-color: var(--color-yellow);
       color: var(--color-key);
       font-family: var(--font-display);
       font-size: 0.75rem;
-      font-weight: 700;
+      font-weight: 720;
       line-height: 1.3;
     }
+
     .work-cap {
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
       padding-top: 1rem;
     }
-    .work-link:hover .h3 {
-      text-decoration: underline;
-      text-decoration-thickness: 2px;
-      text-underline-offset: 0.18em;
+    .work-meta {
+      display: flex;
+      align-items: baseline;
+      gap: 0.875rem;
+    }
+    .work-num {
+      font-family: var(--font-display);
+      font-size: var(--text-label);
+      font-weight: 750;
+      letter-spacing: 0.12em;
+      color: var(--color-muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .work-title {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+    .work-title > span {
+      background-image: linear-gradient(currentColor, currentColor);
+      background-repeat: no-repeat;
+      background-position: 0 100%;
+      background-size: 0 2px;
+      transition: background-size var(--dur-base) var(--ease-out);
+    }
+    .work-title :global(.work-title-arrow) {
+      flex: none;
+      margin-top: 0.1em;
+      opacity: 0;
+      transform: translate(-6px, 6px);
+      transition:
+        opacity var(--dur-base) var(--ease-out),
+        transform var(--dur-base) var(--ease-out);
+    }
+    .work-link:hover .work-title > span,
+    .work-link:focus-visible .work-title > span {
+      background-size: 100% 2px;
+    }
+    .work-link:hover .work-title :global(.work-title-arrow),
+    .work-link:focus-visible .work-title :global(.work-title-arrow) {
+      opacity: 1;
+      transform: none;
+    }
+    .work-link:hover .work-num,
+    .work-link:focus-visible .work-num {
+      color: var(--color-key);
+    }
+    .work-link:focus-visible {
+      outline-offset: 6px;
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .work-all:hover :global(.work-all-arrow),
+      .work-all:focus-visible :global(.work-all-arrow) {
+        transform: translateX(4px);
+      }
     }
 
     .work-pos-0 {
@@ -137,8 +224,15 @@ const sizes = [
     }
 
     @media (min-width: 48rem) {
+      .work-all {
+        display: inline-flex;
+      }
+      .work-all-end {
+        display: none;
+      }
       .work-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        row-gap: clamp(2.5rem, 5vw, 4rem);
       }
       .work-pos-1,
       .work-pos-2 {

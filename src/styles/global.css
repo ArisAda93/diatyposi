@@ -135,6 +135,15 @@
 /* ------------------------------------------------------------------------------------------ */
 
 @layer base {
+  /*
+   * Background stack (back to front): the paper on <html>, the living background (fixed,
+   * z-index −1: the halftone sheet, then the grain; LivingBackground.astro), then the content.
+   * <body> and full-width light sections stay transparent so the sheet shows through; ink
+   * sections and the yellow contact band paint their own opaque backgrounds. <body> must keep no
+   * background (it would paint over the sheet). Content that blends with the sheet (the hero
+   * canvas, `mix-blend-mode: multiply`) must have no isolating ancestor (isolation, transform,
+   * filter, opacity < 1, or a z-index on a positioned ancestor) between it and <body>.
+   */
   html {
     background-color: var(--color-paper);
     color: var(--color-key);
@@ -162,9 +171,8 @@
     font-family: var(--font-sans);
     font-size: var(--text-body);
     line-height: var(--text-body--line-height);
-    background-color: var(--color-paper);
-    background-image: var(--grain);
-    background-size: 160px 160px;
+    /* Transparent: the paper is on <html> and the grain on the living background layer. */
+    background-color: transparent;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -301,7 +309,12 @@
     color: var(--color-ink-muted);
   }
 
-  /* Buttons: square, key-black; on hover the C/M/Y plates slide out, on press they snap back. */
+  /*
+   * Buttons: square, key-black. Hover and keyboard focus lift the face and slide the C/M/Y plates
+   * out behind it; a press pushes the face in and the plates collapse into register; the release
+   * springs back (--ease-snap). The press-in uses the `scale` property, so it composes with the
+   * hover transform and the magnetic pull (motion.css). The ink ripple is motion.ts/motion.css.
+   */
   .btn {
     position: relative;
     display: inline-flex;
@@ -320,7 +333,8 @@
     white-space: nowrap;
     cursor: pointer;
     transition:
-      transform var(--dur-base) var(--ease-out),
+      transform var(--dur-base) var(--ease-snap),
+      scale var(--dur-base) var(--ease-snap),
       box-shadow var(--dur-base) var(--ease-out),
       background-color var(--dur-fast) linear,
       color var(--dur-fast) linear;
@@ -330,17 +344,23 @@
     height: 1.25rem;
     flex: none;
   }
-  .btn:hover {
+  .btn:hover,
+  .btn:focus-visible {
     transform: translate(-2px, -2px);
     box-shadow:
       2px 2px 0 var(--color-cyan),
       4px 4px 0 var(--color-magenta),
       6px 6px 0 var(--color-yellow);
   }
+  /* Clear of the plates (they reach 4px past the lifted face). */
+  .btn:focus-visible {
+    outline-offset: 6px;
+  }
   .btn:active {
     transform: translate(0, 0);
+    scale: 0.97;
     box-shadow: 0 0 0 transparent;
-    transition-duration: 60ms;
+    transition-duration: 70ms;
   }
   .btn-primary {
     background-color: var(--color-key);
@@ -350,7 +370,7 @@
     background-color: transparent;
     color: var(--color-key);
   }
-  .btn-secondary:hover {
+  .btn-secondary:is(:hover, :focus-visible) {
     background-color: var(--color-paper);
   }
   .on-ink .btn {
@@ -363,37 +383,103 @@
   .on-ink .btn-secondary {
     color: var(--color-paper);
   }
-  .on-ink .btn-secondary:hover {
+  .on-ink .btn-secondary:is(:hover, :focus-visible) {
     background-color: var(--color-ink);
   }
   .btn-block {
     width: 100%;
   }
 
-  /* Text link with an underline that draws in */
+  /*
+   * Icon and menu buttons (faces styled in Header.astro). A press pushes them in and the release
+   * springs back; the menu button lifts on its C/M/Y plates like .btn. `html .icon-btn` outranks
+   * the component's transition list, so it repeats its colour fades. Positioned for the ripple.
+   */
+  .icon-btn {
+    position: relative;
+  }
+  html .icon-btn {
+    transition:
+      background-color var(--dur-fast) linear,
+      color var(--dur-fast) linear,
+      scale var(--dur-base) var(--ease-snap);
+  }
+  .icon-btn:active {
+    scale: 0.92;
+    transition-duration: 70ms;
+  }
+  .menu-btn {
+    transition:
+      transform var(--dur-base) var(--ease-snap),
+      scale var(--dur-base) var(--ease-snap),
+      box-shadow var(--dur-base) var(--ease-out);
+  }
+  .menu-btn:is(:hover, :focus-visible) {
+    transform: translate(-2px, -2px);
+    box-shadow:
+      2px 2px 0 var(--color-cyan),
+      4px 4px 0 var(--color-magenta),
+      6px 6px 0 var(--color-yellow);
+  }
+  .menu-btn:focus-visible {
+    outline-offset: 6px;
+  }
+  .menu-btn:active {
+    transform: translate(0, 0);
+    scale: 0.96;
+    box-shadow: 0 0 0 transparent;
+    transition-duration: 70ms;
+  }
+
+  /*
+   * Chips and toggle buttons: pushed in while pressed. Toggling plays a short registration snap
+   * (motion.ts adds .mo-toggle; motion.css).
+   */
+  button[aria-pressed]:active {
+    scale: 0.96;
+  }
+
+  /*
+   * Text links. `.link` keeps a 1px rule at rest, so links in running text stay recognisable; on
+   * hover or keyboard focus a 2px rule draws over it from the left, and leaves to the right.
+   * `.link-draw` has no rule at rest and draws the same 2px rule (navigation, footer lists); the
+   * current page keeps it. A `.link` inside a link or button draws with its parent.
+   */
   .link {
     text-decoration: none;
-    background-image: linear-gradient(currentColor, currentColor);
+    background-image:
+      linear-gradient(currentColor, currentColor), linear-gradient(currentColor, currentColor);
     background-repeat: no-repeat;
-    background-position: 0 100%;
-    background-size: 100% 1px;
+    background-position:
+      100% 100%,
+      0 100%;
+    background-size:
+      0 2px,
+      100% 1px;
     transition: background-size var(--dur-base) var(--ease-out);
     padding-bottom: 2px;
   }
-  .link:hover {
-    background-size: 100% 2px;
+  .link:is(:hover, :focus-visible),
+  :is(a, button):is(:hover, :focus-visible) > .link {
+    background-position:
+      0 100%,
+      0 100%;
+    background-size:
+      100% 2px,
+      100% 1px;
   }
   .link-draw {
     text-decoration: none;
     background-image: linear-gradient(currentColor, currentColor);
     background-repeat: no-repeat;
-    background-position: 0 100%;
+    background-position: 100% 100%;
     background-size: 0 2px;
     transition: background-size var(--dur-base) var(--ease-out);
     padding-bottom: 2px;
   }
-  .link-draw:hover,
+  .link-draw:is(:hover, :focus-visible),
   .link-draw[aria-current='page'] {
+    background-position: 0 100%;
     background-size: 100% 2px;
   }
 
@@ -588,12 +674,53 @@
     scroll-behavior: auto !important;
   }
   .btn:hover,
+  .btn:focus-visible,
+  .menu-btn:hover,
+  .menu-btn:focus-visible,
   .card-lift:hover {
     transform: none;
+  }
+  /* No press-in either: the plates still collapse into register (a colour change, not motion). */
+  .btn:active,
+  .icon-btn:active,
+  .menu-btn:active,
+  button[aria-pressed]:active {
+    scale: none;
   }
   a:hover .media img,
   button:hover .media img,
   .media:hover img {
     transform: none;
+  }
+}
+
+/* ------------------------------------------------------------------------------------------ */
+/* Page transitions (same-origin navigations, CSS only; browsers without support just load)   */
+/* The outgoing page lifts away as it fades; the new one settles up into place. Off with      */
+/* reduced motion: then navigations are instant, as without support.                          */
+/* ------------------------------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+  ::view-transition-old(root) {
+    animation: page-out 200ms cubic-bezier(0.65, 0, 0.35, 1) both;
+  }
+  ::view-transition-new(root) {
+    animation: page-in 380ms cubic-bezier(0.2, 0.8, 0.2, 1) 60ms both;
+  }
+}
+
+@keyframes page-out {
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
   }
 }

@@ -1,15 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEPTH_TILT,
+  PARALLAX_LIMIT,
+  PARALLAX_MAX,
   clamp,
   damp,
   depthAmplitude,
   depthStartScale,
   fitScale,
   magneticPull,
+  parallaxOffset,
+  parallaxSpeed,
   perspectiveGrow,
   plateDirection,
   pointerNorm,
+  rippleDiameter,
   scrollProgress,
   scrubRange,
   springStep,
@@ -196,6 +201,93 @@ describe('pointer helpers', () => {
     expect(plateDirection(0.05, -0.05)).toBeNull();
     expect(plateDirection(0.5, 0.5)).toEqual([1, 1]);
     expect(plateDirection(-0.8, 0.4)).toEqual([-1, 0.5]);
+  });
+});
+
+describe('parallax', () => {
+  const vh = 900;
+  const max = vh * PARALLAX_MAX;
+  /** Screen centre of an element whose layout centre starts at `start`, after scrolling `s`. */
+  const screen = (start: number, s: number, speed: number): number => {
+    const centre = start - s;
+    return centre + parallaxOffset(centre, vh / 2, speed, max);
+  };
+
+  it('reads data-parallax speeds within ±0.4', () => {
+    expect(parallaxSpeed('0.2')).toBe(0.2);
+    expect(parallaxSpeed('-0.15')).toBe(-0.15);
+    expect(parallaxSpeed('1')).toBe(PARALLAX_LIMIT);
+    expect(parallaxSpeed('-3')).toBe(-PARALLAX_LIMIT);
+    expect(parallaxSpeed(' 0.1 ')).toBe(0.1);
+  });
+
+  it('ignores missing, invalid and zero speeds', () => {
+    expect(parallaxSpeed(null)).toBeNull();
+    expect(parallaxSpeed('')).toBeNull();
+    expect(parallaxSpeed('fast')).toBeNull();
+    expect(parallaxSpeed('0')).toBeNull();
+    expect(parallaxSpeed('Infinity')).toBeNull();
+  });
+
+  it('is zero at the viewport centre and for speed 0', () => {
+    expect(parallaxOffset(450, 450, 0.3, max)).toBe(0);
+    expect(parallaxOffset(450, 450, -0.3, max)).toBe(0);
+    [-2000, -100, 0, 300, 450, 900, 5000].forEach((centre) => {
+      expect(parallaxOffset(centre, 450, 0, max)).toBe(0);
+    });
+  });
+
+  it('pushes away from the centre for negative speeds and towards it for positive ones', () => {
+    // Below the centre.
+    expect(parallaxOffset(650, 450, 0.2, max)).toBeLessThan(0);
+    expect(parallaxOffset(650, 450, -0.2, max)).toBeGreaterThan(0);
+    // Above the centre: mirrored.
+    expect(parallaxOffset(250, 450, 0.2, max)).toBeCloseTo(-parallaxOffset(650, 450, 0.2, max));
+  });
+
+  it('lags the scroll for positive speeds and leads it for negative ones', () => {
+    // Scrolling 20px moves the content 20px; a lagging element moves less, a leading one more.
+    const moved = (speed: number): number =>
+      Math.abs(screen(600, 120, speed) - screen(600, 100, speed));
+    expect(moved(0)).toBeCloseTo(20);
+    expect(moved(0.25)).toBeLessThan(20);
+    expect(moved(-0.25)).toBeGreaterThan(20);
+  });
+
+  it('never moves an element more than the maximum from its layout position', () => {
+    [-0.4, -0.1, 0.1, 0.4].forEach((speed) => {
+      [-10_000, -900, 0, 450, 900, 10_000].forEach((centre) => {
+        expect(Math.abs(parallaxOffset(centre, 450, speed, max))).toBeLessThanOrEqual(max);
+      });
+    });
+    expect(parallaxOffset(10_000, 450, 0.4, max)).toBe(-max);
+    expect(parallaxOffset(-10_000, 450, 0.4, max)).toBe(max);
+  });
+});
+
+describe('ink ripple', () => {
+  it('reaches every corner of the button from wherever it starts', () => {
+    const [w, h] = [220, 48];
+    [
+      [0, 0],
+      [110, 24],
+      [219, 47],
+      [30, 40],
+    ].forEach(([x = 0, y = 0]) => {
+      const r = rippleDiameter(x, y, w, h) / 2;
+      [
+        [0, 0],
+        [w, 0],
+        [0, h],
+        [w, h],
+      ].forEach(([cx = 0, cy = 0]) => {
+        expect(Math.hypot(cx - x, cy - y)).toBeLessThanOrEqual(r + 1e-9);
+      });
+    });
+  });
+
+  it('is just large enough: from the centre it spans the diagonal', () => {
+    expect(rippleDiameter(110, 24, 220, 48)).toBeCloseTo(Math.hypot(220, 48));
   });
 });
 

@@ -3,6 +3,10 @@
  * Shown after a valid quote form submit (src/scripts/quote-form.ts fills it): the three send
  * links, the attachment note, a read-only preview of the text with a copy button, and a way
  * back to the form. The hrefs below are plain fallbacks; the script adds the composed text.
+ *
+ * When it appears (the moment a valid form is submitted) the panel prints in from the top and
+ * the check is stamped on with a C/M plate that snaps into register. Reduced motion: it simply
+ * appears.
  */
 import Icon from '~/components/Icon.astro';
 import { site } from '~/data/site';
@@ -130,6 +134,15 @@ const text = contactText.el.send;
       font-size: 0.9375rem;
       line-height: 1.6;
     }
+    @media (prefers-reduced-motion: no-preference) {
+      .send-panel:not([hidden]) {
+        /* No fill: the clip must not outlast the animation (it would cut focus rings). */
+        animation: send-print 560ms var(--ease-out);
+      }
+      .send-panel:not([hidden]) .send-heading :global(.send-check) {
+        animation: send-stamp 700ms var(--ease-snap) 160ms both;
+      }
+    }
     .back-link {
       display: inline-flex;
       align-items: center;
@@ -140,6 +153,45 @@ const text = contactText.el.send;
       font-family: var(--font-display);
       font-weight: 700;
       cursor: pointer;
+    }
+    .back-link :global(svg) {
+      transition: transform var(--dur-base) var(--ease-out);
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .back-link:hover :global(svg),
+      .back-link:focus-visible :global(svg) {
+        transform: translateX(-4px);
+      }
+    }
+  }
+
+  @keyframes send-print {
+    from {
+      opacity: 0;
+      clip-path: inset(0 0 100% 0);
+    }
+    to {
+      opacity: 1;
+      clip-path: inset(0 0 0 0);
+    }
+  }
+  @keyframes send-stamp {
+    0% {
+      transform: scale(1.6) rotate(-12deg);
+      box-shadow:
+        -5px -4px 0 var(--color-cyan),
+        5px 4px 0 var(--color-magenta);
+      opacity: 0;
+    }
+    55% {
+      opacity: 1;
+    }
+    100% {
+      transform: none;
+      box-shadow:
+        0 0 0 transparent,
+        0 0 0 transparent;
+      opacity: 1;
     }
   }
 </style>

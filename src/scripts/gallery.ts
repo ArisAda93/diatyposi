@@ -2,6 +2,11 @@
  * /erga/ gallery behaviour: category filter (chips with aria-pressed, live count, `?kategoria=`)
  * and the lightbox (native modal <dialog>, previous/next within the filtered set, arrow keys,
  * focus back to the opening tile). Markup: src/components/portfolio/WorkGallery.astro.
+ *
+ * Feedback hooks for the CSS: `.is-tick` on the live count when a chip changes the filter,
+ * `data-entering` (with `--enter-i`) on tiles a filter brings back into view, and `.is-swap` on
+ * the lightbox stage when previous/next shows another picture. None of them is set under reduced
+ * motion, and none hides anything: they only replay short CSS animations.
  */
 import {
   ALL,
@@ -18,6 +23,24 @@ import { workText } from '~/i18n/pages/work';
 
 const text = workText.el;
 
+/** Longest tile print-in: 460ms animation plus the largest stagger (8 × 45ms), with a margin. */
+const ENTER_CLEAR_MS = 1100;
+/** Tiles after this many share the last stagger step, so a long list does not drag. */
+const ENTER_MAX_STEP = 8;
+
+const prefersReducedMotion = (): boolean =>
+  typeof window.matchMedia === 'function' &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** Restarts a one-shot CSS animation keyed on `className`. */
+const replay = (el: HTMLElement, className: string): void => {
+  if (prefersReducedMotion()) return;
+  el.classList.remove(className);
+  // Reading layout commits the removal, so adding the class again starts the animation afresh.
+  void el.offsetWidth;
+  el.classList.add(className);
+};
+
 export const initGallery = (root: HTMLElement): void => {
   const filterBar = root.querySelector<HTMLElement>('[data-filter-bar]');
   const chips = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-filter]'));
@@ -25,6 +48,23 @@ export const initGallery = (root: HTMLElement): void => {
   const items = Array.from(root.querySelectorAll<HTMLElement>('[data-work-item]'));
 
   const visibleItems = (): HTMLElement[] => items.filter((item) => !item.hidden);
+
+  const enterTimers = new WeakMap<HTMLElement, number>();
+  /** Prints a tile back in after a filter change (CSS keyed on data-entering). */
+  const printIn = (item: HTMLElement, order: number): void => {
+    if (prefersReducedMotion()) return;
+    window.clearTimeout(enterTimers.get(item));
+    item.style.setProperty('--enter-i', String(Math.min(order, ENTER_MAX_STEP)));
+    item.dataset.entering = '';
+    enterTimers.set(
+      item,
+      window.setTimeout(() => {
+        delete item.dataset.entering;
+        item.style.removeProperty('--enter-i');
+        enterTimers.delete(item);
+      }, ENTER_CLEAR_MS),
+    );
+  };
 
   // ---------------------------------------------------------------------------------------------
   // Filter
@@ -38,6 +78,7 @@ export const initGallery = (root: HTMLElement): void => {
     chips.forEach((chip) => {
       chip.setAttribute('aria-pressed', String(chip.dataset.filter === filter));
     });
+    const wasHidden = new Set(items.filter((item) => item.hidden));
     items.forEach((item) => {
       item.hidden = !matchesFilter(item.dataset.service ?? '', filter);
     });
@@ -54,11 +95,17 @@ export const initGallery = (root: HTMLElement): void => {
       });
     });
 
+    let entering = 0;
+    visible.forEach((item) => {
+      if (wasHidden.has(item)) printIn(item, entering++);
+    });
+
     if (status) {
       status.textContent = formatCount(visible.length, {
         one: text.countOne,
         other: text.countOther,
       });
+      if (updateUrl) replay(status, 'is-tick');
     }
 
     if (updateUrl) {
@@ -157,6 +204,8 @@ export const initGallery = (root: HTMLElement): void => {
     statusEl.textContent = announce
       ? fillTemplate(text.lightboxPositionStatus, { title, ...position })
       : '';
+    // Previous/next: the new picture prints in.
+    if (announce) replay(stage, 'is-swap');
   };
 
   const open = (tile: HTMLAnchorElement): void => {

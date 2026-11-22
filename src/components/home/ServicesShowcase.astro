@@ -3,23 +3,28 @@
  * Home services overview, "the plate and the index".
  *
  * Desktop (from 64rem): two columns. Left, a sticky press plate in perspective inside crop marks,
- * showing the active service's photo, plate icon, number and lead sentence. Right, the nine
- * services as large typographic rows; each row is one link to its chapter on /ypiresies/.
- * Below 64rem: no plate; each row carries its own thumbnail and lead sentence.
+ * showing the active service's photo, plate icon, number and lead sentence, edged in that service's
+ * plate ink (the same C, M, Y, K cycle as the chapters on /ypiresies/). Behind the plate a halftone
+ * under-plate and two registration targets sit at their own scroll depths (`data-parallax`, run by
+ * the motion layer). Right, the nine services as large typographic rows; each row is one link to
+ * its chapter on /ypiresies/. Below 64rem: no plate; each row carries its own thumbnail and lead.
  *
  * Behaviour lives in src/scripts/services-showcase.ts. Without JS, every link is there and the
  * plate shows the first service. The other plates wait in <template>s, so nothing loads until a
  * service is first shown. The plate repeats what the rows say, so it is hidden from assistive
- * technology; the rows carry the content.
+ * technology; the rows carry the content. The section paints no background of its own, so the
+ * site-wide living background (tinted by `data-bg-accent`) shows through.
  */
 import ColorBar from '~/components/ColorBar.astro';
 import Icon from '~/components/Icon.astro';
 import Photo from '~/components/Photo.astro';
 import PlateIcon from '~/components/PlateIcon.astro';
+import RegMark from '~/components/RegMark.astro';
 import { ownerCopy, portfolio, routes, services } from '~/data/site';
 import { homeText } from '~/i18n/pages/home';
 import { t } from '~/i18n/ui';
 import { capsEl } from '~/lib/text';
+import { plateInk } from '~/scripts/services-page';
 import { leadSentence } from '~/scripts/services-showcase';
 
 const copy = homeText.el.services;
@@ -30,6 +35,7 @@ const items = services.map((service, index) => ({
   service,
   index,
   num: pad(index + 1),
+  ink: plateInk(index),
   href: `${routes.services}#${service.slug}`,
   lead: leadSentence(service.text.el.description),
   // Services carry no stand-in flag: take it from the portfolio entry that uses the same photo.
@@ -46,7 +52,12 @@ const thumbSizes = '(min-width: 48rem) 10rem, 7.5rem';
 const thumbWidths = [160, 320, 480];
 ---
 
-<section class="section svc-show" aria-labelledby="services-title" data-svc-show>
+<section
+  class="section svc-show"
+  aria-labelledby="services-title"
+  data-svc-show
+  data-bg-accent="cyan"
+>
   <div class="wrap">
     <div class="svc-show-head">
       <div>
@@ -61,11 +72,14 @@ const thumbWidths = [160, 320, 480];
       </a>
     </div>
 
-    <div class="svc-show-grid" data-motion="off">
+    <div class="svc-show-grid">
       {first && (
         <div class="svc-show-stage" aria-hidden="true">
-          <div class="svc-plate">
-            <div class="svc-plate-tilt crop-frame">
+          <div class="svc-plate" data-svc-plate data-ink={first.ink}>
+            <div class="svc-plate-depth" data-parallax="0.12">
+              <span class="svc-plate-under"></span>
+            </div>
+            <div class="svc-plate-tilt crop-frame" data-motion="off">
               <div class="svc-plate-card" data-svc-plate-card>
                 <div class="svc-plate-bar">
                   <span class="svc-plate-count">
@@ -101,14 +115,18 @@ const thumbWidths = [160, 320, 480];
                 <ColorBar tints={3} class="svc-plate-strip" />
               </div>
             </div>
+            <div class="svc-plate-marks" data-parallax="-0.06">
+              <RegMark size={22} />
+              <RegMark size={22} />
+            </div>
           </div>
         </div>
       )}
 
-      <ol class="svc-show-list" role="list" data-svc-list>
+      <ol class="svc-show-list" role="list" data-svc-list data-motion="off">
         {items.map((item) => (
           <li>
-            <a href={item.href} class="svc-row" data-svc-row={item.index}>
+            <a href={item.href} class="svc-row" data-svc-row={item.index} data-ink={item.ink}>
               <span class="svc-row-num" aria-hidden="true">
                 <span class="svc-row-plate svc-row-plate-c">{item.num}</span>
                 <span class="svc-row-plate svc-row-plate-m">{item.num}</span>
@@ -156,6 +174,26 @@ const thumbWidths = [160, 320, 480];
 
 <style>
   @layer components {
+    /* Each service's plate ink (rows and the plate): C, M, Y, K as on /ypiresies/. `-shade` is
+       the registration shadow of the plate numeral; key would print as a heavy double, so it is
+       lighter. */
+    [data-ink='cyan'] {
+      --svc-ink: var(--color-cyan);
+      --svc-ink-shade: var(--color-cyan);
+    }
+    [data-ink='magenta'] {
+      --svc-ink: var(--color-magenta);
+      --svc-ink-shade: var(--color-magenta);
+    }
+    [data-ink='yellow'] {
+      --svc-ink: var(--color-yellow);
+      --svc-ink-shade: var(--color-yellow);
+    }
+    [data-ink='key'] {
+      --svc-ink: var(--color-key);
+      --svc-ink-shade: color-mix(in srgb, var(--color-key) 30%, transparent);
+    }
+
     .svc-show-head {
       display: flex;
       flex-wrap: wrap;
@@ -172,6 +210,9 @@ const thumbWidths = [160, 320, 480];
       font-family: var(--font-display);
       font-weight: 700;
     }
+    .svc-show-all :global(svg) {
+      transition: transform var(--dur-base) var(--ease-out);
+    }
 
     /* ---------------------------------------------------------------------------------------- */
     /* The index rows                                                                           */
@@ -183,6 +224,7 @@ const thumbWidths = [160, 320, 480];
 
     /* Phones: number and arrow, the title across, then thumbnail and lead sentence. */
     .svc-row {
+      position: relative;
       display: grid;
       grid-template-columns: 7.5rem minmax(0, 1fr) auto;
       grid-template-areas:
@@ -198,6 +240,25 @@ const thumbWidths = [160, 320, 480];
     }
     .svc-row:focus-visible {
       outline-offset: 2px;
+    }
+    /* The service's plate ink overprints the row's top rule, drawn from the left. */
+    .svc-row::before {
+      content: '';
+      position: absolute;
+      top: -1px;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background-color: var(--svc-ink);
+      transform: scaleX(0);
+      transform-origin: 0 50%;
+      transition: transform var(--dur-slow) var(--ease-out);
+      pointer-events: none;
+    }
+    .svc-row:hover::before,
+    .svc-row:focus-visible::before,
+    .svc-row.is-active::before {
+      transform: scaleX(1);
     }
 
     .svc-row-num {
@@ -262,6 +323,7 @@ const thumbWidths = [160, 320, 480];
       aspect-ratio: 4 / 3;
       overflow: hidden;
       background-color: var(--color-paper-2);
+      box-shadow: 0 0 0 1px var(--color-line);
       transition:
         transform var(--dur-base) var(--ease-out),
         box-shadow var(--dur-base) var(--ease-out);
@@ -274,6 +336,7 @@ const thumbWidths = [160, 320, 480];
       width: 100%;
       height: 100%;
       object-fit: cover;
+      transition: transform var(--dur-slow) var(--ease-out);
     }
     .svc-row-chip {
       position: absolute;
@@ -291,6 +354,7 @@ const thumbWidths = [160, 320, 480];
 
     .svc-row-desc {
       grid-area: desc;
+      align-self: center;
       max-width: 44ch;
       color: var(--color-muted);
       font-size: 0.9375rem;
@@ -308,7 +372,8 @@ const thumbWidths = [160, 320, 480];
       transition:
         background-color var(--dur-fast) linear,
         color var(--dur-fast) linear,
-        transform var(--dur-base) var(--ease-out);
+        transform var(--dur-base) var(--ease-out),
+        box-shadow var(--dur-base) var(--ease-out);
     }
 
     /* Hover, and the active row (hovered, focused or in the middle of the viewport with JS). */
@@ -322,6 +387,9 @@ const thumbWidths = [160, 320, 480];
       color: var(--color-paper);
     }
     @media (prefers-reduced-motion: no-preference) {
+      .svc-show-all:hover :global(svg) {
+        transform: translateX(3px);
+      }
       .svc-row:hover .svc-row-plate-c,
       .svc-row.is-active .svc-row-plate-c {
         transform: translate(-3px, -2px);
@@ -334,16 +402,36 @@ const thumbWidths = [160, 320, 480];
       .svc-row.is-active .svc-row-plate-y {
         transform: translate(-1px, 3px);
       }
+      /* The arrow lifts off its own plate shadow, as the buttons do. */
       .svc-row:hover .svc-row-arrow,
       .svc-row.is-active .svc-row-arrow {
-        transform: translate(2px, -2px);
+        transform: translate(-2px, -2px);
+        box-shadow:
+          2px 2px 0 var(--color-cyan),
+          4px 4px 0 var(--color-magenta),
+          6px 6px 0 var(--color-yellow);
       }
+      .svc-row:hover .svc-row-thumb,
       .svc-row.is-active .svc-row-thumb {
         transform: translate(-2px, -2px);
         box-shadow:
           2px 2px 0 var(--color-cyan),
           4px 4px 0 var(--color-magenta),
           6px 6px 0 var(--color-yellow);
+      }
+      .svc-row:hover .svc-row-thumb :global(img) {
+        transform: scale(1.04);
+      }
+      /* Press: everything snaps back into register, like a button. */
+      .svc-row:active .svc-row-plate,
+      .svc-row:active .svc-row-arrow,
+      .svc-row:active .svc-row-thumb {
+        transform: translate(0, 0);
+        transition-duration: 60ms;
+      }
+      .svc-row:active .svc-row-arrow,
+      .svc-row:active .svc-row-thumb {
+        box-shadow: 0 0 0 1px transparent;
       }
     }
 
@@ -358,9 +446,16 @@ const thumbWidths = [160, 320, 480];
         grid-template-rows: auto auto 1fr;
         column-gap: 1.75rem;
         row-gap: 0.625rem;
+        padding-block: 1.75rem;
       }
       .svc-row-title {
         font-size: 1.5rem;
+      }
+      .svc-row-desc {
+        align-self: start;
+      }
+      .svc-row-arrow {
+        align-self: center;
       }
       .svc-row-chip {
         font-size: 0.6875rem;
@@ -414,17 +509,22 @@ const thumbWidths = [160, 320, 480];
         .svc-row.is-active .svc-row-title {
           transform: translateX(0.75rem);
         }
+        .svc-row:active .svc-row-title {
+          transform: translateX(0.5rem);
+          transition-duration: 60ms;
+        }
       }
       /* With JS, the rows other than the active one step back. */
       .svc-show.is-enhanced .svc-row:not(.is-active):not(:hover) .svc-row-title {
         color: var(--color-muted);
       }
 
-      /* The stage: room for the crop marks and the tilt on every side. */
+      /* The stage. No room on top, so the card's top edge lines up with the first row's rule (the
+         crop marks reach into the heading's margin); room for the marks and the tilt elsewhere. */
       .svc-show-stage {
         display: block;
         align-self: stretch;
-        padding: 1.75rem 1.75rem 1.75rem 1.5rem;
+        padding: 0 1.75rem 2.5rem 1.5rem;
       }
       .svc-plate {
         position: sticky;
@@ -439,15 +539,67 @@ const thumbWidths = [160, 320, 480];
         transform: rotateY(-7deg) rotateX(3deg);
         transform-style: preserve-3d;
       }
+
+      /* The under-plate: a halftone of the active ink, offset down and right behind the card and
+         at its own scroll depth, like the next colour waiting to be printed. */
+      .svc-plate-depth {
+        position: absolute;
+        inset: 1.5rem -1.25rem -1.25rem 1.5rem;
+        z-index: -1;
+        pointer-events: none;
+      }
+      .svc-plate-under {
+        position: absolute;
+        inset: 0;
+        color: var(--svc-ink);
+        background-image: radial-gradient(
+          circle at center,
+          currentColor 0 1.5px,
+          transparent 2.1px
+        );
+        background-size: 9px 9px;
+        opacity: 0.55;
+        transition: color var(--dur-slow) linear;
+      }
+      .svc-plate[data-ink='yellow'] .svc-plate-under {
+        opacity: 1;
+      }
+
+      /* Registration targets centred over and under the sheet, as on a press sheet's margins. */
+      .svc-plate-marks {
+        position: absolute;
+        inset: -2.5rem 0;
+        z-index: -1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        color: var(--color-key);
+        pointer-events: none;
+      }
+
       .svc-plate-card {
+        position: relative;
         display: flex;
         flex-direction: column;
         gap: 1rem;
         padding: clamp(0.875rem, 1.2vw, 1.25rem);
+        padding-top: calc(clamp(0.875rem, 1.2vw, 1.25rem) + 4px);
         background-color: var(--color-paper);
         box-shadow:
           0 0 0 1px var(--color-line),
           0 2.5rem 4rem -2.5rem rgb(34 31 32 / 0.45);
+      }
+      /* The active service's plate ink along the card's top edge. */
+      .svc-plate-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background-color: var(--svc-ink);
+        transition: background-color var(--dur-slow) linear;
       }
 
       .svc-plate-bar {
@@ -475,7 +627,7 @@ const thumbWidths = [160, 320, 480];
       }
       .svc-plate-num > :global(span) {
         grid-area: 1 / 1;
-        text-shadow: 0.05em 0.035em 0 var(--color-cyan);
+        text-shadow: 0.05em 0.035em 0 var(--svc-ink-shade);
       }
       .svc-plate-total {
         color: var(--color-muted);
@@ -566,10 +718,11 @@ const thumbWidths = [160, 320, 480];
       }
     }
 
-    /* Short screens: the plate scrolls with the list instead of sticking. */
+    /* Short screens: the plate scrolls with the list instead of sticking (still the containing
+       block of its under-plate and marks). */
     @media (min-width: 64rem) and (max-height: 40rem) {
       .svc-plate {
-        position: static;
+        position: relative;
       }
     }
   }

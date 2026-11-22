@@ -1,29 +1,52 @@
 /**
- * Home hero scene: the four arches of the logo as extruded ink plates (OGL / WebGL).
+ * Home hero scene: the four arches of the logo as extruded ink plates (OGL / WebGL), running the
+ * "metamorphosis" loop of choreography.ts.
  *
- * - The plates float in an exploded stack, separated in depth and slightly out of register, each
- *   breathing slowly. Overlaps multiply like overprinting (see shaders.ts). The group follows the
- *   pointer with damped rotation on fine pointers and drifts on its own on touch screens.
- * - Behind them, a field of small arches (key ink with a few C/M/Y accents) covers the whole
- *   sheet: a slow travelling wave grows and lifts them like halftone dots, rings pulse out from
- *   the plates, they swell around the pointer, and the sheet lags the scroll and leans with the
- *   pointer for depth. It is lighter behind the copy and in the header band (AA stays safe).
- * - As the hero scrolls out (scrubbed, nothing pinned), the plates collapse into register,
- *   flatten, and travel to the exact place and size of the header logo's arches, which then take
- *   over (`--dock` 0–1 and `data-docked` on [data-header]). The path (math.ts dockPath) shrinks
- *   them early and keeps them below the header band until they are under the logo slot, so they
- *   never cross the nav or the buttons. Scrolling back reverses it.
+ * - The plates move through a slow, seamless loop: the logo's mark (exploded in depth,
+ *   breathing), the registration target (the arches close into a ring that turns slowly while
+ *   two key hairlines draw through its centre), and a continuous wave of ink, then snap back
+ *   into register. Overlaps multiply like overprinting (see shaders.ts). A soft contact shadow
+ *   sits under them. The group follows the pointer with damped rotation on fine pointers (and a
+ *   depth parallax per plate) and drifts on its own on touch screens.
+ * - Every pose fits the art box the hero lays out for it (choreography.ts ART, Hero.astro
+ *   `.hero-art`), so no pose is cropped or reaches the copy.
+ * - As the hero scrolls out (scrubbed, nothing pinned), the plates first blend to the mark from
+ *   whatever pose they are in (the loop slows to a stop), then collapse into register, flatten and
+ *   travel to the exact place and size of the header logo's arches, which then take over
+ *   (`--dock` 0–1 and `data-docked` on [data-header]). The path (math.ts dockPath) shrinks them
+ *   early and keeps them below the header band until they are under the logo slot. Scrolling back
+ *   reverses it, and the loop resumes once the hero is back at the top.
  * - Hand-over from the static SVG mark: the first frame draws the plates flat and in register at
  *   the SVG's exact position and size, the canvas fades in over it, then the plates come apart
- *   into the stack. With the intro, they arrive from depth instead (print order Y, M, C, K).
+ *   into the mark pose and the loop starts. With the intro, they arrive from depth instead (print
+ *   order Y, M, C, K) and the loop starts once they have landed.
  *
  * The canvas scrolls with the hero and sits above the header (z-index), composited with
- * `mix-blend-mode: multiply`, so only ink shows and the paper, grain and text stay as they are.
- * One draw loop; it stops when the hero is off-screen, once docked, and while the tab is hidden.
+ * `mix-blend-mode: multiply`, so only ink shows and the paper, the living background, the grain
+ * and the text stay as they are. One draw loop; it stops when the hero is off-screen, once docked,
+ * and while the tab is hidden.
  */
 import { Camera, Geometry, Mesh, Program, Renderer, Transform } from 'ogl';
 import { ARCH, ARCH_PLATES } from '~/components/logo-paths';
-import { boundsOf, extrude, flatShape, sampleOutline, toLocal } from './geometry';
+import {
+  PLATES,
+  archMetrics,
+  blendPose,
+  blendTilt,
+  buildLayout,
+  crosshairAt,
+  dockBlend,
+  markPose,
+  markTilt,
+  platePoseAt,
+  poseBounds,
+  registerPose,
+  tiltAt,
+  type PlateId,
+  type PlateLayout,
+  type PlatePose,
+} from './choreography';
+import { extrude, sampleOutline, toLocal } from './geometry';
 import {
   clamp,
   damp,
@@ -38,7 +61,14 @@ import {
   type Placement,
   type ViewBox,
 } from './math';
-import { depthFragment, fieldFragment, fieldVertex, plateFragment, plateVertex } from './shaders';
+import {
+  depthFragment,
+  lineFragment,
+  plateFragment,
+  plateVertex,
+  quadVertex,
+  shadowFragment,
+} from './shaders';
 
 export interface SceneElements {
   hero: HTMLElement;
@@ -48,8 +78,6 @@ export interface SceneElements {
   markBox: HTMLElement;
   /** The static SVG mark: its box is the rest position and size of the plates. */
   mark: SVGSVGElement;
-  /** Hero text block: the ambient field keeps clear of it. */
-  copy: HTMLElement | null;
   header: HTMLElement | null;
   /** Header logo <svg>: the docking target. */
   headerLogo: SVGSVGElement | null;
@@ -66,54 +94,46 @@ export interface HeroScene {
   destroy(): void;
 }
 
+// ------------------------------------------------------------------------------------------------
+// Tuning (the poses and the loop itself are tuned in choreography.ts)
+// ------------------------------------------------------------------------------------------------
+
 /** Vertical field of view in degrees. Narrow, so the plates keep the logo's proportions. */
 const FOV = 30;
-/** Depth between neighbouring plates in the exploded stack, in logo raster units. */
-const SEPARATION = 85;
 /** Extrusion depth of each plate, in logo raster units. */
 const THICKNESS = 34;
-/** Rest rotation of the stack (radians): the right end recedes, the top leans in. */
-const REST_TILT = { x: 0.12, y: 0.36, z: -0.03 };
-/** Extra rotation at full pointer deflection (radians, about 4° and 6°). */
+/** Extra group rotation at full pointer deflection (radians, about 4° and 6°). */
 const POINTER_TILT = { x: 0.07, y: 0.1 };
+/** Per-plate shift with the pointer, per raster unit of the plate's depth (depth parallax). */
+const PARALLAX = { x: 0.12, y: 0.08 };
 /** Canvas fade-in over the SVG mark, seconds. */
 const FADE_IN = 0.6;
-/** Without the intro: delay and duration of the plates coming apart into the stack. */
+/** Without the intro: delay and duration of the plates coming apart into the mark pose. */
 const ALIVE = { delay: 0.2, duration: 1.8 };
 /** Intro: stagger between plates, duration per plate, start depth (raster units). */
 const INTRO = { stagger: 0.12, duration: 1.3, depth: 1900 };
 const INTRO_TOTAL = INTRO.stagger * 3 + INTRO.duration;
+/** Intro: where each plate starts out of register (raster units, radians). */
+const INTRO_FROM: Record<PlateId, { x: number; y: number; rz: number }> = {
+  c: { x: -170, y: 90, rz: -0.22 },
+  m: { x: 150, y: 70, rz: 0.18 },
+  y: { x: -120, y: -110, rz: 0.14 },
+  k: { x: 160, y: -80, rz: -0.16 },
+};
+/** Crosshair hairlines: width in CSS px, ink strength. */
+const HAIRLINE = { width: 1, alpha: 0.92 };
 /**
- * Ambient field: instance grid, sheet tilt (radians), ink strength, share of C/M/Y accent arches
- * among the key ones, and how much the sheet lags the page scroll (depth parallax).
+ * Contact shadow: ink strength, size relative to the plates' bounds, offset towards the lower
+ * right (share of the bounds; light from the upper left), and depth below the rearmost plate
+ * (raster units). Set alpha to 0 to remove it.
  */
-const FIELD = { cols: 44, rows: 44, tilt: -0.42, alpha: 0.3, accents: 0.12, scrollLag: 0.4 };
+const SHADOW = { alpha: 0.07, spread: 1.3, offset: { x: 0.04, y: -0.1 }, depth: 40 };
 /** Docking: gap kept below the header band, and the plates' half-height with slack (raster). */
 const DOCK_MARGIN = 16;
 const PLATE_EXTENT = 130;
 /** Upper bound for drawing-buffer pixels (keeps 2560 px wide screens cheap). */
 const MAX_PIXELS = 6_000_000;
 const RESIZE_DEBOUNCE = 150;
-
-/** Exploded-stack pose and intro start offset per plate (raster units, radians). */
-const POSE = {
-  c: { depth: 1.5, dx: -9, dy: 6, rz: 0.012, phase: 0, print: 2, ix: -170, iy: 90, irz: -0.22 },
-  m: { depth: 0.5, dx: 7, dy: -5, rz: -0.009, phase: 1.3, print: 1, ix: 150, iy: 70, irz: 0.18 },
-  y: {
-    depth: -0.5,
-    dx: -5,
-    dy: -8,
-    rz: 0.006,
-    phase: 2.6,
-    print: 0,
-    ix: -120,
-    iy: -110,
-    irz: 0.14,
-  },
-  k: { depth: -1.5, dx: 8, dy: 4, rz: -0.012, phase: 3.9, print: 3, ix: 160, iy: -80, irz: -0.16 },
-} as const;
-
-const KEY_HEX = '#221F20';
 
 const hexToRgb = (hex: string): Float32Array => {
   const n = Number.parseInt(hex.replace('#', ''), 16);
@@ -140,9 +160,6 @@ interface Metrics {
   headerBottom: number;
   /** Scroll distance of the docking move. */
   distance: number;
-  /** Rest position of the ambient sheet (world px). */
-  fieldY: number;
-  fieldZ: number;
 }
 
 export const createHeroScene = (
@@ -150,13 +167,19 @@ export const createHeroScene = (
   canvas: HTMLCanvasElement,
   onLost: () => void,
 ): HeroScene => {
-  const { hero, stage, markBox, mark, copy, header, headerLogo } = els;
+  const { hero, stage, markBox, mark, header, headerLogo } = els;
   const markViewBox = viewBoxOf(mark);
   if (!markViewBox) throw new Error('Hero mark has no viewBox');
-  // The plates pivot on the centre of the mark; the same raster point is mapped into the header.
+  // The group pivots on the centre of the mark; the same raster point is mapped into the header.
   const centerX = markViewBox.x + markViewBox.width / 2;
   const centerY = markViewBox.y + markViewBox.height / 2;
   const headerViewBox = headerLogo ? viewBoxOf(headerLogo) : null;
+
+  // The arch, measured and centred on its own anchor, so every plate turns about its middle.
+  const archOutline = sampleOutline(ARCH, 9);
+  const metrics = archMetrics(archOutline);
+  const layout = buildLayout(metrics, ARCH_PLATES, { x: centerX, y: centerY });
+  const plateOutline = toLocal(archOutline, metrics.anchor.x, metrics.anchor.y);
 
   const renderer = new Renderer({
     canvas,
@@ -172,7 +195,7 @@ export const createHeroScene = (
   const camera = new Camera(gl, { fov: FOV, near: 1, far: 10_000 });
 
   // Plates: one extruded arch, shared by the four meshes.
-  const plateSolid = extrude(toLocal(sampleOutline(ARCH, 9), centerX, centerY), THICKNESS);
+  const plateSolid = extrude(plateOutline, THICKNESS);
   const plateGeometry = new Geometry(gl, {
     position: { size: 3, data: plateSolid.position },
     normal: { size: 3, data: plateSolid.normal },
@@ -201,89 +224,69 @@ export const createHeroScene = (
   });
 
   const group = new Transform();
-  const plates = ARCH_PLATES.map((p) => {
+  const hexOf = (id: PlateId): string => {
+    const plate = ARCH_PLATES.find((p) => p.id === id);
+    if (!plate) throw new Error(`No logo plate ${id}`);
+    return plate.hex;
+  };
+  const plates = layout.plates.map((plateLayout: PlateLayout) => {
     const mesh = new Mesh(gl, {
       geometry: plateGeometry,
       program: colorProgram,
       frustumCulled: false,
     });
     mesh.setParent(group);
-    return { offset: p.x, ink: hexToRgb(p.hex), pose: POSE[p.id], mesh, alpha: 1 };
+    return { layout: plateLayout, ink: hexToRgb(hexOf(plateLayout.id)), mesh, alpha: 1 };
   });
 
-  // Ambient field: small flat arches (width 1), instanced over a grid of cells.
-  const smallOutline = sampleOutline(ARCH, 4);
-  const smallBounds = boundsOf(smallOutline);
-  const smallShape = flatShape(
-    toLocal(
-      smallOutline,
-      (smallBounds.minX + smallBounds.maxX) / 2,
-      (smallBounds.minY + smallBounds.maxY) / 2,
-      1 / (smallBounds.maxX - smallBounds.minX),
-    ),
-  );
-  const cells = new Float32Array(FIELD.cols * FIELD.rows * 2);
-  // Ink per cell: 0 key, 1 cyan, 2 magenta, 3 yellow (a fixed scatter of accents).
-  const tones = new Float32Array(FIELD.cols * FIELD.rows);
-  for (let j = 0; j < FIELD.rows; j++) {
-    for (let i = 0; i < FIELD.cols; i++) {
-      const n = j * FIELD.cols + i;
-      cells[n * 2] = i - (FIELD.cols - 1) / 2;
-      cells[n * 2 + 1] = j - (FIELD.rows - 1) / 2;
-      const hash = Math.abs(Math.sin(i * 12.9898 + j * 78.233) * 43758.5453) % 1;
-      tones[n] = hash < FIELD.accents ? 1 + Math.floor((hash / FIELD.accents) * 3) : 0;
-    }
-  }
-  const fieldGeometry = new Geometry(gl, {
-    position: { size: 2, data: smallShape.position },
-    index: { data: smallShape.index },
-    cell: { size: 2, instanced: 1, data: cells },
-    tone: { size: 1, instanced: 1, data: tones },
+  // Flat quads (−0.5 to 0.5) for the crosshair hairlines and the contact shadow.
+  const quadGeometry = new Geometry(gl, {
+    position: { size: 2, data: new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5]) },
+    index: { data: new Uint16Array([0, 1, 2, 0, 2, 3]) },
   });
-  const inkOf = (id: (typeof ARCH_PLATES)[number]['id']): Float32Array => {
-    const plate = ARCH_PLATES.find((p) => p.id === id);
-    return hexToRgb(plate ? plate.hex : KEY_HEX);
-  };
-  const sourceNdc = new Float32Array(2);
-  const pointerNdc = new Float32Array(2);
-  const fieldUniforms = {
-    uTime: { value: 0 },
-    uSpacing: { value: 1 },
-    uPointer: { value: pointerNdc },
-    uPointerAmt: { value: 0 },
-    uAspect: { value: 1 },
-    uInk: { value: inkOf('k') },
-    uCyan: { value: inkOf('c') },
-    uMagenta: { value: inkOf('m') },
-    uYellow: { value: inkOf('y') },
-    uSource: { value: sourceNdc },
-    uSourceAmt: { value: 0 },
-    uAlpha: { value: 0 },
-    uSize: { value: new Float32Array(2) },
-    uDpr: { value: 1 },
-    uClear: { value: new Float32Array(4) },
-    uTop: { value: 0 },
-    uFar: { value: 1 },
-  };
-  const fieldProgram = new Program(gl, {
-    vertex: fieldVertex,
-    fragment: fieldFragment,
-    uniforms: fieldUniforms,
-    depthTest: true,
+  const keyInk = hexToRgb(hexOf('k'));
+  const lineUniforms = { uInk: { value: keyInk }, uAlpha: { value: 0 } };
+  const lineProgram = new Program(gl, {
+    vertex: quadVertex,
+    fragment: lineFragment,
+    uniforms: lineUniforms,
+    depthTest: false,
     depthWrite: false,
     cullFace: false,
   });
-  fieldProgram.setBlendFunc(gl.DST_COLOR, gl.ZERO);
-  const fieldRoot = new Transform();
-  const fieldMesh = new Mesh(gl, {
-    geometry: fieldGeometry,
-    program: fieldProgram,
+  lineProgram.setBlendFunc(gl.DST_COLOR, gl.ZERO);
+  const makeLine = (): Mesh => {
+    const mesh = new Mesh(gl, {
+      geometry: quadGeometry,
+      program: lineProgram,
+      frustumCulled: false,
+    });
+    mesh.setParent(group);
+    return mesh;
+  };
+  const lineH = makeLine();
+  const lineV = makeLine();
+  const lines = [lineH, lineV];
+
+  const shadowUniforms = { uInk: { value: keyInk }, uAlpha: { value: 0 } };
+  const shadowProgram = new Program(gl, {
+    vertex: quadVertex,
+    fragment: shadowFragment,
+    uniforms: shadowUniforms,
+    depthTest: false,
+    depthWrite: false,
+    cullFace: false,
+  });
+  shadowProgram.setBlendFunc(gl.DST_COLOR, gl.ZERO);
+  const shadow = new Mesh(gl, {
+    geometry: quadGeometry,
+    program: shadowProgram,
     frustumCulled: false,
   });
-  fieldMesh.setParent(fieldRoot);
+  shadow.setParent(group);
 
   // OGL only warns when a shader fails; refuse the scene so the static composition stays.
-  for (const program of [colorProgram, depthProgram, fieldProgram]) {
+  for (const program of [colorProgram, depthProgram, lineProgram, shadowProgram]) {
     if (!gl.getProgramParameter(program.program, gl.LINK_STATUS)) {
       throw new Error('Hero scene shaders failed to link');
     }
@@ -300,7 +303,6 @@ export const createHeroScene = (
     const markRect = mark.getBoundingClientRect();
     const headerRect = header?.getBoundingClientRect();
     const logoRect = headerLogo?.getBoundingClientRect();
-    const copyRect = copy?.getBoundingClientRect();
     const scrollY = window.scrollY;
     const width = Math.max(1, heroRect.width);
     const height = Math.max(1, heroRect.height);
@@ -340,24 +342,6 @@ export const createHeroScene = (
     camera.perspective({ aspect: width / height, near: distance * 0.05, far: distance * 6 });
     camera.position.set(0, 0, distance);
 
-    // Generous coverage: the sheet also lags the scroll and leans with the pointer.
-    fieldUniforms.uSpacing.value =
-      (2.1 * Math.max(width, height / Math.cos(FIELD.tilt))) / FIELD.cols;
-    fieldUniforms.uAspect.value = width / height;
-    fieldUniforms.uSize.value[0] = width;
-    fieldUniforms.uSize.value[1] = height;
-    fieldUniforms.uDpr.value = dpr;
-    fieldUniforms.uFar.value = distance * 3;
-    const clear = fieldUniforms.uClear.value;
-    if (copyRect && copyRect.width > 0) {
-      clear[0] = 0;
-      clear[1] = copyRect.top - heroRect.top - 24;
-      clear[2] = copyRect.right - heroRect.left + 48;
-      clear[3] = height;
-    } else {
-      clear.fill(-1e4);
-    }
-
     return {
       width,
       height,
@@ -367,16 +351,12 @@ export const createHeroScene = (
       dock,
       headerBottom,
       distance: dockDistance(height, headerBottom),
-      fieldY: -height * 0.05,
-      fieldZ: -distance * 0.35,
     };
   };
 
   // ---------------------------------------------------------------------------------------------
   // Drawing
   // ---------------------------------------------------------------------------------------------
-
-  let fieldAlpha = 0;
 
   const drawDepth = (mesh: Mesh): void => {
     mesh.program = depthProgram;
@@ -392,25 +372,17 @@ export const createHeroScene = (
     renderer.setViewport(renderer.width * renderer.dpr, renderer.height * renderer.dpr);
     camera.updateMatrixWorld();
     group.updateMatrixWorld();
-    fieldRoot.updateMatrixWorld();
 
     gl.colorMask(true, true, true, true);
     renderer.setDepthMask(true);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    const inked = plates.filter((p) => p.alpha > 0.002);
-
-    if (fieldAlpha > 0.002) {
-      // Union depth of all plates first, so the field never shows through them.
-      gl.colorMask(false, false, false, false);
-      inked.forEach((p) => drawDepth(p.mesh));
-      gl.colorMask(true, true, true, true);
-      fieldUniforms.uAlpha.value = fieldAlpha;
-      fieldMesh.draw({ camera });
-    }
+    // The shadow lies on the sheet, under everything.
+    if (shadowUniforms.uAlpha.value > 0.002) shadow.draw({ camera });
 
     // Each plate prints once: its nearest surface only (own depth pass), multiplied onto the rest.
-    for (const p of inked) {
+    for (const p of plates) {
+      if (p.alpha <= 0.002) continue;
       renderer.setDepthMask(true);
       gl.clear(gl.DEPTH_BUFFER_BIT);
       gl.colorMask(false, false, false, false);
@@ -420,6 +392,11 @@ export const createHeroScene = (
       plateUniforms.uAlpha.value = p.alpha;
       p.mesh.program = colorProgram;
       p.mesh.draw({ camera });
+    }
+
+    // The crosshair prints over the ring, like a key line on top.
+    if (lineUniforms.uAlpha.value > 0.002) {
+      for (const line of lines) if (line.visible) line.draw({ camera });
     }
   };
 
@@ -434,6 +411,8 @@ export const createHeroScene = (
   let raf = 0;
   let last = 0;
   let clock = 0;
+  /** Choreography time: runs once the plates are alive, stops while the hero is scrolled away. */
+  let loopClock = 0;
   let visible = true;
   let docked = false;
   let handedOver = false;
@@ -441,6 +420,7 @@ export const createHeroScene = (
   let resizeTimer = 0;
   const pointer = { x: 0, y: 0, amount: 0 };
   const cursor = { x: 0, y: 0, inside: false };
+  const poses: PlatePose[] = [];
 
   const setHeaderDock = (value: number): void => {
     if (!header) return;
@@ -469,6 +449,28 @@ export const createHeroScene = (
     last = 0;
   };
 
+  /** Draws a crosshair line from `span` (−1 to 1 along it) at group scale `scale` (px/unit). */
+  const placeLine = (
+    mesh: Mesh,
+    span: { from: number; to: number },
+    vertical: boolean,
+    scale: number,
+  ): void => {
+    const length = (span.to - span.from) * layout.crossReach;
+    mesh.visible = length > 1e-3;
+    if (!mesh.visible) return;
+    const mid = ((span.from + span.to) / 2) * layout.crossReach;
+    const thickness = HAIRLINE.width / Math.max(1e-4, scale);
+    // The horizontal line draws left to right, the vertical one top to bottom.
+    if (vertical) {
+      mesh.position.set(0, -mid, 0);
+      mesh.scale.set(thickness, length, 1);
+    } else {
+      mesh.position.set(mid, 0, 0);
+      mesh.scale.set(length, thickness, 1);
+    }
+  };
+
   const tick = (now: number): void => {
     raf = 0;
     if (!m || !shouldRun()) {
@@ -481,12 +483,15 @@ export const createHeroScene = (
 
     const scrolled = window.scrollY - m.heroTop;
     const progress = dockProgress(scrolled, m.distance);
+    const { toMark, collapse } = dockBlend(progress);
     const fadeIn = intro ? 1 : clamp(clock / FADE_IN);
     const alive = intro ? 1 : easeInOutCubic((clock - ALIVE.delay) / ALIVE.duration);
-    const collapse = easeInOutCubic(progress / 0.78);
     const dock = smoothstep(0.93, 1, progress);
     const explode = alive * (1 - collapse);
     const introDone = !intro || clock >= INTRO_TOTAL;
+
+    // The loop starts once the plates have landed, and slows to a stop as they blend to the mark.
+    if (introDone && alive >= 1) loopClock += dt * (1 - toMark);
 
     // Pointer (fine pointers) or a slow autonomous drift (touch), damped.
     const fine = finePointer.matches;
@@ -516,63 +521,73 @@ export const createHeroScene = (
       y = place.y + scrolled;
       scale = place.scale;
     }
+    const tilt = blendTilt(tiltAt(loopClock), markTilt(), toMark);
     group.position.set(x - m.width / 2, m.height / 2 - y, 0);
     group.scale.set(scale, scale, scale);
     group.rotation.set(
-      explode * (REST_TILT.x - pointer.y * POINTER_TILT.x),
-      explode * (REST_TILT.y + pointer.x * POINTER_TILT.y),
-      explode * REST_TILT.z,
+      explode * (tilt.x - pointer.y * POINTER_TILT.x),
+      explode * (tilt.y + pointer.x * POINTER_TILT.y),
+      explode * tilt.z,
     );
 
-    // Plates: depth separation, misregistration and breathing, all scaled by `explode`.
+    // Plates: the loop pose, blended to the mark on scroll-out, then towards flat register by
+    // `explode` (the hand-over at the start, the collapse before docking).
+    poses.length = 0;
+    let inkSum = 0;
     for (const p of plates) {
-      const pose = p.pose;
+      const live = blendPose(
+        platePoseAt(loopClock, p.layout, layout),
+        markPose(p.layout, loopClock),
+        toMark,
+      );
+      const pose = blendPose(registerPose(p.layout), live, explode);
+      poses.push(pose);
+
       // Intro: the plate comes forward from depth (no overshoot) while its register offset snaps
       // in with a small overshoot.
       let ahead = 1;
       let snap = 1;
       let ink = 1;
       if (intro) {
-        const t = clamp((clock - pose.print * INTRO.stagger) / INTRO.duration);
+        const t = clamp((clock - PLATES[p.layout.id].print * INTRO.stagger) / INTRO.duration);
         ahead = easeOutCubic(t);
         snap = easeOutBack(t, 1.4);
         ink = clamp(t * 2.5);
       }
       const away = 1 - snap;
-      const zRest = pose.depth * SEPARATION;
-      const z =
-        explode * (zRest + Math.sin(clock * 0.62 + pose.phase) * 0.1 * SEPARATION) -
-        (1 - ahead) * INTRO.depth;
-      const px = p.offset + explode * (pose.dx + pointer.x * zRest * 0.12) + away * pose.ix;
-      const py =
-        explode * (pose.dy + Math.sin(clock * 0.47 + pose.phase) * 4 - pointer.y * zRest * 0.08) +
-        away * pose.iy;
-      const rz =
-        explode * (pose.rz + Math.sin(clock * 0.33 + pose.phase * 1.7) * 0.006) + away * pose.irz;
-      p.mesh.position.set(px, py, z);
-      p.mesh.rotation.set(0, 0, rz);
-      p.mesh.scale.set(1, 1, Math.max(0.001, explode));
+      const from = INTRO_FROM[p.layout.id];
+      p.mesh.position.set(
+        pose.x + pointer.x * pose.z * PARALLAX.x + away * from.x,
+        pose.y - pointer.y * pose.z * PARALLAX.y + away * from.y,
+        pose.z - (1 - ahead) * INTRO.depth,
+      );
+      p.mesh.rotation.set(pose.rx, 0, pose.rz + away * from.rz);
+      p.mesh.scale.set(pose.scale, pose.scale, pose.scale * Math.max(0.001, explode));
       p.alpha = ink * (1 - dock);
+      inkSum += ink;
     }
 
-    // Ambient field.
-    const fieldIn = intro ? smoothstep(0.5, INTRO_TOTAL, clock) : alive;
-    fieldAlpha = FIELD.alpha * fadeIn * fieldIn * (1 - smoothstep(0, 0.6, progress));
-    fieldRoot.position.set(
-      -pointer.x * m.width * 0.015,
-      m.fieldY - scrolled * FIELD.scrollLag,
-      m.fieldZ,
-    );
-    fieldRoot.rotation.set(FIELD.tilt + pointer.y * 0.035, pointer.x * 0.05, 0);
-    fieldUniforms.uTime.value = clock;
-    // Rings pulse out from the plates' centre while they float in the stack.
-    sourceNdc[0] = (x / m.width) * 2 - 1;
-    sourceNdc[1] = 1 - (y / m.height) * 2;
-    fieldUniforms.uSourceAmt.value = explode;
-    pointerNdc[0] = pointer.x;
-    pointerNdc[1] = pointer.y;
-    fieldUniforms.uPointerAmt.value = pointer.amount;
-    fieldUniforms.uTop.value = m.headerBottom + scrolled;
+    // Contact shadow: under the plates' current footprint, offset away from the light.
+    const ink = inkSum / plates.length;
+    shadowUniforms.uAlpha.value = SHADOW.alpha * explode * fadeIn * ink * (1 - dock);
+    if (shadowUniforms.uAlpha.value > 0.002) {
+      const b = poseBounds(poses, plateOutline);
+      const w = b.maxX - b.minX;
+      const h = b.maxY - b.minY;
+      const back = Math.min(...poses.map((pose) => pose.z));
+      shadow.position.set(
+        (b.minX + b.maxX) / 2 + w * SHADOW.offset.x,
+        (b.minY + b.maxY) / 2 + h * SHADOW.offset.y,
+        back - SHADOW.depth,
+      );
+      shadow.scale.set(w * SHADOW.spread, h * SHADOW.spread, 1);
+    }
+
+    // Registration crosshair through the ring's centre (empty outside the target hold).
+    const cross = crosshairAt(loopClock);
+    lineUniforms.uAlpha.value = HAIRLINE.alpha * explode * fadeIn * (1 - toMark);
+    placeLine(lineH, cross.horizontal, false, scale);
+    placeLine(lineV, cross.vertical, true, scale);
 
     render();
 

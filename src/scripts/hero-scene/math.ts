@@ -1,7 +1,8 @@
 /**
- * Small, pure helpers for the hero scene: easing, interpolation and the mapping from the logo's
- * raster space (the coordinates of ARCH in logo-paths.ts) to CSS pixels inside an <svg> box.
- * No DOM access, so the docking maths can be unit tested.
+ * Small, pure helpers for the hero scene: easing (including CSS cubic-bezier curves),
+ * interpolation and the mapping from the logo's raster space (the coordinates of ARCH in
+ * logo-paths.ts) to CSS pixels inside an <svg> box. No DOM access, so the docking maths can be
+ * unit tested.
  */
 
 export const clamp = (value: number, min = 0, max = 1): number =>
@@ -29,6 +30,58 @@ export const easeOutCubic = (t: number): number => 1 - Math.pow(1 - clamp(t), 3)
 export const easeOutBack = (t: number, overshoot = 1.6): number => {
   const x = clamp(t) - 1;
   return 1 + (overshoot + 1) * x * x * x + overshoot * x * x;
+};
+
+/**
+ * CSS `cubic-bezier(x1, y1, x2, y2)` as an easing function of t (0–1), so the scene moves on the
+ * site's own curves (`--ease-snap` and friends). x1 and x2 must lie in 0–1, as in CSS; y may
+ * leave 0–1 for overshoot. Solved with Newton steps and a bisection fallback.
+ */
+export const cubicBezier = (
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+): ((t: number) => number) => {
+  const cx = 3 * x1;
+  const bx = 3 * (x2 - x1) - cx;
+  const ax = 1 - cx - bx;
+  const cy = 3 * y1;
+  const by = 3 * (y2 - y1) - cy;
+  const ay = 1 - cy - by;
+  const sampleX = (s: number): number => ((ax * s + bx) * s + cx) * s;
+  const sampleY = (s: number): number => ((ay * s + by) * s + cy) * s;
+  const slopeX = (s: number): number => (3 * ax * s + 2 * bx) * s + cx;
+  const epsilon = 1e-7;
+
+  const solve = (x: number): number => {
+    let s = x;
+    for (let i = 0; i < 8; i++) {
+      const error = sampleX(s) - x;
+      if (Math.abs(error) < epsilon && s >= 0 && s <= 1) return s;
+      const slope = slopeX(s);
+      if (Math.abs(slope) < 1e-6) break;
+      s -= error / slope;
+    }
+    // x(s) rises monotonically on 0–1 for valid control points: bisect.
+    let lo = 0;
+    let hi = 1;
+    s = x;
+    for (let i = 0; i < 60; i++) {
+      const value = sampleX(s);
+      if (Math.abs(value - x) < epsilon) break;
+      if (value < x) lo = s;
+      else hi = s;
+      s = (lo + hi) / 2;
+    }
+    return s;
+  };
+
+  return (t: number): number => {
+    const x = clamp(t);
+    if (x === 0 || x === 1) return x;
+    return sampleY(solve(x));
+  };
 };
 
 /** Frame-rate independent damping factor for `current += (target - current) * factor`. */

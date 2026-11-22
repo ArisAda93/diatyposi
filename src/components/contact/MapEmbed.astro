@@ -3,6 +3,8 @@
  * Click-to-load Google map. Until the visitor presses the button, the box shows a printed
  * placeholder (halftone sheet, out-of-register pin) and nothing loads from Google
  * (src/scripts/map-consent.ts swaps in the iframe). Without JS only the external link shows.
+ * Hovering or focusing the button pulls the pin's plates into register; while the map loads a
+ * halftone screen sweeps over the box (`data-loading`).
  */
 import Icon from '~/components/Icon.astro';
 import { site } from '~/data/site';
@@ -104,6 +106,23 @@ const plates = ['c', 'm', 'y', 'k'] as const;
       height: 100%;
       border: 0;
     }
+    /* Loading: a halftone screen over the box until the map has arrived. */
+    .map-box[data-loading]::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      color: var(--color-muted);
+      background-color: var(--color-paper-2);
+      background-image: radial-gradient(circle at center, currentColor 0 1.2px, transparent 1.8px);
+      background-size: 10px 10px;
+      pointer-events: none;
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .map-box[data-loading]::after {
+        animation: map-screen 1.2s linear infinite;
+      }
+    }
 
     .map-placeholder {
       display: grid;
@@ -175,6 +194,12 @@ const plates = ['c', 'm', 'y', 'k'] as const;
       font-size: var(--text-small);
       line-height: var(--text-small--line-height);
       color: var(--color-muted);
+    }
+
+    @keyframes map-screen {
+      to {
+        background-position: 10px 10px;
+      }
     }
 
     .map-open {

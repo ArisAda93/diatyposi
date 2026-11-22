@@ -4,6 +4,12 @@
  * Validation, ?ypiresia= pre-selection and message composition run in src/scripts/quote-form.ts;
  * nothing is sent to a server. Without JS the form is hidden and a note with the direct contact
  * links takes its place, so the section is never a dead end.
+ *
+ * Field feedback: focus prints a yellow plate under the field and marks its label; a field that
+ * passes (`data-valid`, from the script) shows a key check; an error (`data-invalid`) gets the
+ * red rule and a short shake. Service choices are drawn square checkboxes that print a key tick
+ * with a plate pop. The panel itself is the paper job ticket (allowed: it is a card, not a
+ * full-width section).
  */
 import Icon from '~/components/Icon.astro';
 import ColorBar from '~/components/ColorBar.astro';
@@ -202,7 +208,7 @@ const text = contactText.el.form;
       <div class="q-submit">
         <button type="submit" class="btn btn-primary">
           <span>{text.submit}</span>
-          <Icon name="arrow-right" />
+          <Icon name="arrow-right" class="q-submit-arrow" />
         </button>
         <p class="text-small muted max-w-[46ch]">
           {`${text.noSend} `}
@@ -225,6 +231,9 @@ const text = contactText.el.form;
   @layer components {
     /* Job ticket panel: full bleed on phones, a paper-2 sheet with a key rule on wider screens. */
     .quote {
+      /* Check marks (the `check` icon path): key for a passed field, a mask for the ticked box. */
+      --q-tick-key: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23221F20' stroke-width='2.5' stroke-linecap='square'%3E%3Cpath d='M4 12.5l5 5L20 6.5'/%3E%3C/svg%3E");
+      --q-tick-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3.5' stroke-linecap='square'%3E%3Cpath d='M4 12.5l5 5L20 6.5'/%3E%3C/svg%3E");
       margin-inline: calc(var(--gutter) * -1);
       padding: clamp(2rem, 1.5rem + 2.5vw, 3.5rem) var(--gutter);
       background-color: var(--color-paper-2);
@@ -291,6 +300,24 @@ const text = contactText.el.form;
       font-size: 1.0625rem;
       line-height: 1.3;
     }
+    /* Focus marks the field's label with a small key plate. */
+    .quote :global(.field-label)::before {
+      content: '';
+      display: inline-block;
+      width: 0;
+      height: 0.625rem;
+      margin-right: 0;
+      background-color: var(--color-key);
+      vertical-align: 0.05em;
+      transition:
+        width var(--dur-base) var(--ease-out),
+        margin-right var(--dur-base) var(--ease-out);
+    }
+    .quote :global(.field:focus-within > .field-label)::before,
+    .quote :global(.q-services:focus-within > .field-label)::before {
+      width: 0.625rem;
+      margin-right: 0.5rem;
+    }
     .quote :global(.field-optional) {
       font-family: var(--font-sans);
       font-weight: 400;
@@ -330,10 +357,26 @@ const text = contactText.el.form;
       background-color: var(--color-paper);
       border: 2px solid var(--color-key);
       border-radius: 0;
-      transition: box-shadow var(--dur-fast) var(--ease-out);
+      transition:
+        box-shadow var(--dur-base) var(--ease-out),
+        border-color var(--dur-fast) linear;
+    }
+    .quote :global(.input:hover) {
+      box-shadow: 3px 3px 0 var(--color-line);
     }
     .quote :global(.input:focus) {
       box-shadow: 5px 5px 0 var(--color-yellow);
+    }
+    /* Passed: a key check at the end of the field (not on the date, whose picker sits there). */
+    .quote :global([data-valid] .input:not([type='date'], [readonly])) {
+      padding-right: 2.75rem;
+      background-image: var(--q-tick-key);
+      background-repeat: no-repeat;
+      background-position: right 0.875rem center;
+      background-size: 1.125rem 1.125rem;
+    }
+    .quote :global([data-valid] textarea.input:not([readonly])) {
+      background-position: right 0.875rem top 0.875rem;
     }
     .quote :global(.input[aria-invalid='true']) {
       border-color: var(--color-red);
@@ -343,6 +386,13 @@ const text = contactText.el.form;
       box-shadow:
         inset 4px 0 0 var(--color-red),
         5px 5px 0 var(--color-yellow);
+    }
+    /* An error arrives with a short shake (each time a field becomes invalid on submit). */
+    @media (prefers-reduced-motion: no-preference) {
+      .quote :global([data-invalid] .input),
+      .quote :global([data-invalid] .svc-grid) {
+        animation: field-shake 380ms var(--ease-out);
+      }
     }
     .quote .q-textarea {
       min-height: 9rem;
@@ -388,9 +438,12 @@ const text = contactText.el.form;
       background-color: var(--color-paper);
       border: 2px solid var(--color-line);
       cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
       transition:
         border-color var(--dur-fast) linear,
-        background-color var(--dur-fast) linear;
+        background-color var(--dur-fast) linear,
+        box-shadow var(--dur-base) var(--ease-snap),
+        transform var(--dur-fast) var(--ease-out);
     }
     .svc-tile:hover {
       border-color: var(--color-key);
@@ -398,13 +451,69 @@ const text = contactText.el.form;
     .svc-tile:has(.svc-check:checked) {
       background-color: var(--color-yellow);
       border-color: var(--color-key);
+      box-shadow: 3px 3px 0 var(--color-key);
     }
+    @media (prefers-reduced-motion: no-preference) {
+      .svc-tile:active {
+        transform: translate(1px, 1px);
+        box-shadow: 0 0 0 transparent;
+      }
+    }
+
+    /* A drawn square checkbox: key border; checked, a key square with a paper tick. */
     .svc-check {
-      width: 1.25rem;
-      height: 1.25rem;
+      flex: none;
+      display: grid;
+      place-content: center;
+      width: 1.375rem;
+      height: 1.375rem;
       margin: 0;
-      accent-color: var(--color-key);
+      appearance: none;
+      background-color: var(--color-paper);
+      border: 2px solid var(--color-key);
+      border-radius: 0;
       cursor: pointer;
+      transition: background-color var(--dur-fast) linear;
+    }
+    .svc-check::before {
+      content: '';
+      width: 0.875rem;
+      height: 0.875rem;
+      background-color: var(--color-paper);
+      -webkit-mask: var(--q-tick-mask) center / contain no-repeat;
+      mask: var(--q-tick-mask) center / contain no-repeat;
+      transform: scale(0);
+      transition: transform var(--dur-base) var(--ease-snap);
+    }
+    .svc-check:checked {
+      background-color: var(--color-key);
+    }
+    .svc-check:checked::before {
+      transform: scale(1);
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .svc-check:checked {
+        animation: check-pop 420ms var(--ease-snap);
+      }
+    }
+    /* Keyboard focus rings the whole tile rather than the small box. */
+    @supports selector(:has(*)) {
+      .svc-check:focus-visible {
+        outline: none;
+      }
+      .svc-tile:has(.svc-check:focus-visible) {
+        outline: 3px solid var(--focus);
+        outline-offset: 3px;
+      }
+    }
+    /* Forced colours: fall back to the system checkbox, which the user's theme can draw. */
+    @media (forced-colors: active) {
+      .svc-check {
+        appearance: auto;
+      }
+      .svc-check::before {
+        content: none;
+      }
     }
     .svc-name {
       font-weight: 600;
@@ -480,6 +589,46 @@ const text = contactText.el.form;
     }
     .q-submit .btn {
       white-space: normal;
+    }
+    .q-submit :global(.q-submit-arrow) {
+      transition: transform var(--dur-base) var(--ease-out);
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .q-submit .btn:hover :global(.q-submit-arrow),
+      .q-submit .btn:focus-visible :global(.q-submit-arrow) {
+        transform: translateX(4px);
+      }
+    }
+  }
+
+  @keyframes field-shake {
+    0%,
+    100% {
+      translate: 0 0;
+    }
+    20% {
+      translate: -6px 0;
+    }
+    45% {
+      translate: 5px 0;
+    }
+    70% {
+      translate: -3px 0;
+    }
+  }
+  /* The ticked box lands with a C/M plate shadow that snaps into register. */
+  @keyframes check-pop {
+    0% {
+      box-shadow:
+        -4px -3px 0 var(--color-cyan),
+        4px 3px 0 var(--color-magenta);
+      transform: scale(0.85);
+    }
+    100% {
+      box-shadow:
+        0 0 0 transparent,
+        0 0 0 transparent;
+      transform: none;
     }
   }
 </style>

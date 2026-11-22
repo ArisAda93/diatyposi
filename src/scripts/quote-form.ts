@@ -11,6 +11,11 @@
  * - `[data-error-summary]` (role="alert", tabindex="-1") with `ul[data-error-list]`
  * - `[data-send-panel]` with `[data-send-heading]`, `a[data-send="email|viber|whatsapp"]`,
  *   `textarea[data-preview]`, `button[data-copy]`, `[data-copy-status]`, `button[data-edit]`
+ *
+ * State hooks for the CSS: `data-invalid` on a field wrapper while it shows an error (set only
+ * after a submit), `data-valid` once a filled-in field passes the same checks (set when the
+ * visitor leaves the field or, for a flagged field, as they type; removed as soon as it no longer
+ * passes, so the mark never claims more than the validation does).
  */
 import {
   buildQuoteMessage,
@@ -49,6 +54,12 @@ interface FieldRefs {
 
 const isQuoteField = (value: string | undefined): value is QuoteField =>
   FIELDS.some((field) => field === value);
+
+/** Whether the visitor has entered anything in a field (a valid mark needs a value). */
+const isFilled = (data: QuoteData, field: QuoteField): boolean => {
+  const entry = data[field];
+  return Array.isArray(entry) ? entry.length > 0 : entry.trim() !== '';
+};
 
 /** Text inputs get aria-invalid; the fieldset does not (it is not a valid target for it). */
 const takesAriaInvalid = (el: HTMLElement): boolean =>
@@ -165,6 +176,7 @@ const initQuote = (root: HTMLElement): void => {
       ref.errorText.textContent = message;
       ref.error.hidden = false;
       ref.wrap.dataset.invalid = '';
+      delete ref.wrap.dataset.valid;
       describedBy.unshift(ref.error.id);
       if (takesAriaInvalid(ref.describe)) ref.describe.setAttribute('aria-invalid', 'true');
     } else {
@@ -225,19 +237,48 @@ const initQuote = (root: HTMLElement): void => {
     ref.focus.focus({ preventScroll: true });
   });
 
-  // Fields flagged on a submit are re-checked as the visitor types or changes them.
+  /** Sets or clears the valid mark of one field from the current data and errors. */
+  const markValid = (field: QuoteField, data: QuoteData, errors: QuoteErrors): void => {
+    const ref = refs.get(field);
+    if (!ref) return;
+    if (!errors[field] && isFilled(data, field)) ref.wrap.dataset.valid = '';
+    else delete ref.wrap.dataset.valid;
+  };
+
+  const fieldOf = (target: EventTarget | null): QuoteField | null => {
+    if (!(target instanceof HTMLElement)) return null;
+    const field = target.closest<HTMLElement>('[data-field]')?.dataset.field;
+    return isQuoteField(field) ? field : null;
+  };
+
+  // Fields flagged on a submit are re-checked as the visitor types or changes them. A field that
+  // carries the valid mark is re-checked too, so the mark goes as soon as the value stops passing.
   const flagged = new Set<QuoteField>();
   const revalidate = (event: Event): void => {
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) return;
-    const field = target.closest<HTMLElement>('[data-field]')?.dataset.field;
-    if (!isQuoteField(field) || !flagged.has(field)) return;
-    const errors = collectErrors(readData());
-    setFieldError(field, errors[field]);
-    refreshSummary(errors);
+    const field = fieldOf(event.target);
+    if (!field) return;
+    const isFlagged = flagged.has(field);
+    const hasMark = refs.get(field)?.wrap.dataset.valid !== undefined;
+    // Ticking a service is a finished choice: confirm it at once, like leaving a text field.
+    if (!isFlagged && !hasMark && !(field === 'services' && event.type === 'change')) return;
+    const data = readData();
+    const errors = collectErrors(data);
+    if (isFlagged) {
+      setFieldError(field, errors[field]);
+      refreshSummary(errors);
+    }
+    markValid(field, data, errors);
   };
   form.addEventListener('input', revalidate);
   form.addEventListener('change', revalidate);
+
+  // Leaving a field confirms it when it passes; errors still wait for a submit.
+  form.addEventListener('focusout', (event) => {
+    const field = fieldOf(event.target);
+    if (!field) return;
+    const data = readData();
+    markValid(field, data, collectErrors(data));
+  });
 
   const showPanel = (data: QuoteData): void => {
     const titles: Record<string, string> = Object.fromEntries(
@@ -263,6 +304,7 @@ const initQuote = (root: HTMLElement): void => {
       const message = errors[field];
       setFieldError(field, message);
       if (message) flagged.add(field);
+      markValid(field, data, errors);
     }
     renderSummary(errors);
     if (!summary.hidden) {

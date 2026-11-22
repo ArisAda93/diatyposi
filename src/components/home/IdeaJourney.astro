@@ -1,0 +1,490 @@
+---
+/**
+ * Home “Μία ιδέα. Παντού.”: one partner takes the visitor's idea from a sketch to a brand on
+ * everything they need. Replaces the old four-step process section.
+ *
+ * Desktop (from 64rem, JS on, motion allowed): two columns. Left, a sticky stage (CSS
+ * `position: sticky`, nothing pinned) where one sample mark is sketched, printed plate by plate
+ * and carried onto a card, a T-shirt, a shop front, a mug and a phone. Right, the seven steps;
+ * the one crossing the middle of the viewport sets the stage (src/scripts/idea-journey.ts).
+ * Otherwise (phones, reduced motion, no JS) each step shows its own still illustration in its
+ * final state and nothing is hidden. The illustrations repeat what the steps say, so they are
+ * hidden from assistive technology.
+ *
+ * Closing block: toggle chips for the products in the story; the button links to the quote form
+ * with every picked service pre-selected and counts them. Without JS the chips are hidden and the
+ * button links to the plain quote form.
+ */
+import Icon from '~/components/Icon.astro';
+import JourneyArt from './journey/JourneyArt.astro';
+import { routes, serviceBySlug } from '~/data/site';
+import { homeText } from '~/i18n/pages/home';
+import { capsEl } from '~/lib/text';
+import { JOURNEY_CHOICES, JOURNEY_STEPS } from '~/scripts/idea-journey';
+
+const copy = homeText.el.journey;
+const pad = (n: number): string => String(n).padStart(2, '0');
+const total = pad(JOURNEY_STEPS.length);
+
+const steps = JOURNEY_STEPS.map((step, index) => ({
+  ...step,
+  num: pad(index + 1),
+  text: copy.steps[step.id],
+  href: `${routes.services}#${step.service}`,
+  linkLabel: serviceBySlug(step.service)?.text.el.short ?? copy.steps[step.id].title,
+}));
+const choices = JOURNEY_CHOICES.map((slug) => ({ slug, label: copy.chooser.options[slug] }));
+const promiseInks = ['c', 'm', 'y'] as const;
+/** Readout swatches in print order. */
+const readoutInks = ['y', 'm', 'c', 'k'] as const;
+---
+
+<section class="section ij" aria-labelledby="journey-title" data-journey data-bg-accent="magenta">
+  <div class="wrap">
+    <div class="ij-head">
+      <p class="label mb-5">{capsEl(copy.label)}</p>
+      <h2 id="journey-title" class="h2 ij-title">{copy.heading}</h2>
+      <p class="lead muted mt-6 max-w-[48ch]">{copy.lead}</p>
+      <div class="ij-deco" aria-hidden="true">
+        <span class="ij-deco-dots halftone" data-parallax="-0.12"></span>
+        <span class="ij-deco-target" data-parallax="0.18">
+          <svg viewBox="0 0 100 100" focusable="false">
+            <circle cx="50" cy="50" r="22"></circle>
+            <circle cx="50" cy="50" r="9"></circle>
+            <path d="M50 4V96M4 50H96"></path>
+          </svg>
+        </span>
+      </div>
+    </div>
+
+    <div class="ij-grid" data-motion="off">
+      <div class="ij-stage-col" aria-hidden="true">
+        <div class="ij-stage" data-journey-stage data-stage="idea">
+          <div class="ij-stage-art crop-frame" data-journey-art>
+            <JourneyArt mode="stage" />
+          </div>
+          <div class="ij-readout">
+            <span class="ij-readout-inks">
+              {readoutInks.map((ink) => <span class={`ij-sw ij-sw-${ink}`} />)}
+            </span>
+            <span class="ij-count" data-journey-count>01 / {total}</span>
+          </div>
+        </div>
+      </div>
+
+      <ol class="ij-steps" role="list">
+        {
+          steps.map((step) => (
+            <li class="ij-step" data-journey-step={step.id}>
+              <div class="ij-still" aria-hidden="true">
+                <JourneyArt mode="still" step={step.id} />
+              </div>
+              <div class="ij-step-body">
+                <p class="ij-step-num" aria-hidden="true">
+                  {step.num} / {total}
+                </p>
+                <h3 class="h3 ij-step-title">{step.text.title}</h3>
+                <p class="muted ij-step-text">{step.text.text}</p>
+                <a href={step.href} class="ij-step-link">
+                  <span class="link">{step.linkLabel}</span>
+                  <Icon name="arrow-up-right" size={18} />
+                </a>
+              </div>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+
+    <div class="ij-choose">
+      <div class="ij-choose-main">
+        <h3 id="journey-choose-title" class="ij-choose-title">{copy.chooser.heading}</h3>
+        <p id="journey-choose-hint" class="muted ij-js-only mt-4 max-w-[52ch]">
+          {copy.chooser.hint}
+        </p>
+        <div
+          class="ij-chips ij-js-only"
+          role="group"
+          aria-labelledby="journey-choose-title"
+          aria-describedby="journey-choose-hint"
+        >
+          {
+            choices.map((choice) => (
+              <button
+                type="button"
+                class="ij-chip"
+                aria-pressed="false"
+                data-journey-choice={choice.slug}
+                disabled
+              >
+                {choice.label}
+              </button>
+            ))
+          }
+        </div>
+        <a href={routes.quote} class="btn btn-primary ij-cta" data-journey-cta>
+          <span data-journey-cta-label>{copy.chooser.cta.none}</span>
+          <Icon name="arrow-right" size={20} />
+        </a>
+        <p class="sr-only" role="status" aria-live="polite" data-journey-status></p>
+      </div>
+
+      <ul class="ij-promises" role="list">
+        {
+          copy.promises.map((promise, i) => (
+            <li>
+              <span
+                class={`ij-sw ij-sw-${promiseInks[i % promiseInks.length]}`}
+                aria-hidden="true"
+              />
+              <span>{promise}</span>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { initIdeaJourney } from '~/scripts/idea-journey';
+
+  initIdeaJourney();
+</script>
+
+<style>
+  @layer components {
+    /* ---------------------------------------------------------------------------------------- */
+    /* Head                                                                                     */
+    /* ---------------------------------------------------------------------------------------- */
+
+    .ij-head {
+      position: relative;
+      margin-bottom: clamp(2.5rem, 5vw, 4.5rem);
+    }
+    .ij-title {
+      max-width: 18ch;
+    }
+    /* Decorative: a registration target over a magenta halftone patch, on wide screens only. */
+    .ij-deco {
+      display: none;
+    }
+    .ij-deco-dots {
+      position: absolute;
+      top: 0.5rem;
+      right: 3.5rem;
+      width: clamp(8rem, 11vw, 11rem);
+      aspect-ratio: 4 / 3;
+      color: var(--color-magenta);
+      opacity: 0.55;
+      mix-blend-mode: multiply;
+      -webkit-mask-image: radial-gradient(closest-side, #000 35%, transparent);
+      mask-image: radial-gradient(closest-side, #000 35%, transparent);
+    }
+    .ij-deco-target {
+      position: absolute;
+      top: 2.5rem;
+      right: 0.5rem;
+      width: clamp(5rem, 7vw, 7rem);
+    }
+    .ij-deco-target svg {
+      width: 100%;
+      height: auto;
+      fill: none;
+      stroke: var(--color-key);
+      stroke-width: 1;
+    }
+
+    /* ---------------------------------------------------------------------------------------- */
+    /* Steps: still illustrations by default (phones, reduced motion, no JS)                     */
+    /* ---------------------------------------------------------------------------------------- */
+
+    .ij-stage-col {
+      display: none;
+    }
+    .ij-steps {
+      border-top: 1px solid var(--color-line);
+    }
+    .ij-step {
+      display: grid;
+      gap: 1.25rem;
+      padding-block: 2rem 2.25rem;
+      border-bottom: 1px solid var(--color-line);
+    }
+    .ij-still {
+      width: min(100%, 22rem);
+    }
+    .ij-step-num {
+      margin-bottom: 0.625rem;
+      font-family: var(--font-display);
+      font-size: 0.875rem;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+      font-variant-numeric: tabular-nums;
+      color: var(--color-muted);
+    }
+    .ij-step-title {
+      margin-bottom: 0.625rem;
+      transition: color var(--dur-base) linear;
+    }
+    .ij-step-text {
+      max-width: 42ch;
+    }
+    .ij-step-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-height: 2.75rem;
+      margin-top: 0.5rem;
+      font-family: var(--font-display);
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--color-key);
+      text-decoration: none;
+    }
+    .ij-step-link:hover .link {
+      background-size: 100% 2px;
+    }
+    .ij-step-link :global(svg) {
+      flex: none;
+      transition: transform var(--dur-base) var(--ease-out);
+    }
+    .ij-step-link:hover :global(svg) {
+      transform: translate(2px, -2px);
+    }
+
+    @media (min-width: 48rem) {
+      .ij-step {
+        grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+        align-items: center;
+        gap: var(--grid-gap) clamp(2rem, 4vw, 4rem);
+      }
+      .ij-still {
+        width: 100%;
+        max-width: 26rem;
+      }
+    }
+
+    /* ---------------------------------------------------------------------------------------- */
+    /* Live stage: wide screens with JS and motion (the same query as idea-journey.ts)           */
+    /* ---------------------------------------------------------------------------------------- */
+
+    @media (min-width: 64rem) and (prefers-reduced-motion: no-preference) {
+      :global(html:not(.no-js)) .ij-grid {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: var(--grid-gap);
+      }
+      :global(html:not(.no-js)) .ij-stage-col {
+        display: block;
+        grid-column: 1 / span 6;
+      }
+      :global(html:not(.no-js)) .ij-steps {
+        grid-column: 8 / span 5;
+        border-top: 0;
+      }
+      :global(html:not(.no-js)) .ij-step {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 68svh;
+        padding-block: 2rem;
+        border-bottom: 0;
+      }
+      :global(html:not(.no-js)) .ij-step-body {
+        padding-left: 1.5rem;
+        border-left: 2px solid var(--color-line);
+        transition: border-color var(--dur-base) linear;
+      }
+      :global(html:not(.no-js)) .ij-still {
+        display: none;
+      }
+    }
+
+    .ij-stage {
+      position: sticky;
+      top: calc(var(--header-h) + 2.5rem);
+    }
+    .ij-stage-art {
+      width: min(100% - 2.5rem, 100svh - var(--header-h) - 10rem);
+      margin-inline: auto;
+    }
+    .ij-readout {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      width: min(100% - 2.5rem, 100svh - var(--header-h) - 10rem);
+      margin: 1.75rem auto 0;
+      font-family: var(--font-display);
+      font-size: 0.875rem;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+      font-variant-numeric: tabular-nums;
+    }
+    .ij-readout-inks {
+      display: flex;
+      gap: 0.375rem;
+    }
+
+    /* Plate swatches (readout and promises). */
+    .ij-sw {
+      display: inline-block;
+      flex: none;
+      width: 0.75rem;
+      height: 0.75rem;
+      box-shadow: inset 0 0 0 1px var(--color-key);
+      transition: background-color var(--dur-base) var(--ease-out);
+    }
+    .ij-sw-c {
+      background-color: var(--color-cyan);
+    }
+    .ij-sw-m {
+      background-color: var(--color-magenta);
+    }
+    .ij-sw-y {
+      background-color: var(--color-yellow);
+    }
+    .ij-sw-k {
+      background-color: var(--color-key);
+    }
+    /* The readout fills in print order when the mark is printed (as the plates on the stage). */
+    .ij-readout-inks .ij-sw-m {
+      transition-delay: 0.18s;
+    }
+    .ij-readout-inks .ij-sw-c {
+      transition-delay: 0.36s;
+    }
+    .ij-readout-inks .ij-sw-k {
+      transition-delay: 0.54s;
+    }
+    .ij-stage[data-stage='idea'] .ij-sw,
+    .ij-stage[data-stage='blank'] .ij-sw {
+      background-color: transparent;
+      transition-delay: 0s;
+    }
+
+    /* Active step (idea-journey.ts adds .is-live and .is-active). Muted stays at 6.9:1. */
+    .ij.is-live .ij-step:not(.is-active) .ij-step-title {
+      color: var(--color-muted);
+    }
+    .ij.is-live .ij-step.is-active .ij-step-body {
+      border-left-color: var(--color-key);
+    }
+    .ij.is-live .ij-step.is-active .ij-step-num {
+      color: var(--color-red);
+    }
+
+    /* ---------------------------------------------------------------------------------------- */
+    /* Chooser                                                                                  */
+    /* ---------------------------------------------------------------------------------------- */
+
+    .ij-choose {
+      display: grid;
+      gap: 2.5rem;
+      margin-top: clamp(3rem, 6vw, 6rem);
+      padding-top: clamp(2rem, 4vw, 3rem);
+      border-top: 2px solid var(--color-key);
+    }
+    .ij-choose-title {
+      font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.5rem);
+      line-height: 1.1;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    :global(.no-js) .ij-js-only {
+      display: none;
+    }
+    .ij-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.625rem;
+      margin-block: 1.5rem 2rem;
+      padding: 0 6px 6px 0;
+    }
+    .ij-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.625rem;
+      min-height: 2.75rem;
+      padding: 0.5rem 1rem;
+      border: 2px solid var(--color-key);
+      background-color: transparent;
+      color: var(--color-key);
+      font-family: var(--font-display);
+      font-size: 0.9375rem;
+      font-weight: 650;
+      line-height: 1.2;
+      text-align: left;
+      cursor: pointer;
+      transition:
+        background-color var(--dur-fast) linear,
+        color var(--dur-fast) linear,
+        box-shadow var(--dur-base) var(--ease-out);
+    }
+    /* A square tick box: empty, then filled with yellow when pressed. */
+    .ij-chip::before {
+      content: '';
+      flex: none;
+      width: 0.75rem;
+      height: 0.75rem;
+      box-shadow: inset 0 0 0 1.5px currentColor;
+    }
+    .ij-chip:hover {
+      background-color: var(--color-paper-2);
+    }
+    .ij-chip[aria-pressed='true'] {
+      background-color: var(--color-key);
+      color: var(--color-paper);
+      box-shadow:
+        3px 3px 0 var(--color-cyan),
+        6px 6px 0 var(--color-magenta);
+    }
+    .ij-chip[aria-pressed='true']::before {
+      background-color: var(--color-yellow);
+      box-shadow: none;
+    }
+    .ij-chip:disabled {
+      cursor: default;
+    }
+    .ij-cta {
+      max-width: 100%;
+      white-space: normal;
+      text-align: left;
+    }
+    :global(.no-js) .ij-cta {
+      margin-top: 1.5rem;
+    }
+
+    .ij-promises {
+      display: grid;
+      gap: 1rem;
+      align-content: end;
+    }
+    .ij-promises li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.875rem;
+      max-width: 40ch;
+    }
+    .ij-promises .ij-sw {
+      margin-top: 0.45em;
+    }
+
+    @media (min-width: 64rem) {
+      .ij-choose {
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: var(--grid-gap);
+      }
+      .ij-choose-main {
+        grid-column: 1 / span 7;
+      }
+      .ij-promises {
+        grid-column: 9 / span 4;
+      }
+      .ij-deco {
+        display: block;
+      }
+    }
+  }
+</style>

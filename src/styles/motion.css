@@ -3,8 +3,8 @@
  *
  * Every rule is keyed on `html.mo-on` (set by the script only when motion is allowed) plus a state
  * class the script adds per element, so without JS, or with reduced motion, nothing here applies
- * and the page shows its composed state. Only transform, translate, text-shadow, box-shadow, mask
- * and custom properties change: no layout.
+ * and the page shows its composed state. Only transform, translate, scale, opacity, text-shadow,
+ * box-shadow, mask and custom properties change: no layout.
  */
 
 /* Registered so they can transition (one-shot registration and the halftone print-in). */
@@ -22,6 +22,12 @@
   syntax: '<percentage>';
   inherits: false;
   initial-value: 0%;
+}
+/* Parallax offset: not inherited, so a nested parallax element never adds its parent's. */
+@property --px-y {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
 }
 
 @layer components {
@@ -111,6 +117,63 @@
   }
 
   /* ---------------------------------------------------------------------------------------- */
+  /* Parallax (`data-parallax`): the script writes --px-y; `translate` composes with any       */
+  /* transform the element already has (depth entry, tilt, hover).                             */
+  /* ---------------------------------------------------------------------------------------- */
+  html.mo-on .mo-px {
+    translate: 0 var(--px-y);
+  }
+  html.mo-on .mo-px.mo-mag-live {
+    translate: var(--mo-mx, 0px) calc(var(--mo-my, 0px) + var(--px-y));
+  }
+
+  /* ---------------------------------------------------------------------------------------- */
+  /* Ink press ripple (.btn, .icon-btn): three rings, C, M and Y, start out of register at the */
+  /* pointer, expand across the button and fade as they snap into register. The script adds    */
+  /* the layer on pointerdown and removes it when the rings finish.                            */
+  /* ---------------------------------------------------------------------------------------- */
+  html.mo-on .mo-ripple {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  html.mo-on .mo-ripple > span {
+    position: absolute;
+    top: var(--mo-ry);
+    left: var(--mo-rx);
+    width: var(--mo-rd);
+    height: var(--mo-rd);
+    margin: calc(var(--mo-rd) * -0.5) 0 0 calc(var(--mo-rd) * -0.5);
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    opacity: 0;
+    animation: mo-ripple 640ms var(--ease-out) both;
+  }
+  html.mo-on .mo-ripple > .mo-ripple-c {
+    --mo-rdx: -3px;
+    --mo-rdy: -2px;
+    color: var(--color-cyan);
+  }
+  html.mo-on .mo-ripple > .mo-ripple-m {
+    --mo-rdx: 3px;
+    --mo-rdy: -1px;
+    color: var(--color-magenta);
+    animation-delay: 25ms;
+  }
+  html.mo-on .mo-ripple > .mo-ripple-y {
+    --mo-rdx: -1px;
+    --mo-rdy: 3px;
+    color: var(--color-yellow);
+    animation-delay: 50ms;
+  }
+
+  /* Toggle buttons and chips (`aria-pressed`): a short registration snap when toggled. */
+  html.mo-on .mo-toggle {
+    animation: mo-toggle 420ms var(--ease-out);
+  }
+
+  /* ---------------------------------------------------------------------------------------- */
   /* Halftone print-in: the element shows through a dot screen whose dots grow (--mo-ht) while */
   /* a solid band sweeps across (--mo-sweep). The script removes all three classes at the end. */
   /* ---------------------------------------------------------------------------------------- */
@@ -191,5 +254,37 @@
     html.mo-on .mo-tilt-live.mo-sheen::after {
       content: none;
     }
+    html.mo-on :is(.mo-px, .mo-px.mo-mag-live) {
+      translate: none;
+    }
+    html.mo-on .mo-ripple {
+      display: none;
+    }
+    html.mo-on .mo-toggle {
+      animation: none;
+    }
+  }
+}
+
+@keyframes mo-ripple {
+  from {
+    opacity: 0.9;
+    transform: translate(var(--mo-rdx, 0px), var(--mo-rdy, 0px)) scale(0.04);
+  }
+  to {
+    opacity: 0;
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+@keyframes mo-toggle {
+  0% {
+    scale: 0.94;
+  }
+  55% {
+    scale: 1.035;
+  }
+  100% {
+    scale: 1;
   }
 }

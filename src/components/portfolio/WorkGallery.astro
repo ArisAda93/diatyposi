@@ -3,8 +3,13 @@
  * Filterable gallery for /erga/. Data: `portfolio` in src/data/site.ts (images in
  * src/assets/portfolio/). Without JS every tile shows and links to its large image; the filter
  * chips stay hidden (`html.no-js`, removed by BaseLayout before first paint) because they cannot
- * work, so with JS they are visible from first paint (no layout shift). With JS (src/scripts/gallery.ts) the chips filter,
- * the count is announced and the tiles open the lightbox.
+ * work, so with JS they are visible from first paint (no layout shift). With JS
+ * (src/scripts/gallery.ts) the chips filter, the count is announced and the tiles open the
+ * lightbox.
+ *
+ * Feedback: each chip shows how many items it holds (a small tally); the pressed chip is printed
+ * in key with a C/M plate shadow that snaps into register on press; the live count ticks when it
+ * changes, and tiles that come back into view print in (`data-entering`, set by the script).
  */
 import { getImage as optimizeImage } from 'astro:assets';
 import WorkTile from './WorkTile.astro';
@@ -15,7 +20,10 @@ import { getImage as imageFile } from '~/lib/images';
 import { ALL, categoriesFor, categoryLabel, formatCount, tileLayout } from '~/lib/portfolio';
 
 const text = workText.el;
-const categories = categoriesFor(portfolio, services);
+const categories = categoriesFor(portfolio, services).map((c) => ({
+  ...c,
+  count: portfolio.filter((item) => item.service === c.slug).length,
+}));
 const shapes = tileLayout(portfolio.length);
 const LARGE_WIDTHS = [960, 1600];
 
@@ -48,11 +56,13 @@ const tiles = await Promise.all(
   <div class="work-filters" data-filter-bar>
     <div class="work-chips" role="group" aria-label={text.filterGroupLabel}>
       <button type="button" class="work-chip" aria-pressed="true" data-filter={ALL}>
-        {text.filterAll}
+        <span>{text.filterAll}</span>
+        <span class="chip-count">{portfolio.length}</span>
       </button>
       {categories.map((c) => (
         <button type="button" class="work-chip" aria-pressed="false" data-filter={c.slug}>
-          {c.label}
+          <span>{c.label}</span>
+          <span class="chip-count">{c.count}</span>
         </button>
       ))}
     </div>
@@ -102,11 +112,14 @@ const tiles = await Promise.all(
       scrollbar-width: thin;
     }
     .work-chip {
+      display: inline-flex;
       flex: none;
+      align-items: center;
+      gap: 0.625rem;
       min-height: 2.75rem;
-      padding: 0.5rem 1rem;
+      padding: 0.5rem 0.625rem 0.5rem 1rem;
       border: 2px solid var(--color-key);
-      background-color: transparent;
+      background-color: var(--color-paper);
       color: var(--color-key);
       font-family: var(--font-display);
       font-size: 0.9375rem;
@@ -114,13 +127,30 @@ const tiles = await Promise.all(
       line-height: 1.2;
       white-space: nowrap;
       cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
       transition:
         background-color var(--dur-fast) linear,
         color var(--dur-fast) linear,
-        box-shadow var(--dur-base) var(--ease-out);
+        box-shadow var(--dur-base) var(--ease-snap);
     }
     .work-chip:hover {
       background-color: var(--color-paper-2);
+    }
+    /* Tally of the items under this chip. */
+    .chip-count {
+      min-width: 1.625rem;
+      padding: 0.125rem 0.375rem;
+      background-color: var(--color-paper-2);
+      font-size: 0.8125rem;
+      font-weight: 750;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      transition:
+        background-color var(--dur-fast) linear,
+        color var(--dur-fast) linear;
+    }
+    .work-chip:hover .chip-count {
+      background-color: var(--color-paper);
     }
     .work-chip[aria-pressed='true'] {
       background-color: var(--color-key);
@@ -129,9 +159,26 @@ const tiles = await Promise.all(
         3px 3px 0 var(--color-cyan),
         6px 6px 0 var(--color-magenta);
     }
+    .work-chip[aria-pressed='true'] .chip-count {
+      background-color: var(--color-yellow);
+      color: var(--color-key);
+    }
+    /* Press: the plates snap into register (the push-in itself is the global aria-pressed rule). */
+    .work-chip:active {
+      box-shadow: 0 0 0 transparent;
+      transition-duration: 60ms;
+    }
+
     .work-count {
       font-size: var(--text-small);
       color: var(--color-muted);
+      font-variant-numeric: tabular-nums;
+    }
+    /* The count ticks when the filter changes (class set by the script). */
+    @media (prefers-reduced-motion: no-preference) {
+      .work-count.is-tick {
+        animation: count-tick 520ms var(--ease-snap);
+      }
     }
 
     .work-grid {
@@ -167,6 +214,19 @@ const tiles = await Promise.all(
         grid-template-columns: repeat(12, minmax(0, 1fr));
         grid-auto-rows: clamp(7rem, 2rem + 8vw, 13rem);
       }
+    }
+  }
+
+  @keyframes count-tick {
+    0% {
+      color: var(--color-key);
+      transform: translateY(-0.35em);
+    }
+    60% {
+      color: var(--color-key);
+    }
+    100% {
+      transform: none;
     }
   }
 </style>

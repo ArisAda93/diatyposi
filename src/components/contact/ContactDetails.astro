@@ -1,7 +1,8 @@
 ---
 /**
  * Contact page, left column: phone, mobile, email and address from `site`, quick Viber and
- * WhatsApp links, opening hours and social links.
+ * WhatsApp links, opening hours and social links. Rows answer the pointer (the term darkens, a
+ * key rule runs in at the row's start); the social links sink on press.
  */
 import Icon from '~/components/Icon.astro';
 import OpeningHours from './OpeningHours.astro';
@@ -111,10 +112,32 @@ const text = contactText.el.details;
       font-style: normal;
     }
     .cd-row {
+      position: relative;
       display: grid;
       gap: 0.25rem;
       padding-block: 1rem;
       border-bottom: 1px solid var(--color-line);
+    }
+    /* A key rule runs in along the row's top edge when the pointer is on it. */
+    .cd-row::before {
+      content: '';
+      position: absolute;
+      top: -1px;
+      left: 0;
+      width: 3rem;
+      height: 2px;
+      background-color: var(--color-key);
+      transform: scaleX(0);
+      transform-origin: left center;
+      transition: transform var(--dur-base) var(--ease-out);
+    }
+    .cd-row:hover::before,
+    .cd-row:focus-within::before {
+      transform: scaleX(1);
+    }
+    .cd-row:hover .cd-term,
+    .cd-row:focus-within .cd-term {
+      color: var(--color-key);
     }
     .cd-row:first-child {
       border-top: 2px solid var(--color-key);
@@ -122,6 +145,7 @@ const text = contactText.el.details;
     .cd-term {
       font-size: var(--text-small);
       color: var(--color-muted);
+      transition: color var(--dur-fast) linear;
     }
     /* Tap target: at least 44px tall at every width. */
     .cd-big {
@@ -179,6 +203,17 @@ const text = contactText.el.details;
     .cd-social-link:hover {
       background-color: var(--color-key);
       color: var(--color-paper);
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .cd-social-link {
+        transition:
+          background-color var(--dur-fast) linear,
+          color var(--dur-fast) linear,
+          transform var(--dur-fast) var(--ease-out);
+      }
+      .cd-social-link:active {
+        transform: translate(1px, 2px);
+      }
     }
   }
 </style>

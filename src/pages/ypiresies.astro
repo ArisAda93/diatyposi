@@ -1,7 +1,9 @@
 ---
 /**
- * Υπηρεσίες: page header, then nine calm chapters on the paper ground (one per service, anchored
- * by its slug) beside a slim sticky index rail on desktop. Behaviour: src/scripts/services-page.ts.
+ * Υπηρεσίες: page header, then nine calm chapters on the paper ground (one per service, in the
+ * owner's order, anchored by its slug) beside a slim sticky index rail on desktop. Below 64rem the
+ * index is a chip row in a bar that sticks under the header, so every chapter stays one tap away.
+ * Behaviour: src/scripts/services-page.ts.
  */
 import BaseLayout from '~/layouts/BaseLayout.astro';
 import PageHeader from '~/components/PageHeader.astro';
@@ -44,9 +46,6 @@ const text = servicesText.el;
 <style>
   @layer components {
     .svcp-layout {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr);
-      row-gap: 1.5rem;
       padding-top: clamp(2rem, 1rem + 3vw, 4rem);
       padding-bottom: var(--section-y);
     }
@@ -54,14 +53,38 @@ const text = servicesText.el;
     .svcp-list {
       min-width: 0;
     }
+
+    /* Below 64rem the layout is plain blocks, so the index bar can stick for the whole list. It is
+       navigation chrome, not a section: a translucent paper bar edge to edge, under the header. */
+    .svcp-aside {
+      position: sticky;
+      top: var(--header-h);
+      z-index: 30;
+      margin-inline: calc(var(--gutter) * -1);
+      padding-inline: var(--gutter);
+      border-bottom: 1px solid var(--color-line);
+      background-color: color-mix(in srgb, var(--color-paper) 90%, transparent);
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+    }
+
     @media (min-width: 64rem) {
       .svcp-layout {
+        display: grid;
         grid-template-columns: minmax(11rem, 2.4fr) minmax(0, 9.6fr);
         column-gap: clamp(2.5rem, 4.5vw, 5.5rem);
         align-items: start;
       }
       .svcp-aside {
+        position: static;
+        z-index: auto;
         align-self: stretch;
+        margin-inline: 0;
+        padding-inline: 0;
+        border-bottom: 0;
+        background-color: transparent;
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
       }
     }
   }

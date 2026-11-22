@@ -3,7 +3,8 @@
  * One quote-form field: visible label, optional hint and the error slot that
  * src/scripts/quote-form.ts fills. The control goes in the default slot; give it the `id`,
  * `data-describe` and, when there is a hint, aria-describedby="<id>-hint".
- * Styles live in QuoteForm.astro (shared with the services fieldset).
+ * Styles live in QuoteForm.astro (shared with the services fieldset). The script sets
+ * `data-invalid` or `data-valid` on the wrapper; the styles key the field's feedback on them.
  */
 import type { QuoteField } from '~/lib/quote';
 import { contactText } from '~/i18n/pages/contact';

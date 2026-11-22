@@ -1,8 +1,20 @@
 ---
+/**
+ * Shared footer: solid ink (opaque), the brand's close.
+ *
+ * Top: the press colour bar with a registration mark. Four columns on the 12-column grid: logo
+ * with the tagline in Comfortaa; pages; services (iterated from `services`, never by index);
+ * contact details with the social links. Then the wordmark set huge across the full width, its
+ * C/M/Y plates converging as it scrolls in (motion layer, `data-reveal="registration"`), and the
+ * bottom row (© year, privacy). Behind it all, the four arches drawn as plate outlines drift on
+ * a parallax layer (`data-parallax`, motion.ts). Decoration is aria-hidden.
+ */
 import Logo from './Logo.astro';
 import Icon from './Icon.astro';
 import ColorBar from './ColorBar.astro';
-import { routes, services, site } from '~/data/site';
+import RegMark from './RegMark.astro';
+import { ARCH, ARCH_PLATES } from './logo-paths';
+import { nav, routes, services, site } from '~/data/site';
 import { t, type Locale } from '~/i18n/ui';
 import { mailtoHref, telHref } from '~/lib/links';
 import { capsEl } from '~/lib/text';
@@ -15,21 +27,62 @@ const year = new Date().getFullYear();
 ---
 
 <footer class="on-ink site-footer">
-  <div class="wrap pt-14 pb-10 lg:pt-20">
-    <ColorBar class="mb-14 lg:mb-20" tints={6} />
-    <div class="grid-12 gap-y-12">
+  <div class="footer-deco" aria-hidden="true">
+    <div class="footer-deco-plx" data-parallax="0.22">
+      <svg
+        class="footer-arches"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="690 50 840 205"
+        focusable="false"
+      >
+        {ARCH_PLATES.map((p) => (
+          <path
+            d={ARCH}
+            transform={`translate(${p.x} 0)`}
+            class={`footer-arch footer-arch-${p.id}`}
+            vector-effect="non-scaling-stroke"
+          />
+        ))}
+      </svg>
+    </div>
+  </div>
+
+  <div class="wrap footer-inner">
+    <div class="footer-top">
+      <ColorBar tints={6} />
+      <span class="footer-top-rule" aria-hidden="true"></span>
+      <RegMark size={22} class="footer-reg" />
+    </div>
+
+    <div class="grid-12 footer-cols">
       <div class="col-span-12 lg:col-span-4">
-        <a href={routes.home} class="inline-block" aria-label={t('homeLinkLabel', locale)}>
+        <a href={routes.home} class="footer-logo" aria-label={t('homeLinkLabel', locale)}>
           <Logo variant="full" tone="ink" id="footer-logo" class="h-auto w-56 sm:w-64" />
         </a>
-        <p class="voice mt-8 max-w-[22ch] text-xl leading-snug text-(--color-paper)">
-          {site.tagline[locale]}
-        </p>
+        <p class="voice footer-tagline">{site.tagline[locale]}</p>
       </div>
 
-      <div class="col-span-12 sm:col-span-6 lg:col-span-3 lg:col-start-6">
-        <h2 class="label mb-5">{capsEl(t('footerServices', locale))}</h2>
-        <ul class="flex flex-col gap-1">
+      <nav
+        class="col-span-12 sm:col-span-4 lg:col-span-2 lg:col-start-6"
+        aria-labelledby="footer-pages-title"
+      >
+        <h2 id="footer-pages-title" class="label footer-heading">
+          {capsEl(t('footerPages', locale))}
+        </h2>
+        <ul class="footer-list">
+          {nav.map((item) => (
+            <li>
+              <a href={item.href} class="footer-link link-draw">
+                {item.label[locale]}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      <div class="col-span-12 sm:col-span-8 lg:col-span-3">
+        <h2 class="label footer-heading">{capsEl(t('footerServices', locale))}</h2>
+        <ul class="footer-list">
           {services.map((s) => (
             <li>
               <a href={`${routes.services}#${s.slug}`} class="footer-link link-draw">
@@ -40,23 +93,23 @@ const year = new Date().getFullYear();
         </ul>
       </div>
 
-      <div class="col-span-12 sm:col-span-6 lg:col-span-4 lg:col-start-9">
-        <h2 class="label mb-5">{capsEl(t('footerContact', locale))}</h2>
-        <ul class="flex flex-col gap-1">
+      <div class="col-span-12 lg:col-span-3">
+        <h2 class="label footer-heading">{capsEl(t('footerContact', locale))}</h2>
+        <ul class="footer-list">
           <li>
             <a href={telHref(site.contact.phone)} class="footer-link link-draw">
               <span class="muted">{t('phoneLabel', locale)}:</span>
-              {site.contact.phoneDisplay}
+              <span class="tabular-nums">{site.contact.phoneDisplay}</span>
             </a>
           </li>
           <li>
             <a href={telHref(site.contact.mobile)} class="footer-link link-draw">
               <span class="muted">{t('mobileLabel', locale)}:</span>
-              {site.contact.mobileDisplay}
+              <span class="tabular-nums">{site.contact.mobileDisplay}</span>
             </a>
           </li>
           <li>
-            <a href={mailtoHref(site.contact.email)} class="footer-link link-draw">
+            <a href={mailtoHref(site.contact.email)} class="footer-link footer-mail link-draw">
               {site.contact.email}
             </a>
           </li>
@@ -75,7 +128,11 @@ const year = new Date().getFullYear();
       </div>
     </div>
 
-    <div class="mt-16 flex flex-col gap-3 border-t border-(--color-ink-line) pt-6 text-small sm:flex-row sm:items-center sm:justify-between">
+    <div class="footer-word-box" aria-hidden="true">
+      <p class="footer-word" data-reveal="registration">{capsEl(site.name)}</p>
+    </div>
+
+    <div class="footer-bottom">
       <p class="muted">
         © {year} {site.name}. {t('copyright', locale)}
       </p>
@@ -89,7 +146,93 @@ const year = new Date().getFullYear();
 <style>
   @layer components {
     .site-footer {
+      position: relative;
+      overflow: clip;
+      isolation: isolate;
       background-image: none;
+    }
+
+    /* Plate outlines of the four arches, bleeding off the top right, on a parallax layer. */
+    .footer-deco {
+      position: absolute;
+      top: clamp(4rem, 10vw, 9rem);
+      right: calc(var(--gutter) * -1);
+      z-index: -1;
+      width: min(78rem, 92%);
+      pointer-events: none;
+    }
+    .footer-arches {
+      width: 100%;
+      height: auto;
+      overflow: visible;
+    }
+    .footer-arch {
+      fill: none;
+      stroke-width: 1.25px;
+      opacity: 0.55;
+    }
+    .footer-arch-c {
+      stroke: var(--color-cyan);
+    }
+    .footer-arch-m {
+      stroke: var(--color-magenta);
+    }
+    .footer-arch-y {
+      stroke: var(--color-yellow);
+    }
+    .footer-arch-k {
+      stroke: var(--color-ink-muted);
+    }
+    @media (max-width: 63.99rem) {
+      .footer-deco {
+        top: auto;
+        bottom: clamp(7rem, 30vw, 12rem);
+        width: 120%;
+        opacity: 0.6;
+      }
+    }
+
+    .footer-inner {
+      position: relative;
+      padding-top: clamp(3.5rem, 2.5rem + 3vw, 5rem);
+      padding-bottom: clamp(1.5rem, 1rem + 1vw, 2.5rem);
+    }
+    .footer-top {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: clamp(3rem, 2rem + 4vw, 5.5rem);
+    }
+    .footer-top-rule {
+      flex: 1;
+      height: 1px;
+      background-color: var(--color-ink-line);
+    }
+    .footer-top :global(.footer-reg) {
+      flex: none;
+      color: var(--color-ink-muted);
+    }
+
+    .footer-cols {
+      row-gap: 3rem;
+    }
+    .footer-logo {
+      display: inline-block;
+    }
+    .footer-tagline {
+      max-width: 22ch;
+      margin-top: 1.75rem;
+      font-size: clamp(1.25rem, 1.1rem + 0.5vw, 1.5rem);
+      line-height: 1.35;
+      color: var(--color-paper);
+    }
+    .footer-heading {
+      margin-bottom: 1.25rem;
+    }
+    .footer-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
     }
     .footer-link {
       display: inline-flex;
@@ -97,6 +240,46 @@ const year = new Date().getFullYear();
       gap: 0.35em;
       align-items: center;
       min-height: 2.75rem;
+    }
+    .footer-mail {
+      overflow-wrap: anywhere;
+    }
+
+    /*
+     * The wordmark across the full width: sized in container units so it fills about 90% of the
+     * content width at any size (Commissioner 900 caps run about 5.6em for the nine letters).
+     */
+    .footer-word-box {
+      container-type: inline-size;
+      margin-top: clamp(3.5rem, 2rem + 6vw, 7rem);
+      overflow: clip;
+    }
+    .footer-word {
+      font-family: var(--font-display);
+      font-size: 16cqi;
+      font-weight: 900;
+      line-height: 0.82;
+      letter-spacing: -0.045em;
+      white-space: nowrap;
+      color: var(--color-paper);
+      user-select: none;
+    }
+
+    .footer-bottom {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: clamp(1.5rem, 1rem + 2vw, 2.5rem);
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--color-ink-line);
+      font-size: var(--text-small);
+    }
+    @media (min-width: 40rem) {
+      .footer-bottom {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+      }
     }
   }
 </style>

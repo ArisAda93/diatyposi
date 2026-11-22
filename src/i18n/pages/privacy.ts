@@ -18,6 +18,8 @@ export const privacyText = {
     reviewNote:
       'Το κείμενο αυτό είναι προσχέδιο και περιμένει τον τελικό έλεγχο από την επιχείρηση.',
     updatedLabel: 'Τελευταία ενημέρωση:',
+    /** Heading of the in-page contents list beside the text (wide screens; shown in capitals). */
+    tocLabel: 'Σε αυτή τη σελίδα',
     updatedDate: '22 Νοεμβρίου 2026',
     who: {
       heading: 'Ποιοι είμαστε',

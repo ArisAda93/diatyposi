@@ -4,6 +4,9 @@
  * Until then it shows a press sheet: the four logo arches printed as halftone plates at their
  * screen angles (C 15°, M 75°, Y 0°, K 45°), slightly out of register, with a registration mark,
  * a colour bar and the solid mark as the proof. Decorative, no text.
+ *
+ * The arches sit on a parallax layer (`data-parallax`, motion.ts) and drift inside the sheet while
+ * the page scrolls; hovering the sheet pulls the plates into register.
  */
 import Photo from '../Photo.astro';
 import Logo from '../Logo.astro';
@@ -46,7 +49,7 @@ const plates = [...ARCH_PLATES].reverse().map((p) => {
 ) : (
   <div class="about-photo crop-frame" aria-hidden="true" data-reveal="depth">
     <div class="about-sheet" data-tilt>
-      <div class="about-arches">
+      <div class="about-arches" data-parallax="-0.08">
         {plates.map((p) => (
           <span class:list={['about-plate', `about-plate-${p.id}`]} style={p.style} />
         ))}

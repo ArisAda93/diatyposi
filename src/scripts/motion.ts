@@ -13,6 +13,14 @@
  *   ink sheen and a C/M/Y plate shadow opposite the tilt.
  * - Magnetic (`data-magnetic`, auto on `.btn`, fine pointers only): a pull of up to 6 px towards
  *   the pointer; the button's plate shadow points towards the pointer.
+ * - Parallax (`data-parallax="<speed>"`, -0.4…0.4): the element is offset by
+ *   (its centre − the viewport centre) × −speed, at most 18vh, smoothed. Positive speeds lag the
+ *   scroll (the element recedes), negative ones lead it. Written to the `translate` property
+ *   (`--px-y`), so it composes with any transform; only elements near the viewport are updated.
+ *   It measures the element's box (minus its own offset), so it also works in sticky containers.
+ * - Ink ripple (`.btn`, `.icon-btn`): on press, C/M/Y rings expand from the pointer and snap into
+ *   register as they fade (touch included: it is press feedback, not a hover effect).
+ * - Toggles (`[aria-pressed]`): a short registration snap whenever one is clicked.
  * - Header: scroll-velocity misregistration of `.site-header .logo-plate` (translate only, springs
  *   back into register), and `--scroll-progress` (0–1) on `[data-scroll-progress]`. The progress
  *   is a direct mapping of the scroll position, like a scrollbar, so it also runs with reduced
@@ -133,6 +141,35 @@ export const scrubRange = (
   return [Math.max(0, Math.min(top - viewport * from, end - 1)), end];
 };
 
+/** Largest parallax speed either way (`data-parallax`). */
+export const PARALLAX_LIMIT = 0.4;
+/** Largest parallax offset, as a fraction of the viewport height. */
+export const PARALLAX_MAX = 0.18;
+
+/** A `data-parallax` value as a speed, clamped to ±PARALLAX_LIMIT; null if missing, bad or 0. */
+export const parallaxSpeed = (value: string | null): number | null => {
+  if (value === null || value.trim() === '') return null;
+  const speed = Number(value);
+  if (!Number.isFinite(speed) || speed === 0) return null;
+  return clamp(speed, -PARALLAX_LIMIT, PARALLAX_LIMIT);
+};
+
+/**
+ * Parallax offset (px) for an element whose layout centre is at `centre` (viewport px): its
+ * distance from the viewport centre times −speed, clamped to ±max. Zero at the centre, so every
+ * element passes through its own layout position, and never more than `max` away from it.
+ */
+export const parallaxOffset = (
+  centre: number,
+  viewportCentre: number,
+  speed: number,
+  max: number,
+): number => clamp((centre - viewportCentre) * -speed, -max, max) || 0;
+
+/** Diameter (px) of a ripple from (x, y) in a box that reaches the box's farthest corner. */
+export const rippleDiameter = (x: number, y: number, width: number, height: number): number =>
+  2 * Math.hypot(Math.max(x, width - x), Math.max(y, height - y));
+
 /** Perspective distance (px) of the depth and tilt transform (motion.css uses the same value). */
 export const PERSPECTIVE = 1000;
 /** Largest depth rotation (deg) before the amplitude is applied. */
@@ -200,6 +237,9 @@ const DEPTH = '[data-reveal="depth"]';
 const HALFTONE = '[data-halftone], .media, .colorbar';
 const TILT = '[data-tilt], .card-lift';
 const MAGNETIC = '[data-magnetic], .btn';
+const PARALLAX = '[data-parallax]';
+const RIPPLE = '.btn, .icon-btn';
+const TOGGLE = '[aria-pressed]';
 const TILT_VARS = [
   '--mo-rx',
   '--mo-ry',
@@ -215,6 +255,13 @@ const MAGNET_VARS = ['--mo-mx', '--mo-my', '--mo-bx', '--mo-by'];
 const HALFTONE_MS = 1700;
 /** How long to wait for the GSAP chunks before showing the scrubbed elements at rest. */
 const GSAP_WAIT_MS = 8000;
+/** Parallax smoothing (per second) and the band around the viewport where it is updated. */
+const PARALLAX_LAMBDA = 10;
+const PARALLAX_NEAR = '25% 0px 25% 0px';
+/** Longest ripple ring (motion.css: 640 ms plus the 50 ms delay) plus a margin. */
+const RIPPLE_MS = 900;
+/** Toggle snap (motion.css) plus a margin. */
+const TOGGLE_MS = 600;
 
 const measure = (el: Element): Box => {
   const r = el.getBoundingClientRect();
@@ -881,6 +928,187 @@ const setupMagnetic = (session: Session): void => {
   });
 };
 
+// --- Parallax ---------------------------------------------------------------------------------
+
+interface ParallaxItem {
+  el: HTMLElement;
+  speed: number;
+  /** Inside the band around the viewport where offsets are updated. */
+  near: boolean;
+  /** Entered the band since the last read: start at the target when not on screen. */
+  entered: boolean;
+  target: number;
+  current: number;
+  /** The offset the element carries now (px, as written). */
+  written: number;
+}
+
+const setupParallax = (session: Session): void => {
+  if (!('IntersectionObserver' in window)) return;
+  const items: ParallaxItem[] = pick<HTMLElement>(PARALLAX, false)
+    .map((el) => ({ el, speed: parallaxSpeed(el.getAttribute('data-parallax')) }))
+    .filter((item): item is { el: HTMLElement; speed: number } => item.speed !== null)
+    .map(({ el, speed }) => ({
+      el,
+      speed,
+      near: false,
+      entered: false,
+      target: 0,
+      current: 0,
+      written: 0,
+    }));
+  if (!items.length) return;
+
+  const byElement = new Map(items.map((item) => [item.el, item]));
+  let dirty = true;
+  const invalidate = (): void => {
+    dirty = true;
+    session.ticker.wake();
+  };
+
+  const io = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        const item = byElement.get(entry.target as HTMLElement);
+        if (!item) return;
+        if (entry.isIntersecting && !item.near) item.entered = true;
+        item.near = entry.isIntersecting;
+      });
+      invalidate();
+    },
+    { rootMargin: PARALLAX_NEAR },
+  );
+  items.forEach((item) => {
+    item.el.classList.add('mo-px');
+    io.observe(item.el);
+  });
+  session.onScroll.push(invalidate);
+  session.onResize.push(invalidate);
+
+  session.ticker.add({
+    read: () => {
+      if (!dirty) return;
+      dirty = false;
+      const viewport = window.innerHeight;
+      const max = viewport * PARALLAX_MAX;
+      items.forEach((item) => {
+        if (!item.near) return;
+        // The box carries the offset written last frame: take it out to get the layout centre.
+        const box = item.el.getBoundingClientRect();
+        const centre = box.top + box.height / 2 - item.written;
+        item.target = parallaxOffset(centre, viewport / 2, item.speed, max);
+        if (item.entered) {
+          item.entered = false;
+          // Off screen: jump straight to the offset. On screen (at load): settle into it.
+          if (box.bottom < 0 || box.top > viewport) item.current = item.target;
+        }
+      });
+    },
+    write: (dt) => {
+      let moving = false;
+      items.forEach((item) => {
+        if (!item.near) return;
+        item.current = damp(item.current, item.target, PARALLAX_LAMBDA, dt);
+        if (Math.abs(item.current - item.target) < 0.1) item.current = item.target;
+        else moving = true;
+        const value = Math.round(item.current * 100) / 100;
+        if (value === item.written) return;
+        item.written = value;
+        item.el.style.setProperty('--px-y', `${value}px`);
+      });
+      return moving;
+    },
+  });
+
+  session.cleanups.push(() => {
+    io.disconnect();
+    items.forEach((item) => {
+      item.el.classList.remove('mo-px');
+      item.el.style.removeProperty('--px-y');
+    });
+  });
+};
+
+// --- Press feedback: ink ripple and toggle snap -----------------------------------------------
+
+const setupRipple = (session: Session): void => {
+  const live = new Set<HTMLElement>();
+  const timers = new Set<number>();
+
+  listen(session, document, 'pointerdown', (event) => {
+    const pe = event as PointerEvent;
+    if (!pe.isPrimary || pe.button !== 0 || !(pe.target instanceof Element)) return;
+    const host = pe.target.closest<HTMLElement>(RIPPLE);
+    if (!host || host.closest(OFF) || host.matches(':disabled, [aria-disabled="true"]')) return;
+
+    // Relative to the padding box (the layer sits inside the border).
+    const box = host.getBoundingClientRect();
+    const width = host.clientWidth;
+    const height = host.clientHeight;
+    const x = pe.clientX - box.left - host.clientLeft;
+    const y = pe.clientY - box.top - host.clientTop;
+    if (width <= 0 || height <= 0) return;
+
+    const layer = document.createElement('span');
+    layer.className = 'mo-ripple';
+    layer.setAttribute('aria-hidden', 'true');
+    layer.style.setProperty('--mo-rx', `${x.toFixed(1)}px`);
+    layer.style.setProperty('--mo-ry', `${y.toFixed(1)}px`);
+    layer.style.setProperty('--mo-rd', `${rippleDiameter(x, y, width, height).toFixed(1)}px`);
+    ['c', 'm', 'y'].forEach((plate) => {
+      const ring = document.createElement('span');
+      ring.className = `mo-ripple-${plate}`;
+      layer.append(ring);
+    });
+
+    const done = (): void => {
+      window.clearTimeout(timer);
+      timers.delete(timer);
+      live.delete(layer);
+      layer.remove();
+    };
+    // The yellow ring ends last; the timeout covers a missing animationend.
+    layer.lastElementChild?.addEventListener('animationend', done, { once: true });
+    const timer = window.setTimeout(done, RIPPLE_MS);
+    timers.add(timer);
+    live.add(layer);
+    host.append(layer);
+  });
+
+  session.cleanups.push(() => {
+    timers.forEach((timer) => window.clearTimeout(timer));
+    timers.clear();
+    live.forEach((layer) => layer.remove());
+    live.clear();
+  });
+};
+
+const setupToggles = (session: Session): void => {
+  const timers = new Map<HTMLElement, number>();
+  const finish = (el: HTMLElement): void => {
+    window.clearTimeout(timers.get(el));
+    timers.delete(el);
+    el.classList.remove('mo-toggle');
+  };
+
+  listen(session, document, 'click', (event) => {
+    if (!(event.target instanceof Element)) return;
+    const el = event.target.closest<HTMLElement>(TOGGLE);
+    if (!el || el.closest(OFF)) return;
+    // Restart the snap if it is still playing (reading layout commits the removal). The class
+    // goes after a timeout rather than on animationend, which children's animations also fire.
+    finish(el);
+    void el.offsetWidth;
+    el.classList.add('mo-toggle');
+    timers.set(
+      el,
+      window.setTimeout(() => finish(el), TOGGLE_MS),
+    );
+  });
+
+  session.cleanups.push(() => Array.from(timers.keys()).forEach(finish));
+};
+
 // --- Header: velocity misregistration and scroll progress -------------------------------------
 
 const setupHeader = (session: Session): void => {
@@ -1029,6 +1257,9 @@ const start = (finePointer: boolean): Cleanup => {
     guarded(() => setupMagnetic(session));
   }
   guarded(() => setupHeader(session));
+  guarded(() => setupParallax(session));
+  guarded(() => setupRipple(session));
+  guarded(() => setupToggles(session));
 
   listen(session, window, 'scroll', () => {
     session.scroll.y = window.scrollY;

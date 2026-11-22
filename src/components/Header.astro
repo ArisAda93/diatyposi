@@ -1,6 +1,25 @@
 ---
+/**
+ * Shared site header and the full-screen mobile menu.
+ *
+ * Header: sticky paper bar (translucent with a blur where supported, so the living background
+ * reads through it), logo, nav with a drawn key underline whose C/M/Y ghost snaps into register on
+ * hover and focus, the current page underlined by a CMYK colour-bar rule, phone and quote buttons
+ * of one height. The scrolled state adds the hairline and a soft shadow.
+ *
+ * Menu (under 1024px): a native modal <dialog> (focus trap, Esc, inert page come from the
+ * platform). It opens as a paper sheet wiped down by a CMYK registration edge, the numbered links
+ * arrive staggered, and it wipes back up on close (Esc included). Page scroll is locked while it
+ * is open. Every animation is off under reduced motion; the menu then opens and closes at once.
+ *
+ * Hooks read by other scripts (keep them): `[data-header]`, `data-over-hero`, `data-solid`,
+ * `data-docked`, `data-scene`, `--dock` (hero-scene/scene.ts), `.site-header-logo svg` (hero.ts),
+ * `.site-header .logo-plate` and `[data-scroll-progress]` (motion.ts), `data-menu`,
+ * `data-menu-open`, `data-menu-close` (script below).
+ */
 import Logo from './Logo.astro';
 import Icon from './Icon.astro';
+import ColorBar from './ColorBar.astro';
 import { nav, routes, site } from '~/data/site';
 import { t, type Locale } from '~/i18n/ui';
 import { telHref } from '~/lib/links';
@@ -19,18 +38,18 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
 ---
 
 <header class="site-header" data-header data-over-hero={overHero ? '' : undefined}>
-  <div class="wrap flex h-full items-center justify-between gap-6">
+  <div class="wrap header-inner">
     <a href={routes.home} class="site-header-logo" aria-label={t('homeLinkLabel', locale)}>
       <Logo variant="compact" id="header-logo" class="h-9 w-auto lg:h-10" />
     </a>
 
-    <nav aria-label={t('navLabel', locale)} class="hidden lg:block">
+    <nav aria-label={t('navLabel', locale)} class="header-nav hidden lg:block">
       <ul class="flex items-center gap-7 xl:gap-9">
         {nav.map((item) => (
           <li>
             <a
               href={item.href}
-              class="link-draw nav-link"
+              class="nav-link"
               aria-current={isCurrent(item.href) ? 'page' : undefined}
             >
               {item.label[locale]}
@@ -40,10 +59,10 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
       </ul>
     </nav>
 
-    <div class="flex items-center gap-2 sm:gap-3">
+    <div class="header-actions">
       <a
         href={telHref(site.contact.phone)}
-        class="btn btn-secondary header-phone hidden xl:inline-flex"
+        class="btn btn-secondary header-btn header-phone hidden xl:inline-flex"
       >
         <Icon name="phone" size={18} />
         <span>
@@ -58,7 +77,7 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
       >
         <Icon name="phone" size={22} />
       </a>
-      <a href={routes.quote} class="btn btn-primary hidden lg:inline-flex">
+      <a href={routes.quote} class="btn btn-primary header-btn hidden lg:inline-flex">
         {t('requestQuote', locale)}
       </a>
       <button
@@ -78,9 +97,9 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
 </header>
 
 <dialog id="site-menu" class="site-menu" aria-label={t('menuDialogLabel', locale)} data-menu>
-  <div class="wrap flex min-h-full flex-col">
-    <div class="flex h-(--header-h) items-center justify-between">
-      <a href={routes.home} aria-label={t('homeLinkLabel', locale)}>
+  <div class="wrap menu-inner">
+    <div class="menu-top">
+      <a href={routes.home} class="menu-home" aria-label={t('homeLinkLabel', locale)}>
         <Logo variant="compact" id="menu-logo" class="h-9 w-auto" />
       </a>
       <button type="button" class="menu-btn" data-menu-close>
@@ -88,10 +107,12 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
         <span>{t('menuClose', locale)}</span>
       </button>
     </div>
-    <nav aria-label={t('navLabel', locale)} class="flex-1 py-8">
-      <ul class="flex flex-col">
+    <ColorBar tints={4} class="menu-colorbar" />
+
+    <nav aria-label={t('navLabel', locale)} class="menu-nav">
+      <ul class="menu-list">
         {nav.map((item, i) => (
-          <li>
+          <li class="menu-item" style={`--i:${i}`}>
             <a
               href={item.href}
               class="menu-link"
@@ -100,13 +121,15 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
               <span class="label menu-link-num" aria-hidden="true">
                 {String(i + 1).padStart(2, '0')}
               </span>
-              <span>{item.label[locale]}</span>
+              <span class="menu-link-text">{item.label[locale]}</span>
+              <Icon name="arrow-right" size={28} class="menu-link-arrow" />
             </a>
           </li>
         ))}
       </ul>
     </nav>
-    <div class="flex flex-col gap-3 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+
+    <div class="menu-item menu-foot" style={`--i:${nav.length}`}>
       <a href={routes.quote} class="btn btn-primary btn-block">
         {t('requestQuote', locale)}
       </a>
@@ -116,13 +139,16 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
           {t('callUs', locale)}: {site.contact.phoneDisplay}
         </span>
       </a>
-      <div class="mt-3 flex gap-2">
-        <a href={site.social.facebook} class="icon-btn" aria-label={t('facebookLabel', locale)}>
-          <Icon name="facebook" size={22} />
-        </a>
-        <a href={site.social.instagram} class="icon-btn" aria-label={t('instagramLabel', locale)}>
-          <Icon name="instagram" size={22} />
-        </a>
+      <div class="menu-meta">
+        <p class="voice menu-tagline">{site.tagline[locale]}</p>
+        <div class="flex gap-2">
+          <a href={site.social.facebook} class="icon-btn" aria-label={t('facebookLabel', locale)}>
+            <Icon name="facebook" size={22} />
+          </a>
+          <a href={site.social.instagram} class="icon-btn" aria-label={t('instagramLabel', locale)}>
+            <Icon name="instagram" size={22} />
+          </a>
+        </div>
       </div>
     </div>
   </div>
@@ -137,10 +163,45 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
       height: var(--header-h);
       background-color: var(--color-paper);
       border-bottom: 1px solid transparent;
-      transition: border-color var(--dur-base) linear;
+      transition:
+        border-color var(--dur-base) linear,
+        background-color var(--dur-base) linear,
+        box-shadow var(--dur-slow) var(--ease-out);
     }
+    .header-inner {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      height: 100%;
+    }
+    .header-nav {
+      margin-left: auto;
+    }
+    .header-actions {
+      display: flex;
+      flex: none;
+      align-items: center;
+      gap: 0.5rem;
+      margin-left: auto;
+    }
+    @media (min-width: 40rem) {
+      .header-actions {
+        gap: 0.75rem;
+      }
+    }
+    @media (min-width: 64rem) {
+      .header-actions {
+        margin-left: 0.5rem;
+      }
+    }
+
+    /* Scrolled: hairline and a soft paper shadow (never over the transparent hero state). */
     .site-header[data-scrolled] {
       border-bottom-color: var(--color-line);
+    }
+    .site-header[data-scrolled]:not([data-over-hero]),
+    .site-header[data-over-hero]:is([data-solid], [data-docked]) {
+      box-shadow: 0 14px 32px -26px rgb(34 31 32 / 0.45);
     }
 
     /*
@@ -153,9 +214,6 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
       right: 0;
       left: 0;
       background-color: transparent;
-      transition:
-        background-color var(--dur-base) linear,
-        border-color var(--dur-base) linear;
     }
     .site-header[data-over-hero]:not([data-solid], [data-docked]) {
       border-bottom-color: transparent;
@@ -165,6 +223,17 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
       background-color: var(--color-paper);
       border-bottom-color: var(--color-line);
     }
+
+    /* Where the browser can blur, the bar is translucent paper over the living background. */
+    @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+      .site-header:not([data-over-hero]),
+      .site-header[data-over-hero]:is([data-solid], [data-docked]) {
+        background-color: color-mix(in srgb, var(--color-paper) 86%, transparent);
+        -webkit-backdrop-filter: blur(14px) saturate(1.25);
+        backdrop-filter: blur(14px) saturate(1.25);
+      }
+    }
+
     /*
      * Logo arches on the home page. With the live hero scene (data-scene) they are hidden while
      * the 3D arches are in the hero and appear as those dock: opacity follows --dock (0-1),
@@ -201,22 +270,89 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
     }
     .site-header-logo {
       display: inline-flex;
+      flex: none;
       align-items: center;
       min-height: 44px;
     }
+
+    /*
+     * Nav links. Hover and keyboard focus draw a key underline from the left; a C/M/Y ghost of
+     * the rule starts out of register and snaps onto it. The current page carries the press
+     * colour bar (C, M, Y, K) as its rule, so it never relies on colour alone: it is a shape.
+     */
     .nav-link {
+      position: relative;
       display: inline-flex;
       align-items: center;
       min-height: 2.75rem;
       font-family: var(--font-display);
       font-weight: 650;
       font-size: 1rem;
+      color: var(--color-key);
+      text-decoration: none;
+    }
+    .nav-link::before,
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      bottom: 0.5rem;
+      left: 0;
+      height: 2px;
+      pointer-events: none;
+    }
+    .nav-link::after {
+      background-color: var(--color-key);
+      transform: scaleX(0);
+      transform-origin: right center;
+      transition: transform var(--dur-base) var(--ease-out);
+    }
+    .nav-link::before {
+      background-image: linear-gradient(
+        90deg,
+        var(--color-cyan) 0 33.3%,
+        var(--color-magenta) 33.3% 66.6%,
+        var(--color-yellow) 66.6% 100%
+      );
+      opacity: 0;
+    }
+    .nav-link:hover::after,
+    .nav-link:focus-visible::after {
+      transform: scaleX(1);
+      transform-origin: left center;
+    }
+    .nav-link[aria-current='page']::after {
+      height: 3px;
+      background-image: linear-gradient(
+        90deg,
+        var(--color-cyan) 0 25%,
+        var(--color-magenta) 25% 50%,
+        var(--color-yellow) 50% 75%,
+        var(--color-key) 75% 100%
+      );
+      transform: scaleX(1);
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .nav-link:hover::before,
+      .nav-link:focus-visible::before {
+        animation: nav-register 620ms var(--ease-snap) both;
+      }
+      .nav-link:active {
+        transform: translateY(1px);
+      }
+    }
+
+    /* Header buttons share one height with the icon and menu buttons (44px). */
+    .header-btn {
+      min-height: 2.75rem;
+      padding-block: 0.5rem;
+      padding-inline: 1.125rem;
     }
     .header-phone {
-      min-height: 2.75rem;
       padding-inline: 1rem;
       font-variant-numeric: tabular-nums;
     }
+
     :global(.icon-btn) {
       display: inline-flex;
       align-items: center;
@@ -250,6 +386,10 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
       cursor: pointer;
     }
 
+    /* ---------------------------------------------------------------------------------------- */
+    /* Mobile menu                                                                               */
+    /* ---------------------------------------------------------------------------------------- */
+
     .site-menu {
       position: fixed;
       inset: 0;
@@ -264,17 +404,47 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
       background-image: var(--grain);
       color: var(--color-key);
       overflow-y: auto;
+      overscroll-behavior: contain;
     }
     .site-menu::backdrop {
-      background: var(--color-paper);
+      background: color-mix(in srgb, var(--color-ink) 30%, transparent);
     }
-    .site-menu[open] {
-      animation: menu-in var(--dur-slow) var(--ease-out);
+    /* The page behind does not scroll while the menu is open. */
+    :global(html:has(.site-menu[open])) {
+      overflow: hidden;
     }
-    .menu-link {
+    .menu-inner {
       display: flex;
-      align-items: baseline;
-      gap: 1rem;
+      flex-direction: column;
+      min-height: 100%;
+    }
+    .menu-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: var(--header-h);
+    }
+    .menu-home {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+    }
+    .menu-nav {
+      flex: 1;
+      padding-block: clamp(1.25rem, 4vh, 2.5rem);
+    }
+    .menu-list {
+      display: flex;
+      flex-direction: column;
+      border-top: 2px solid var(--color-key);
+    }
+
+    .menu-link {
+      display: grid;
+      grid-template-columns: 2.5rem minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 0.75rem;
+      min-height: 3.5rem;
       padding-block: 0.75rem;
       border-bottom: 1px solid var(--color-line);
       font-family: var(--font-display);
@@ -283,22 +453,163 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
       letter-spacing: -0.025em;
       line-height: 1.1;
       text-decoration: none;
-    }
-    .menu-link[aria-current='page'] > span:last-child {
-      text-decoration: underline;
-      text-decoration-thickness: 3px;
-      text-underline-offset: 0.18em;
+      -webkit-tap-highlight-color: transparent;
     }
     .menu-link-num {
-      min-width: 2.25rem;
+      align-self: start;
+      padding-top: 0.9em;
+      font-size: var(--text-label);
+      font-variant-numeric: tabular-nums;
     }
-    @keyframes menu-in {
-      from {
-        clip-path: inset(0 0 100% 0);
+    .menu-link-text {
+      padding-bottom: 0.08em;
+      background-repeat: no-repeat;
+      background-position: 0 100%;
+      background-size: 0 4px;
+      transition: transform var(--dur-base) var(--ease-out);
+    }
+    /* Current page: the colour-bar rule under the name, as in the desktop nav. */
+    .menu-link[aria-current='page'] .menu-link-text {
+      background-image: linear-gradient(
+        90deg,
+        var(--color-cyan) 0 25%,
+        var(--color-magenta) 25% 50%,
+        var(--color-yellow) 50% 75%,
+        var(--color-key) 75% 100%
+      );
+      background-size: 100% 4px;
+    }
+    .menu-link :global(.menu-link-arrow) {
+      opacity: 0;
+      transform: translateX(-0.75rem);
+      transition:
+        opacity var(--dur-base) var(--ease-out),
+        transform var(--dur-base) var(--ease-out);
+    }
+    .menu-link:hover :global(.menu-link-arrow),
+    .menu-link:focus-visible :global(.menu-link-arrow),
+    .menu-link[aria-current='page'] :global(.menu-link-arrow) {
+      opacity: 1;
+      transform: none;
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .menu-link:hover .menu-link-text,
+      .menu-link:focus-visible .menu-link-text {
+        transform: translateX(0.375rem);
       }
-      to {
-        clip-path: inset(0 0 0 0);
+      .menu-link:active .menu-link-text {
+        transform: translateX(0.75rem);
       }
+    }
+    .menu-link:focus-visible {
+      outline-offset: -3px;
+    }
+
+    .menu-foot {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
+    }
+    .menu-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-top: 0.75rem;
+    }
+    .menu-tagline {
+      max-width: 26ch;
+      font-size: 1.0625rem;
+      line-height: 1.4;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .site-menu[open] {
+        animation: menu-in var(--dur-slow) var(--ease-out);
+      }
+      /* The CMYK registration edge rides down with the sheet as it is wiped open. */
+      .site-menu[open]::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        left: 0;
+        height: 6px;
+        background-image: linear-gradient(
+          90deg,
+          var(--color-cyan) 0 25%,
+          var(--color-magenta) 25% 50%,
+          var(--color-yellow) 50% 75%,
+          var(--color-key) 75% 100%
+        );
+        pointer-events: none;
+        animation: menu-edge var(--dur-slow) var(--ease-out) both;
+      }
+      .site-menu[open] .menu-item {
+        animation: menu-item-in 560ms var(--ease-out) both;
+        animation-delay: calc(140ms + var(--i, 0) * 55ms);
+      }
+      .site-menu[open][data-closing] {
+        animation: menu-out 300ms var(--ease-in-out) both;
+      }
+      .site-menu[open][data-closing]::after {
+        content: none;
+      }
+    }
+  }
+
+  @keyframes nav-register {
+    0% {
+      opacity: 1;
+      transform: translate(3px, 5px);
+    }
+    65% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translate(0, 0);
+    }
+  }
+  @keyframes menu-in {
+    from {
+      clip-path: inset(0 0 100% 0);
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+  @keyframes menu-out {
+    from {
+      clip-path: inset(0 0 0 0);
+    }
+    to {
+      clip-path: inset(0 0 100% 0);
+    }
+  }
+  @keyframes menu-edge {
+    0% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    85% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(calc(100dvh - 6px));
+    }
+  }
+  @keyframes menu-item-in {
+    from {
+      opacity: 0;
+      transform: translateY(1.25rem);
+    }
+    to {
+      opacity: 1;
+      transform: none;
     }
   }
 </style>
@@ -343,20 +654,61 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
 
   // Full-screen menu: native modal <dialog> traps focus, closes on Esc and makes the page inert.
   if (menu && openBtn && closeBtn) {
-    const close = () => menu.close();
+    const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+    /** The close wipe (menu-out, 300ms) plus a margin, in case animationend never fires. */
+    const CLOSE_FALLBACK_MS = 420;
+    let closing = false;
+
+    const finishClose = (): void => {
+      if (!closing) return;
+      closing = false;
+      menu.removeAttribute('data-closing');
+      if (menu.open) menu.close();
+    };
+
+    /** Wipes the sheet back up, then closes. Instant with reduced motion. */
+    const close = (): void => {
+      if (!menu.open || closing) return;
+      if (reduceMotion.matches) {
+        menu.close();
+        return;
+      }
+      closing = true;
+      menu.setAttribute('data-closing', '');
+      const fallback = window.setTimeout(finishClose, CLOSE_FALLBACK_MS);
+      const onEnd = (event: AnimationEvent): void => {
+        // Only the sheet's own wipe (not a link's entry animation or the registration edge).
+        if (event.target !== menu || event.pseudoElement) return;
+        menu.removeEventListener('animationend', onEnd);
+        window.clearTimeout(fallback);
+        finishClose();
+      };
+      menu.addEventListener('animationend', onEnd);
+    };
+
     openBtn.addEventListener('click', () => {
+      if (menu.open) return;
       menu.showModal();
       openBtn.setAttribute('aria-expanded', 'true');
     });
     closeBtn.addEventListener('click', close);
+    // Esc: run the same wipe instead of the instant platform close.
+    menu.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      close();
+    });
     menu.addEventListener('close', () => {
+      // Also reached when the platform closes the dialog directly (a repeated Esc).
+      closing = false;
+      menu.removeAttribute('data-closing');
       openBtn.setAttribute('aria-expanded', 'false');
       openBtn.focus();
     });
-    menu.querySelectorAll('a').forEach((a) => a.addEventListener('click', close));
+    // A link navigates away (or to the current page): close at once, no wipe to wait for.
+    menu.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => menu.close()));
     // Leaving the mobile layout closes the menu.
     matchMedia('(min-width: 64rem)').addEventListener('change', (e) => {
-      if (e.matches && menu.open) close();
+      if (e.matches && menu.open) menu.close();
     });
   }
 </script>

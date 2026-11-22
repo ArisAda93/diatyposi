@@ -2,6 +2,9 @@
 /**
  * The owner's four values as four plate-coloured blocks: cyan and yellow fills with key text,
  * magenta only as a graphic band and halftone (never behind text), and a solid ink block.
+ * Hovering a block sends C/M/Y ghosts of its plate letter out of register and back, and turns
+ * its registration mark. The ink block is opaque; the section paints nothing
+ * else, so the living background shows between the blocks (`data-bg-accent`).
  */
 import RegMark from '../RegMark.astro';
 import { ownerCopy } from '~/data/site';
@@ -17,7 +20,7 @@ const blocks = ownerCopy.el.values.map((value, i) => ({
 }));
 ---
 
-<section class="section values" aria-labelledby="values-title">
+<section class="section values" aria-labelledby="values-title" data-bg-accent="magenta">
   <div class="wrap">
     <div class="grid-12 gap-y-6">
       <p class="label col-span-12 lg:col-span-3">{capsEl(text.valuesLabel)}</p>
@@ -35,7 +38,7 @@ const blocks = ownerCopy.el.values.map((value, i) => ({
         >
           <div class="value-top" aria-hidden="true">
             <span class="value-plate">{b.plate.toUpperCase()}</span>
-            <RegMark size={22} />
+            <RegMark size={22} class="value-reg" />
           </div>
           <div>
             <h3 class="h3 value-title">{b.value}</h3>
@@ -109,8 +112,19 @@ const blocks = ownerCopy.el.values.map((value, i) => ({
       line-height: 0.8;
       letter-spacing: -0.04em;
     }
+    .value-top :global(.value-reg) {
+      transition: transform var(--dur-slow) var(--ease-snap);
+    }
     .value-title {
       position: relative;
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .value:hover .value-plate {
+        animation: value-plate-reg 700ms var(--ease-snap);
+      }
+      .value:hover :global(.value-reg) {
+        transform: rotate(90deg);
+      }
     }
     .value-note {
       position: relative;
@@ -141,6 +155,23 @@ const blocks = ownerCopy.el.values.map((value, i) => ({
       .value-k {
         margin-top: 4.5rem;
       }
+    }
+  }
+
+  /* The plate letter's C/M/Y copies split off and snap back into register. */
+  @keyframes value-plate-reg {
+    0%,
+    100% {
+      text-shadow:
+        0 0 0 rgb(0 174 239 / 0),
+        0 0 0 rgb(237 0 140 / 0),
+        0 0 0 rgb(255 241 0 / 0);
+    }
+    35% {
+      text-shadow:
+        -5px -3px 0 rgb(0 174 239 / 0.9),
+        5px -1px 0 rgb(237 0 140 / 0.9),
+        -2px 5px 0 rgb(255 241 0 / 0.9);
     }
   }
 </style>

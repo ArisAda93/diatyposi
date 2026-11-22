@@ -2,6 +2,9 @@
 /**
  * Lightbox for the gallery: a native modal <dialog> (focus trap, Esc, inert background come from
  * the platform). The gallery script fills it; the large <img> is created only when it opens.
+ *
+ * Motion: the sheet opens from a slight inset; each new picture prints in (the script toggles
+ * `.is-swap` on the stage); buttons sink on press. All of it rests under reduced motion.
  */
 import Icon from '../Icon.astro';
 import { workText } from '~/i18n/pages/work';
@@ -112,6 +115,26 @@ const text = workText.el;
       background-color: var(--color-paper);
       color: var(--color-key);
     }
+    @media (prefers-reduced-motion: no-preference) {
+      .lb-btn {
+        transition:
+          background-color var(--dur-fast) linear,
+          color var(--dur-fast) linear,
+          transform var(--dur-fast) var(--ease-out);
+      }
+      .lb-btn:active {
+        transform: scale(0.94);
+      }
+      .lb-arrow[data-lb-prev]:hover :global(svg) {
+        animation: lb-nudge-prev 520ms var(--ease-snap);
+      }
+      .lb-arrow[data-lb-next]:hover :global(svg) {
+        animation: lb-nudge-next 520ms var(--ease-snap);
+      }
+      .lightbox-stage.is-swap :global(img) {
+        animation: lb-swap 420ms var(--ease-out);
+      }
+    }
     .lb-arrow {
       width: 3rem;
       height: 3rem;
@@ -177,6 +200,26 @@ const text = workText.el;
     }
   }
 
+  @keyframes lb-swap {
+    from {
+      opacity: 0.2;
+      clip-path: inset(0 100% 0 0);
+    }
+    to {
+      opacity: 1;
+      clip-path: inset(0 0 0 0);
+    }
+  }
+  @keyframes lb-nudge-prev {
+    40% {
+      transform: translateX(-3px);
+    }
+  }
+  @keyframes lb-nudge-next {
+    40% {
+      transform: translateX(3px);
+    }
+  }
   @keyframes lightbox-in {
     from {
       opacity: 0;

@@ -1,13 +1,12 @@
 ---
 /**
- * Αρχική. Section order follows DESIGN.md §6: hero (the page's single h1), intro, services,
- * process, selected work, values, statement, contact band.
+ * Αρχική. Section order follows DESIGN.md §6: hero (the page's single h1, with the owner's intro),
+ * services, the idea journey, selected work, values, statement, contact band.
  */
 import BaseLayout from '~/layouts/BaseLayout.astro';
 import Hero from '~/components/home/Hero.astro';
-import Intro from '~/components/home/Intro.astro';
 import ServicesShowcase from '~/components/home/ServicesShowcase.astro';
-import Process from '~/components/home/Process.astro';
+import IdeaJourney from '~/components/home/IdeaJourney.astro';
 import WorkTeaser from '~/components/home/WorkTeaser.astro';
 import Values from '~/components/home/Values.astro';
 import Statement from '~/components/home/Statement.astro';
@@ -17,9 +16,8 @@ import { homeText } from '~/i18n/pages/home';
 
 <BaseLayout description={homeText.el.metaDescription} structuredData heroHeader>
   <Hero />
-  <Intro />
   <ServicesShowcase />
-  <Process />
+  <IdeaJourney />
   <WorkTeaser />
   <Values />
   <Statement />

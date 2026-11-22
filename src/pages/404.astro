@@ -2,7 +2,8 @@
 /**
  * 404 “misprint”: a huge 404 printed as four C/M/Y/K plates, out of register. Hovering the
  * numerals, or hovering/focusing the home button, snaps the plates into register (CSS only).
- * With reduced motion the plates stay out of register and nothing moves.
+ * On load the plates arrive from further out and settle into their misprint. With reduced
+ * motion the plates stay out of register and nothing moves. The sheet sits on a parallax layer.
  */
 import BaseLayout from '~/layouts/BaseLayout.astro';
 import Icon from '~/components/Icon.astro';
@@ -17,12 +18,14 @@ const plates = ['c', 'm', 'y', 'k'] as const;
 ---
 
 <BaseLayout title={text.meta.title} description={text.meta.description} noindex>
-  <section class="np wrap" aria-labelledby="np-title">
+  <section class="np wrap" aria-labelledby="np-title" data-bg-accent="magenta">
     <div class="np-sheet" aria-hidden="true">
-      <div class="np-art crop-frame" data-tilt>
-        {plates.map((plate) => (
-          <span class={`np-plate np-plate-${plate}`}>404</span>
-        ))}
+      <div class="np-plx" data-parallax="-0.06">
+        <div class="np-art crop-frame" data-tilt>
+          {plates.map((plate) => (
+            <span class={`np-plate np-plate-${plate}`}>404</span>
+          ))}
+        </div>
       </div>
       <div class="np-foot">
         <RegMark size={22} />
@@ -114,6 +117,17 @@ const plates = ['c', 'm', 'y', 'k'] as const;
       .np:has(.np-home:focus-visible) .np-plate {
         transform: translate(0, 0);
       }
+      /* Arrival uses the individual `translate`, so it adds to the misprint offsets above and
+         leaves nothing behind once it ends. */
+      .np-plate-c {
+        animation: np-arrive-c 1200ms var(--ease-snap) 150ms backwards;
+      }
+      .np-plate-m {
+        animation: np-arrive-m 1200ms var(--ease-snap) 220ms backwards;
+      }
+      .np-plate-y {
+        animation: np-arrive-y 1200ms var(--ease-snap) 290ms backwards;
+      }
     }
 
     .np-foot {
@@ -125,6 +139,23 @@ const plates = ['c', 'm', 'y', 'k'] as const;
     }
     .np-slug {
       color: var(--color-muted);
+    }
+
+    .np-home :global(svg) {
+      transition: transform var(--dur-base) var(--ease-out);
+    }
+    .np-secondary :global(svg) {
+      transition: transform var(--dur-base) var(--ease-out);
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .np-home:hover :global(svg),
+      .np-home:focus-visible :global(svg) {
+        transform: translateX(-4px);
+      }
+      .np-secondary:hover :global(svg),
+      .np-secondary:focus-visible :global(svg) {
+        transform: translateX(4px);
+      }
     }
 
     .np-actions {
@@ -141,6 +172,25 @@ const plates = ['c', 'm', 'y', 'k'] as const;
       min-height: 2.75rem;
       font-family: var(--font-display);
       font-weight: 700;
+    }
+  }
+
+  @keyframes np-arrive-c {
+    from {
+      translate: -0.12em -0.08em;
+      opacity: 0;
+    }
+  }
+  @keyframes np-arrive-m {
+    from {
+      translate: 0.12em 0.05em;
+      opacity: 0;
+    }
+  }
+  @keyframes np-arrive-y {
+    from {
+      translate: -0.05em 0.12em;
+      opacity: 0;
     }
   }
 </style>

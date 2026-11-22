@@ -5,6 +5,10 @@
  * TODO(owner): add the legal entity details (registered name, legal form, ΑΦΜ, registered
  * address) in the “Ποιοι είμαστε” section, and have the whole text reviewed before launch.
  * Then remove the review note at the top and update `updatedDate` in src/i18n/pages/privacy.ts.
+ *
+ * Layout: a calm reading column (68ch) on the 12-column grid; from 1024px a sticky contents list
+ * sits beside it (columns 1–3) and each section heading carries its number. No background is
+ * painted, so the living background shows (`data-bg-accent`).
  */
 import BaseLayout from '~/layouts/BaseLayout.astro';
 import PageHeader from '~/components/PageHeader.astro';
@@ -12,17 +16,52 @@ import { site } from '~/data/site';
 import { t } from '~/i18n/ui';
 import { privacyText } from '~/i18n/pages/privacy';
 import { mailtoHref } from '~/lib/links';
+import { capsEl } from '~/lib/text';
 
 const text = privacyText.el;
+/** Section anchors and headings, in page order (contents list and heading numbers). */
+const toc = [
+  { id: 'pp-who', heading: text.who.heading },
+  { id: 'pp-tracking', heading: text.tracking.heading },
+  { id: 'pp-form', heading: text.form.heading },
+  { id: 'pp-map', heading: text.map.heading },
+  { id: 'pp-links', heading: text.links.heading },
+  { id: 'pp-hosting', heading: text.hosting.heading },
+  { id: 'pp-rights', heading: text.rights.heading },
+  { id: 'pp-changes', heading: text.changes.heading },
+] as const;
+const num = (id: (typeof toc)[number]['id']): string =>
+  String(toc.findIndex((entry) => entry.id === id) + 1).padStart(2, '0');
 const updatedIso = '2026-11-22';
 const googlePrivacy = 'https://policies.google.com/privacy';
 const dataAuthority = 'https://www.dpa.gr/';
 ---
 
 <BaseLayout title={text.meta.title} description={text.meta.description}>
-  <PageHeader label={text.header.label} title={text.header.title} intro={text.header.intro} />
+  <PageHeader
+    label={text.header.label}
+    title={text.header.title}
+    intro={text.header.intro}
+    accent="key"
+  />
 
-  <div class="wrap pt-12 pb-(--section-y) lg:pt-16">
+  <div class="wrap privacy-layout" data-bg-accent="cyan">
+    <nav class="privacy-toc" aria-labelledby="pp-toc-title">
+      <h2 id="pp-toc-title" class="label">{capsEl(text.tocLabel)}</h2>
+      <ol class="privacy-toc-list">
+        {toc.map((entry) => (
+          <li>
+            <a href={`#${entry.id}`} class="privacy-toc-link">
+              <span class="privacy-num" aria-hidden="true">
+                {num(entry.id)}
+              </span>
+              <span>{entry.heading}</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </nav>
+
     <article class="privacy">
       <p class="privacy-note">{text.reviewNote}</p>
       <p class="text-small muted">
@@ -31,8 +70,11 @@ const dataAuthority = 'https://www.dpa.gr/';
       </p>
 
       <section aria-labelledby="pp-who">
-        <h2 id="pp-who" class="h3">
-          {text.who.heading}
+        <h2 id="pp-who" class="h3 privacy-h">
+          <span class="privacy-num" aria-hidden="true">
+            {num('pp-who')}
+          </span>
+          <span>{text.who.heading}</span>
         </h2>
         {/* TODO(owner): registered business name, legal form, ΑΦΜ and registered address. */}
         <p>{text.who.body}</p>
@@ -46,16 +88,22 @@ const dataAuthority = 'https://www.dpa.gr/';
       </section>
 
       <section aria-labelledby="pp-tracking">
-        <h2 id="pp-tracking" class="h3">
-          {text.tracking.heading}
+        <h2 id="pp-tracking" class="h3 privacy-h">
+          <span class="privacy-num" aria-hidden="true">
+            {num('pp-tracking')}
+          </span>
+          <span>{text.tracking.heading}</span>
         </h2>
         <p>{text.tracking.body}</p>
         <p>{text.tracking.storage}</p>
       </section>
 
       <section aria-labelledby="pp-form">
-        <h2 id="pp-form" class="h3">
-          {text.form.heading}
+        <h2 id="pp-form" class="h3 privacy-h">
+          <span class="privacy-num" aria-hidden="true">
+            {num('pp-form')}
+          </span>
+          <span>{text.form.heading}</span>
         </h2>
         <p>{text.form.body}</p>
         <p>{text.form.apps}</p>
@@ -64,8 +112,11 @@ const dataAuthority = 'https://www.dpa.gr/';
       </section>
 
       <section aria-labelledby="pp-map">
-        <h2 id="pp-map" class="h3">
-          {text.map.heading}
+        <h2 id="pp-map" class="h3 privacy-h">
+          <span class="privacy-num" aria-hidden="true">
+            {num('pp-map')}
+          </span>
+          <span>{text.map.heading}</span>
         </h2>
         <p>{text.map.body}</p>
         <p>
@@ -80,15 +131,21 @@ const dataAuthority = 'https://www.dpa.gr/';
       </section>
 
       <section aria-labelledby="pp-links">
-        <h2 id="pp-links" class="h3">
-          {text.links.heading}
+        <h2 id="pp-links" class="h3 privacy-h">
+          <span class="privacy-num" aria-hidden="true">
+            {num('pp-links')}
+          </span>
+          <span>{text.links.heading}</span>
         </h2>
         <p>{text.links.body}</p>
       </section>
 
       <section aria-labelledby="pp-hosting">
-        <h2 id="pp-hosting" class="h3">
-          {text.hosting.heading}
+        <h2 id="pp-hosting" class="h3 privacy-h">
+          <span class="privacy-num" aria-hidden="true">
+            {num('pp-hosting')}
+          </span>
+          <span>{text.hosting.heading}</span>
         </h2>
         <p>{text.hosting.fonts}</p>
         {/* TODO(owner): name the hosting provider once chosen. */}
@@ -96,8 +153,11 @@ const dataAuthority = 'https://www.dpa.gr/';
       </section>
 
       <section aria-labelledby="pp-rights">
-        <h2 id="pp-rights" class="h3">
-          {text.rights.heading}
+        <h2 id="pp-rights" class="h3 privacy-h">
+          <span class="privacy-num" aria-hidden="true">
+            {num('pp-rights')}
+          </span>
+          <span>{text.rights.heading}</span>
         </h2>
         <p>{text.rights.body}</p>
         <p>
@@ -111,8 +171,11 @@ const dataAuthority = 'https://www.dpa.gr/';
       </section>
 
       <section aria-labelledby="pp-changes">
-        <h2 id="pp-changes" class="h3">
-          {text.changes.heading}
+        <h2 id="pp-changes" class="h3 privacy-h">
+          <span class="privacy-num" aria-hidden="true">
+            {num('pp-changes')}
+          </span>
+          <span>{text.changes.heading}</span>
         </h2>
         <p>{text.changes.body}</p>
       </section>
@@ -122,11 +185,69 @@ const dataAuthority = 'https://www.dpa.gr/';
 
 <style>
   @layer components {
+    .privacy-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      padding-top: clamp(3rem, 2rem + 3vw, 4rem);
+      padding-bottom: var(--section-y);
+    }
+    /* Phones and tablets read straight through; the contents list is a wide-screen aid. */
+    .privacy-toc {
+      display: none;
+    }
+    @media (min-width: 64rem) {
+      .privacy-layout {
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        column-gap: var(--grid-gap);
+        align-items: start;
+      }
+      .privacy-toc {
+        position: sticky;
+        top: calc(var(--header-h) + 2rem);
+        display: block;
+        grid-column: 1 / span 3;
+      }
+      .privacy {
+        grid-column: 4 / span 8;
+      }
+    }
+    .privacy-toc-list {
+      display: flex;
+      flex-direction: column;
+      margin-top: 1.25rem;
+      border-top: 2px solid var(--color-key);
+    }
+    .privacy-toc-link {
+      display: flex;
+      align-items: baseline;
+      gap: 0.75rem;
+      min-height: 2.75rem;
+      padding-block: 0.625rem;
+      border-bottom: 1px solid var(--color-line);
+      font-size: var(--text-small);
+      font-weight: 600;
+      line-height: 1.35;
+      text-decoration: none;
+      transition: color var(--dur-fast) linear;
+    }
+    .privacy-toc-link > span:last-child {
+      transition: transform var(--dur-base) var(--ease-out);
+    }
+    .privacy-toc-link:hover > span:last-child,
+    .privacy-toc-link:focus-visible > span:last-child {
+      transform: translateX(0.25rem);
+      text-decoration: underline;
+      text-decoration-thickness: 2px;
+      text-underline-offset: 0.2em;
+    }
+
     .privacy {
       display: flex;
       flex-direction: column;
       gap: 1.25rem;
       max-width: 68ch;
+      font-size: 1.0625rem;
+      line-height: 1.7;
     }
     .privacy section {
       display: flex;
@@ -136,11 +257,31 @@ const dataAuthority = 'https://www.dpa.gr/';
       padding-top: 1.75rem;
       border-top: 1px solid var(--color-line);
     }
+    .privacy-h {
+      display: flex;
+      align-items: baseline;
+      gap: 0.875rem;
+    }
+    .privacy-num {
+      flex: none;
+      min-width: 1.75rem;
+      font-family: var(--font-display);
+      font-size: var(--text-label);
+      font-weight: 750;
+      letter-spacing: 0.12em;
+      color: var(--color-red);
+      font-variant-numeric: tabular-nums;
+    }
     .privacy-note {
       padding: 1rem 1.25rem;
       background-color: var(--color-yellow);
       color: var(--color-key);
       font-weight: 600;
+      border-left: 6px solid var(--color-key);
+    }
+    .privacy-note::selection {
+      background: var(--color-key);
+      color: var(--color-yellow);
     }
     .privacy a {
       overflow-wrap: anywhere;

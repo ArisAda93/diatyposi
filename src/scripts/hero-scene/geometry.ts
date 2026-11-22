@@ -1,7 +1,8 @@
 /**
  * Procedural geometry for the hero scene, built from the logo's ARCH path (logo-paths.ts):
  * the outline is sampled into a polygon, triangulated (ear clipping) and extruded into a solid
- * with depth. Pure functions on plain arrays, run once per page.
+ * with depth. boundsOf also measures the arch for the choreography (choreography.ts). Pure
+ * functions on plain arrays, run once per page.
  */
 
 export interface Point {
@@ -308,15 +309,3 @@ export const extrude = (outline: readonly Point[], depth: number): SolidGeometry
     index: new Uint16Array(indices),
   };
 };
-
-export interface FlatGeometry {
-  /** xy per vertex. */
-  position: Float32Array;
-  index: Uint16Array;
-}
-
-/** The front face only, as 2D triangles (the small arches of the ambient field). */
-export const flatShape = (outline: readonly Point[]): FlatGeometry => ({
-  position: new Float32Array(outline.flatMap((p) => [p.x, p.y])),
-  index: new Uint16Array(triangulate(outline)),
-});

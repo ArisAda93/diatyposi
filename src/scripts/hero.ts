@@ -7,7 +7,8 @@
  *
  * Live scene (src/scripts/hero-scene/scene.ts, OGL): loaded with a dynamic import after first
  * paint, never in the critical path. It takes over from the SVG without a jump: its first frame
- * draws the arches exactly where the SVG has them, then the canvas fades in over it.
+ * draws the arches exactly where the SVG has them, then the canvas fades in over it and the plates
+ * start their loop (hero-scene/choreography.ts).
  *
  * Intro contract with BaseLayout: `html.hero-intro` is set before first paint only when the intro
  * should play (once per session, never with reduced motion) and is removed by BaseLayout after 4 s
@@ -118,7 +119,6 @@ export const initHero = (): void => {
     stage,
     markBox,
     mark,
-    copy: hero.querySelector<HTMLElement>('[data-hero-copy]'),
     header,
     headerLogo: header?.querySelector<SVGSVGElement>('.site-header-logo svg') ?? null,
   };

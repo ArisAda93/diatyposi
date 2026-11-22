@@ -1,9 +1,34 @@
 import { describe, expect, it } from 'vitest';
-import { ARCH } from '../src/components/logo-paths';
+import { ARCH, ARCH_PLATES } from '../src/components/logo-paths';
+import {
+  ART,
+  DOCK_BLEND,
+  MARK,
+  PERIOD,
+  RING,
+  SEGMENTS,
+  STAGGER,
+  WAVE,
+  archMetrics,
+  blendPose,
+  buildLayout,
+  crosshairAt,
+  dockBlend,
+  easeSnap,
+  loopTime,
+  markPose,
+  platePoseAt,
+  poseBounds,
+  registerPose,
+  tiltAt,
+  type PlateId,
+  type PlateLayout,
+  type PlatePose,
+  type Segment,
+} from '../src/scripts/hero-scene/choreography';
 import {
   boundsOf,
   extrude,
-  flatShape,
   sampleArc,
   sampleOutline,
   signedArea,
@@ -14,6 +39,7 @@ import {
 import {
   DOCK_PHASES,
   clamp,
+  cubicBezier,
   dockDistance,
   dockPath,
   dockProgress,
@@ -116,21 +142,6 @@ describe('local outline, triangulation and extrusion', () => {
     expect(solid.wall[vertices - 1]).toBe(1);
   });
 
-  it('builds the flat shape for the ambient field at unit width', () => {
-    const outline = sampleOutline(ARCH, 4);
-    const b = boundsOf(outline);
-    const unit = toLocal(
-      outline,
-      (b.minX + b.maxX) / 2,
-      (b.minY + b.maxY) / 2,
-      1 / (b.maxX - b.minX),
-    );
-    const shape = flatShape(unit);
-    const ub = boundsOf(unit);
-    expect(ub.maxX - ub.minX).toBeCloseTo(1, 9);
-    expect(shape.position.length).toBe(unit.length * 2);
-    expect(shape.index.length % 3).toBe(0);
-  });
 });
 
 describe('placeInBox (docking target maths)', () => {
@@ -188,6 +199,26 @@ describe('docking progress and easing', () => {
     expect(smoothstep(0.86, 1, 0.5)).toBe(0);
     expect(smoothstep(0.86, 1, 1)).toBe(1);
     expect(clamp(2)).toBe(1);
+  });
+
+  it('follows CSS cubic-bezier curves, including the overshoot of --ease-snap', () => {
+    const inOut = cubicBezier(0.65, 0, 0.35, 1);
+    expect(inOut(0)).toBe(0);
+    expect(inOut(1)).toBe(1);
+    expect(inOut(0.5)).toBeCloseTo(0.5, 6);
+    const near = cubicBezier(0.25, 0.25, 0.75, 0.75);
+    expect(near(0.3)).toBeCloseTo(0.3, 6);
+    let previous = 0;
+    for (let i = 1; i <= 100; i++) {
+      const value = inOut(i / 100);
+      expect(value).toBeGreaterThanOrEqual(previous - 1e-9);
+      previous = value;
+    }
+    const snap = cubicBezier(0.3, 1.5, 0.5, 1);
+    const peak = Math.max(...Array.from({ length: 99 }, (_, i) => snap((i + 1) / 100)));
+    expect(peak).toBeGreaterThan(1);
+    expect(peak).toBeLessThan(1.15);
+    expect(snap(1)).toBe(1);
   });
 
   it('interpolates scales geometrically', () => {
@@ -265,5 +296,279 @@ describe('dockPath (plates stay clear of the header band)', () => {
     expect(dockPath(0, inside).y).toBe(120);
     const later = dockPath(0.3, inside);
     expect(later.y - inside.extent * later.scale).toBeGreaterThanOrEqual(inside.bandBottom - 1e-9);
+  });
+});
+
+describe('choreography (the plates’ metamorphosis loop)', () => {
+  const outline = sampleOutline(ARCH, 9);
+  const metrics = archMetrics(outline);
+  // The mark's viewBox is 690 50 840 205: the group pivots on its centre.
+  const layout = buildLayout(metrics, ARCH_PLATES, { x: 1110, y: 152.5 });
+  const plateOutline = toLocal(outline, metrics.anchor.x, metrics.anchor.y);
+  const plate = (id: PlateId): PlateLayout => {
+    const found = layout.plates.find((p) => p.id === id);
+    if (!found) throw new Error(`missing plate ${id}`);
+    return found;
+  };
+  const segment = (pose: Segment['pose']): Segment => {
+    const found = SEGMENTS.find((s) => s.pose === pose);
+    if (!found) throw new Error(`missing segment ${pose}`);
+    return found;
+  };
+  const times = (from: number, to: number, step: number): number[] =>
+    Array.from({ length: Math.floor((to - from) / step) + 1 }, (_, i) => from + i * step);
+  const posesAt = (t: number): PlatePose[] => layout.plates.map((p) => platePoseAt(t, p, layout));
+  const fields = ['x', 'y', 'z', 'rx', 'rz', 'scale'] as const;
+  const target = segment('target');
+  const targetMid = (target.holdStart + target.moveStart) / 2;
+
+  it('measures the arch: anchor at its box centre, feet on the base line', () => {
+    expect(metrics.anchor.x).toBeCloseTo(932, 6);
+    expect(metrics.anchor.y).toBeCloseTo(155, 0);
+    expect(metrics.halfWidth).toBeCloseTo(231, 6);
+    expect(metrics.halfHeight).toBeCloseTo(93, 0);
+    expect(metrics.leftFoot[0]).toBeCloseTo(-231, 6);
+    expect(metrics.leftFoot[1]).toBeCloseTo(-130, 6);
+    expect(metrics.rightFoot[0]).toBeCloseTo(174, 6);
+    expect(metrics.rightFoot[1]).toBeCloseTo(231, 6);
+  });
+
+  it('puts the plates in register at the logo offsets', () => {
+    for (const logoPlate of ARCH_PLATES) {
+      const p = registerPose(plate(logoPlate.id));
+      expect(p.x - registerPose(plate('c')).x).toBeCloseTo(logoPlate.x, 9);
+      expect(p.y).toBeCloseTo(registerPose(plate('c')).y, 9);
+      expect(p.z).toBe(0);
+      expect(p.rz).toBe(0);
+    }
+  });
+
+  it('is seamless: the end of the loop meets its start', () => {
+    for (const p of layout.plates) {
+      const start = platePoseAt(0, p, layout);
+      const end = platePoseAt(PERIOD - 1e-6, p, layout);
+      for (const field of fields) expect(end[field]).toBeCloseTo(start[field], 3);
+      const again = platePoseAt(PERIOD * 3 + 1.25, p, layout);
+      const once = platePoseAt(1.25, p, layout);
+      for (const field of fields) expect(again[field]).toBeCloseTo(once[field], 9);
+    }
+    const tiltStart = tiltAt(0);
+    const tiltEnd = tiltAt(PERIOD - 1e-6);
+    expect(tiltEnd.x).toBeCloseTo(tiltStart.x, 6);
+    expect(tiltEnd.y).toBeCloseTo(tiltStart.y, 6);
+    expect(tiltEnd.z).toBeCloseTo(tiltStart.z, 6);
+    expect(loopTime(-1)).toBeCloseTo(PERIOD - 1, 9);
+  });
+
+  it('never jumps: every frame moves each plate by a small step only', () => {
+    const step = 1 / 240;
+    let previous = posesAt(0);
+    for (const t of times(step, PERIOD, step)) {
+      const current = posesAt(t);
+      current.forEach((pose, i) => {
+        const before = previous[i];
+        if (!before) throw new Error('missing pose');
+        expect(Math.abs(pose.x - before.x)).toBeLessThan(5);
+        expect(Math.abs(pose.y - before.y)).toBeLessThan(5);
+        expect(Math.abs(pose.z - before.z)).toBeLessThan(5);
+        expect(Math.abs(pose.rz - before.rz)).toBeLessThan(0.05);
+        expect(Math.abs(pose.rx - before.rx)).toBeLessThan(0.05);
+        expect(Math.abs(pose.scale - before.scale)).toBeLessThan(0.01);
+      });
+      previous = current;
+    }
+  });
+
+  it('keeps every value finite and every pose inside the art box the hero lays out', () => {
+    for (const t of times(0, PERIOD, 1 / 60)) {
+      const poses = posesAt(t);
+      for (const pose of poses) {
+        for (const field of fields) expect(Number.isFinite(pose[field])).toBe(true);
+      }
+      const b = poseBounds(poses, plateOutline);
+      expect(b.minX).toBeGreaterThanOrEqual(-ART.width / 2);
+      expect(b.maxX).toBeLessThanOrEqual(ART.width / 2);
+      expect(b.minY).toBeGreaterThanOrEqual(-ART.height / 2);
+      expect(b.maxY).toBeLessThanOrEqual(ART.height / 2);
+    }
+  });
+
+  it('holds the mark still apart from its gentle breathing', () => {
+    const mark = segment('mark');
+    for (const p of layout.plates) {
+      const rest = registerPose(p);
+      for (const t of times(mark.holdStart, mark.moveStart, 0.05)) {
+        const pose = platePoseAt(t, p, layout);
+        expect(Math.abs(pose.x - rest.x)).toBeLessThan(12);
+        expect(Math.abs(pose.y - rest.y)).toBeLessThan(14);
+        expect(Math.abs(pose.z)).toBeLessThan(1.7 * MARK.separation);
+        expect(Math.abs(pose.rz)).toBeLessThan(0.03);
+        expect(pose.scale).toBe(1);
+      }
+    }
+  });
+
+  it('closes the ring: four arches at 90° steps about one centre, apexes outwards', () => {
+    const radius = layout.ringRadius * RING.scale;
+    for (const t of times(target.holdStart, target.moveStart, 0.1)) {
+      const poses = posesAt(t);
+      const turns = poses.map((pose) => pose.rz).sort((a, b) => a - b);
+      for (let i = 1; i < turns.length; i++) {
+        expect((turns[i] ?? 0) - (turns[i - 1] ?? 0)).toBeCloseTo(Math.PI / 2, 9);
+      }
+      for (const pose of poses) {
+        expect(Math.hypot(pose.x, pose.y)).toBeCloseTo(radius, 9);
+        // The apex points away from the centre.
+        expect(pose.x).toBeCloseTo(-Math.sin(pose.rz) * radius, 9);
+        expect(pose.y).toBeCloseTo(Math.cos(pose.rz) * radius, 9);
+        expect(pose.scale).toBe(RING.scale);
+      }
+    }
+    // In the middle of the hold the ring sits square: C left, M top, Y bottom, K right.
+    const mid = layout.plates.map((p) => [p.id, platePoseAt(targetMid, p, layout)] as const);
+    const turnOf = (id: PlateId): number => mid.find(([pid]) => pid === id)?.[1].rz ?? NaN;
+    expect(turnOf('c')).toBeCloseTo(Math.PI / 2, 9);
+    expect(turnOf('m')).toBeCloseTo(0, 9);
+    expect(turnOf('y')).toBeCloseTo(Math.PI, 9);
+    expect(turnOf('k')).toBeCloseTo(-Math.PI / 2, 9);
+  });
+
+  it('turns the ring slowly during its hold', () => {
+    const early = platePoseAt(target.holdStart, plate('m'), layout).rz;
+    const late = platePoseAt(target.moveStart, plate('m'), layout).rz;
+    expect(Math.abs(late - early)).toBeGreaterThan(0.1);
+    expect(Math.abs(late - early)).toBeLessThan(Math.PI / 4);
+  });
+
+  it('meets the neighbouring feet of the ring, overlapping by RING.overlap', () => {
+    const s = RING.scale;
+    const h = metrics.halfHeight;
+    const corner = (pose: PlatePose, x: number): { x: number; y: number } => ({
+      x: pose.x + (x * Math.cos(pose.rz) + h * Math.sin(pose.rz)) * s,
+      y: pose.y + (x * Math.sin(pose.rz) - h * Math.cos(pose.rz)) * s,
+    });
+    const poses = posesAt(targetMid);
+    for (const p of poses) {
+      // The neighbour a quarter turn clockwise.
+      const next = poses.find(
+        (q) => Math.abs(Math.cos(q.rz - (p.rz - Math.PI / 2)) - 1) < 1e-9 && q !== p,
+      );
+      if (!next) throw new Error('ring has a gap');
+      const a = corner(p, metrics.rightFoot[1]);
+      const b = corner(next, metrics.leftFoot[0]);
+      expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeCloseTo(RING.overlap * Math.SQRT2 * s, 6);
+    }
+  });
+
+  it('lines the wave up into one ribbon: alternating plates, feet joined on one base line', () => {
+    const plates = [...layout.plates].sort((a, b) => a.waveIndex - b.waveIndex);
+    const nth = (i: number): PlateLayout => {
+      const found = plates[i];
+      if (!found) throw new Error(`missing plate ${i}`);
+      return found;
+    };
+    const h = metrics.halfHeight;
+    /** Foot intervals (x) and base line (y) of a plate in the wave, before WAVE.scale. */
+    const feet = (p: PlateLayout) => {
+      const inverted = Math.cos(p.waveTurn) < 0;
+      const flip = (f: readonly [number, number]): [number, number] =>
+        inverted ? [p.waveX - f[1], p.waveX - f[0]] : [p.waveX + f[0], p.waveX + f[1]];
+      const both = [flip(metrics.leftFoot), flip(metrics.rightFoot)].sort((a, b) => a[0] - b[0]);
+      return {
+        inverted,
+        base: inverted ? p.waveY + h : p.waveY - h,
+        left: both[0] ?? [NaN, NaN],
+        right: both[1] ?? [NaN, NaN],
+      };
+    };
+    for (let i = 1; i < plates.length; i++) {
+      const a = feet(nth(i - 1));
+      const b = feet(nth(i));
+      expect(a.inverted).not.toBe(b.inverted);
+      expect(b.base).toBeCloseTo(a.base, 9);
+      expect(b.left[0]).toBeCloseTo(a.right[0] - WAVE.overlap, 9);
+      expect(b.left[1]).toBeCloseTo(a.right[1] - WAVE.overlap, 9);
+    }
+    expect(nth(0).waveX + nth(plates.length - 1).waveX).toBeCloseTo(0, 9);
+
+    // During the hold the ribbon only ripples: x and turn stay, y moves by the bob at most.
+    const wave = segment('wave');
+    for (const t of times(wave.holdStart, wave.moveStart, 0.1)) {
+      for (const p of layout.plates) {
+        const pose = platePoseAt(t, p, layout);
+        expect(pose.x).toBeCloseTo(p.waveX * WAVE.scale, 9);
+        expect(pose.rz).toBe(p.waveTurn);
+        expect(Math.abs(pose.y - p.waveY * WAVE.scale)).toBeLessThanOrEqual(WAVE.bob + 1e-9);
+      }
+    }
+  });
+
+  it('staggers every move in print order Y, M, C, K', () => {
+    const first = segment('mark');
+    const t = first.moveStart + STAGGER * 1.5;
+    expect(platePoseAt(t, plate('y'), layout)).not.toEqual(markPose(plate('y'), t));
+    expect(platePoseAt(t, plate('m'), layout)).not.toEqual(markPose(plate('m'), t));
+    expect(platePoseAt(t, plate('c'), layout)).toEqual(markPose(plate('c'), t));
+    expect(platePoseAt(t, plate('k'), layout)).toEqual(markPose(plate('k'), t));
+  });
+
+  it('separates the plates in depth mid-move and sets them down at the holds', () => {
+    const spread = (t: number): number => {
+      const z = posesAt(t).map((pose) => pose.z);
+      return Math.max(...z) - Math.min(...z);
+    };
+    const move = segment('target');
+    expect(spread((move.moveStart + move.end) / 2)).toBeGreaterThan(spread(move.end) + 50);
+    expect(spread((move.moveStart + move.end) / 2)).toBeGreaterThan(spread(move.moveStart) + 50);
+  });
+
+  it('draws the crosshair through the centre during the target hold only', () => {
+    const empty = (span: { from: number; to: number }): boolean => span.from === span.to;
+    for (const t of [0, target.holdStart, target.moveStart, segment('wave').holdStart]) {
+      const cross = crosshairAt(t);
+      expect(empty(cross.horizontal)).toBe(true);
+      expect(empty(cross.vertical)).toBe(true);
+    }
+    const full = crosshairAt(targetMid);
+    expect(full.horizontal).toEqual({ from: -1, to: 1 });
+    expect(full.vertical).toEqual({ from: -1, to: 1 });
+    for (const t of times(0, PERIOD, 1 / 60)) {
+      for (const span of Object.values(crosshairAt(t))) {
+        expect(span.from).toBeGreaterThanOrEqual(-1);
+        expect(span.to).toBeLessThanOrEqual(1);
+        expect(span.from).toBeLessThanOrEqual(span.to);
+      }
+    }
+  });
+
+  it('blends to the mark before it collapses into register for docking', () => {
+    const atTop = dockBlend(0);
+    expect(atTop.toMark).toBe(0);
+    expect(atTop.collapse).toBe(0);
+    const blended = dockBlend(DOCK_BLEND.toMark);
+    expect(blended.toMark).toBe(1);
+    expect(blended.collapse).toBeLessThan(0.05);
+    expect(dockBlend(DOCK_BLEND.collapseTo).collapse).toBe(1);
+    let previous = { toMark: 0, collapse: 0 };
+    for (const p of times(0, 1, 0.01)) {
+      const now = dockBlend(p);
+      expect(now.toMark).toBeGreaterThanOrEqual(previous.toMark);
+      expect(now.collapse).toBeGreaterThanOrEqual(previous.collapse);
+      previous = now;
+    }
+    // Whatever the loop shows, a full blend lands on the mark pose.
+    for (const t of [targetMid, segment('wave').holdStart + 1]) {
+      for (const p of layout.plates) {
+        const docking = blendPose(platePoseAt(t, p, layout), markPose(p, t), blended.toMark);
+        const mark = markPose(p, t);
+        for (const field of fields) expect(docking[field]).toBeCloseTo(mark[field], 9);
+      }
+    }
+  });
+
+  it('snaps into register with a small overshoot (--ease-snap)', () => {
+    expect(easeSnap(0)).toBe(0);
+    expect(easeSnap(1)).toBe(1);
+    expect(Math.max(...times(0, 1, 0.01).map((u) => easeSnap(u)))).toBeGreaterThan(1);
   });
 });

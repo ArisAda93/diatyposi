@@ -10,44 +10,86 @@ export const homeText = {
     metaDescription:
       'ΔΙΑΤΥΠΩΣΗ, διαφήμιση και εκτυπώσεις: σχεδιάζουμε και τυπώνουμε λογότυπα, κάρτες, έντυπα, banners, επιγραφές, ρουχισμό και διαφημιστικά δώρα για επαγγελματίες και ιδιώτες.',
 
-    intro: {
-      /** Label-style heading of the intro section (shown in capitals). */
-      label: 'Ποιοι είμαστε',
-      aboutLink: 'Γνωρίστε μας',
-    },
-
     services: {
       /** Small label above the owner's “Οι υπηρεσίες μας:” heading (shown in capitals). */
       label: 'Τι κάνουμε',
       allLink: 'Δείτε όλες τις υπηρεσίες',
     },
 
-    process: {
-      /** Small label above the process heading (shown in capitals). */
-      label: 'Πώς δουλεύουμε',
-      heading: 'Η ιδέα σας, βήμα βήμα',
-      intro: 'Κάθε δουλειά περνά από τέσσερα βήματα, και σε καθένα αποφασίζουμε μαζί.',
-      /** Step titles are given by the brief; the texts are new copy. */
-      steps: [
-        {
-          title: 'Ιδέα',
-          text: 'Μας λέτε τι έχετε στο μυαλό σας, ακόμη κι αν είναι μόνο μια σκέψη. Συζητάμε μαζί τι χρειάζεστε και πού θα το χρησιμοποιήσετε.',
+    /**
+     * “Μία ιδέα. Παντού.” (IdeaJourney.astro): one sample mark travels from a sketch to every
+     * product. All of it is new copy for the owner's review. Step keys match JOURNEY_STEPS in
+     * src/scripts/idea-journey.ts; chooser option keys are service slugs (src/data/site.ts).
+     */
+    journey: {
+      /** Small label above the heading (shown in capitals). */
+      label: 'Από την ιδέα στο αποτέλεσμα',
+      heading: 'Μία ιδέα. Παντού όπου σας βλέπουν.',
+      lead: 'Σχεδιάζουμε το σήμα σας και το τυπώνουμε σε ό,τι χρειάζεστε, από την κάρτα στην τσέπη ως τη βιτρίνα στον δρόμο. Ένας συνεργάτης, η ίδια εικόνα παντού.',
+      /** Wordmark of the sample brand in the illustrations, so visitors picture their own name. */
+      sampleName: 'Η επωνυμία σας',
+      steps: {
+        idea: {
+          title: 'Η ιδέα σας',
+          text: 'Ξεκινάμε από αυτό που έχετε στο μυαλό σας: ένα πρόχειρο σκίτσο, μια φωτογραφία ή απλώς μια κουβέντα.',
         },
-        {
-          title: 'Σχεδιασμός',
-          text: 'Δίνουμε μορφή στην ιδέα και επιλέγουμε μαζί χρώματα, χαρτί και διαστάσεις, ώστε το αποτέλεσμα να σας ταιριάζει.',
+        mark: {
+          title: 'Γίνεται σήμα',
+          text: 'Το δουλεύουμε μαζί σας μέχρι να γίνει ένα καθαρό σήμα που νιώθετε δικό σας, έτοιμο για χαρτί, ύφασμα και οθόνη.',
         },
-        {
-          title: 'Δοκίμιο & έγκριση',
-          text: 'Βλέπετε το δοκίμιο πριν από την εκτύπωση. Διορθώνουμε ό,τι χρειάζεται και προχωράμε όταν είστε σίγουροι.',
+        card: {
+          title: 'Στην κάρτα σας',
+          text: 'Η κάρτα που δίνετε στη χειραψία, το φυλλάδιο, ο κατάλογος, όλα τυπωμένα στο χαρτί που τους ταιριάζει.',
         },
-        {
-          title: 'Εκτύπωση & παράδοση',
-          text: 'Τυπώνουμε με προσοχή στο χρώμα και στο φινίρισμα, και σας παραδίδουμε τη δουλειά έτοιμη για χρήση.',
+        shirt: {
+          title: 'Πάνω στην ομάδα σας',
+          text: 'Μπλουζάκια και ρούχα εργασίας με το σήμα σας, ώστε η ομάδα σας να ξεχωρίζει όπου κι αν βρίσκεται.',
         },
+        sign: {
+          title: 'Στη βιτρίνα σας',
+          text: 'Η επιγραφή και η βιτρίνα λένε ποιοι είστε σε όποιον περνά από τον δρόμο, πριν ακόμη μπει μέσα.',
+        },
+        gift: {
+          title: 'Στα χέρια των πελατών σας',
+          text: 'Μια κούπα ή ένα σημειωματάριο με το σήμα σας κρατά το όνομά σας στο γραφείο τους, κάθε μέρα.',
+        },
+        social: {
+          title: 'Στην οθόνη τους',
+          text: 'Αναρτήσεις και stories με την ίδια εικόνα, για να σας αναγνωρίζουν αμέσως και στο κινητό.',
+        },
+      },
+      chooser: {
+        heading: 'Τι θα θέλατε να φτιάξουμε;',
+        /** Shown only with JS, next to the toggle chips. */
+        hint: 'Σημειώστε ό,τι σας ενδιαφέρει. Θα το βρείτε ήδη επιλεγμένο στη φόρμα προσφοράς.',
+        /** Chip labels, keyed by service slug. */
+        options: {
+          'grafistikos-sxediasmos': 'Λογότυπο',
+          'kartes-fylladia-entypa': 'Κάρτες & έντυπα',
+          'mplouzakia-rouxismos': 'Μπλουζάκια & ρουχισμός',
+          'epigrafes-aftokollita-vitrines': 'Επιγραφή & βιτρίνα',
+          'diafimistika-dora': 'Διαφημιστικά δώρα',
+          'social-media': 'Αναρτήσεις για social media',
+        },
+        /** Button label by number of chips pressed; {count} is replaced by the number. */
+        cta: {
+          none: 'Ζητήστε προσφορά',
+          one: 'Ζητήστε προσφορά για 1 προϊόν',
+          many: 'Ζητήστε προσφορά για {count} προϊόντα',
+        },
+        /** Announced politely to screen readers after each chip press. */
+        status: {
+          none: 'Δεν έχετε σημειώσει κάτι ακόμη.',
+          one: 'Σημειώσατε 1 προϊόν.',
+          many: 'Σημειώσατε {count} προϊόντα.',
+        },
+      },
+      /** Three modest promises beside the button (no numbers or years). */
+      promises: [
+        'Σχεδιασμός και εκτύπωση στο ίδιο μέρος, χωρίς να τρέχετε αλλού.',
+        'Βλέπετε δοκίμιο και εγκρίνετε πριν τυπωθεί οτιδήποτε.',
+        'Ένας άνθρωπος φροντίζει τη δουλειά σας από την αρχή ως το τέλος.',
       ],
-      /** Poster print line (shown in capitals; τετραχρωμία = four-colour print). */
-      posterKicker: 'Τετραχρωμία · C M Y K',
     },
 
     work: {

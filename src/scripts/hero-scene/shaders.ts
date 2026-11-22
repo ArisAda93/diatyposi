@@ -56,93 +56,40 @@ void main() {
 `;
 
 /**
- * Ambient field: one small arch per instance on a tilted sheet. A slow travelling wave across the
- * whole sheet lifts and grows the arches like halftone dots; rings pulse out from the plates
- * (uSource), and near the pointer the arches swell and ripple outwards. `tone` picks the ink:
- * 0 key, 1 cyan, 2 magenta, 3 yellow.
+ * Flat quads in group space (the crosshair hairlines and the contact shadow). The quad spans
+ * −0.5 to 0.5; vUv runs from −1 to 1 across it.
  */
-export const fieldVertex = /* glsl */ `
+export const quadVertex = /* glsl */ `
 attribute vec2 position;
-attribute vec2 cell;
-attribute float tone;
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
-uniform float uTime;
-uniform float uSpacing;
-uniform vec2 uPointer;
-uniform float uPointerAmt;
-uniform vec2 uSource;
-uniform float uSourceAmt;
-uniform float uAspect;
-uniform vec3 uInk;
-uniform vec3 uCyan;
-uniform vec3 uMagenta;
-uniform vec3 uYellow;
-varying float vInk;
-varying float vDepth;
-varying vec3 vColor;
+varying vec2 vUv;
 void main() {
-  vec2 base = cell * uSpacing;
-  vec4 anchor = projectionMatrix * modelViewMatrix * vec4(base, 0.0, 1.0);
-  vec2 ndc = anchor.xy / anchor.w;
+  vUv = position * 2.0;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 0.0, 1.0);
+}
+`;
 
-  float w1 = sin(dot(cell, vec2(0.23, 0.17)) - uTime * 0.42);
-  float w2 = sin(dot(cell, vec2(-0.11, 0.29)) - uTime * 0.27 + 1.7);
-  vec2 s = (ndc - uSource) * vec2(uAspect, 1.0);
-  float rs = length(s);
-  float pulse = (0.5 + 0.5 * sin(rs * 9.0 - uTime * 1.1)) * exp(-rs * 1.4) * uSourceAmt;
-  float wave = clamp(0.42 + 0.3 * w1 + 0.16 * w2 + 0.3 * pulse, 0.0, 1.0);
-  wave = wave * wave * (3.0 - 2.0 * wave);
-
-  vec2 d = (ndc - uPointer) * vec2(uAspect, 1.0);
-  float r = length(d);
-  float near = exp(-r * r * 9.0) * uPointerAmt;
-  float ring = sin(r * 18.0 - uTime * 2.4) * exp(-r * 3.2) * uPointerAmt;
-
-  float size = uSpacing * (0.12 + 0.42 * wave + 0.22 * near + 0.05 * ring);
-  float lift = uSpacing * (0.9 * wave + 1.6 * near + 0.4 * ring);
-  vec4 mv = modelViewMatrix * vec4(base + position * size, lift, 1.0);
-
-  vec3 color = uInk;
-  color = mix(color, uCyan, step(0.5, tone) * (1.0 - step(1.5, tone)));
-  color = mix(color, uMagenta, step(1.5, tone) * (1.0 - step(2.5, tone)));
-  color = mix(color, uYellow, step(2.5, tone));
-  vColor = color;
-  vInk = 0.3 + 0.7 * wave + 0.7 * near;
-  vDepth = -mv.z;
-  gl_Position = projectionMatrix * mv;
+/** A key hairline of the registration crosshair: solid ink, faded towards white by uAlpha. */
+export const lineFragment = /* glsl */ `${PRECISION}
+uniform vec3 uInk;
+uniform float uAlpha;
+void main() {
+  gl_FragColor = vec4(mix(vec3(1.0), uInk, uAlpha), 1.0);
 }
 `;
 
 /**
- * Ink at moderate strength across the whole sheet. It is reduced (never removed) behind the text
- * (uClear, a CSS-px box in canvas space, feathered), in the header band (above uTop) and at the
- * foot of the hero, capped so text over it keeps AA contrast, and fogged with distance so the
- * sheet never shows a hard horizon.
+ * Soft contact shadow under the plates: a gaussian ellipse of key ink that fades out well before
+ * the quad's edge, so it never shows a border.
  */
-export const fieldFragment = /* glsl */ `${PRECISION}
+export const shadowFragment = /* glsl */ `${PRECISION}
+uniform vec3 uInk;
 uniform float uAlpha;
-uniform vec2 uSize;
-uniform float uDpr;
-uniform vec4 uClear;
-uniform float uTop;
-uniform float uFar;
-varying float vInk;
-varying float vDepth;
-varying vec3 vColor;
-float boxDistance(vec2 p, vec4 box) {
-  vec2 c = (box.xy + box.zw) * 0.5;
-  vec2 h = (box.zw - box.xy) * 0.5;
-  vec2 q = abs(p - c) - h;
-  return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0);
-}
+varying vec2 vUv;
 void main() {
-  vec2 px = vec2(gl_FragCoord.x, uSize.y * uDpr - gl_FragCoord.y) / uDpr;
-  float mask = mix(0.18, 1.0, smoothstep(0.0, 120.0, boxDistance(px, uClear)));
-  mask *= mix(0.3, 1.0, smoothstep(uTop, uTop + 60.0, px.y));
-  mask *= mix(0.35, 1.0, 1.0 - smoothstep(uSize.y - 140.0, uSize.y, px.y));
-  float fog = 1.0 - smoothstep(uFar * 0.6, uFar, vDepth);
-  float a = clamp(uAlpha * vInk * mask * fog, 0.0, 0.45);
-  gl_FragColor = vec4(mix(vec3(1.0), vColor, a), 1.0);
+  float d2 = dot(vUv, vUv);
+  float a = exp(-d2 * 3.2) * (1.0 - smoothstep(0.6, 1.0, d2));
+  gl_FragColor = vec4(mix(vec3(1.0), uInk, a * uAlpha), 1.0);
 }
 `;

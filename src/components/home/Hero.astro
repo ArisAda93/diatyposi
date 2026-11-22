@@ -1,16 +1,23 @@
 ---
 /**
- * Home hero: one full-screen press sheet that starts at the very top of the page, with the header
- * lying over it as part of the composition (Header.astro, `overHero`).
+ * Home hero: one composed press sheet that starts at the very top of the page, with the header
+ * lying over it as part of the composition (Header.astro, `overHero`). It has no background of its
+ * own, so the site-wide living background shows through (cyan accent while it holds the centre).
  *
- * - The stage (decorative, aria-hidden) holds the crop-marked trim and the logo arches as SVG:
- *   the static composition, shown at first paint, without JS, with reduced motion and without
- *   WebGL. src/scripts/hero.ts loads the live scene (src/scripts/hero-scene/) after first paint;
- *   its canvas is inserted into the stage, draws the arches exactly where the SVG has them and
- *   fades in over it.
- * - The copy sits bottom-left: the red label, the owner's headline (painted at first paint, the
- *   LCP element) and the two actions. The scene keeps a clear zone behind it.
- * - The foot carries the colour bar, the scroll cue and a registration mark.
+ * - The copy is one block: the red label, the owner's headline (painted at first paint, the LCP
+ *   element), a registration hairline that ties it to the owner's intro (set as its lead), the two
+ *   actions and a quiet link to the company page. Desktop: a left column, vertically centred.
+ *   Below 64rem: under the art.
+ * - The art box (decorative, aria-hidden) holds the logo arches as SVG: the static composition,
+ *   shown at first paint, without JS, with reduced motion and without WebGL. Its aspect ratio is
+ *   the box every pose of the live scene fits in (hero-scene/choreography.ts ART, 900 × 620
+ *   raster units, the 840-wide mark centred in it), so the mark, the ring and the wave are never
+ *   cropped and never reach the copy. Desktop: the right column. Below 64rem: above the copy.
+ * - The stage (decorative, aria-hidden) fills the hero; src/scripts/hero.ts inserts the scene's
+ *   canvas there after first paint (src/scripts/hero-scene/). Its first frame draws the arches
+ *   exactly where the SVG has them, then it fades in over it.
+ * - The sheet's crop-marked trim recedes slightly on scroll (`data-parallax`). The foot carries
+ *   the colour bar, the scroll cue and a registration mark.
  *
  * The CSS describes the composed state. Intro start states apply only under `html.hero-intro`
  * (set before first paint by BaseLayout) and while `.hero.is-intro` / `.is-intro-svg` are set
@@ -32,44 +39,57 @@ const lines = cut >= 0 ? [headline.slice(0, cut + 1), headline.slice(cut + 2)] :
 const ghosts = ['c', 'm', 'y'] as const;
 ---
 
-<section class="hero" aria-labelledby="hero-title" data-hero>
-  <div class="hero-stage" aria-hidden="true" data-hero-stage data-motion="off">
-    <div class="hero-trim crop-frame"></div>
-    <div class="hero-mark" data-hero-mark>
-      <Logo variant="mark" id="hero-mark" />
-    </div>
-  </div>
+<section class="hero" aria-labelledby="hero-title" data-hero data-bg-accent="cyan">
+  <div class="hero-trim crop-frame" aria-hidden="true" data-parallax="0.1"></div>
+  <div class="hero-stage" aria-hidden="true" data-hero-stage data-motion="off"></div>
 
   <div class="wrap hero-inner">
-    <div class="hero-copy" data-hero-copy>
-      <span class="hero-sentinel" aria-hidden="true" data-hero-sentinel></span>
-      <p class="label hero-label">{site.descriptorCaps.el}</p>
-      <div class="hero-headline" data-motion="off">
-        <h1 id="hero-title" class="display-xl hero-title hero-h1">
-          {lines.map((line, i) => (
-            <>
-              {i > 0 && ' '}
-              <span class="hero-line">{line}</span>
-            </>
-          ))}
-        </h1>
-        <div class="hero-ghosts" aria-hidden="true">
-          {ghosts.map((g) => (
-            <div class={`display-xl hero-title hero-ghost hero-ghost-${g}`}>
-              {lines.map((line) => (
-                <span class="hero-line">{line}</span>
-              ))}
-            </div>
-          ))}
+    <div class="hero-grid">
+      <div class="hero-art" aria-hidden="true" data-motion="off">
+        <div class="hero-mark" data-hero-mark>
+          <Logo variant="mark" id="hero-mark" />
         </div>
       </div>
-      <div class="hero-actions">
-        <a href={routes.quote} class="btn btn-primary">
-          <span>{t('requestQuote')}</span>
-          <Icon name="arrow-right" size={20} />
-        </a>
-        <a href={routes.services} class="btn btn-secondary">
-          {t('ourServices')}
+
+      <div class="hero-copy" data-hero-copy>
+        <span class="hero-sentinel" aria-hidden="true" data-hero-sentinel></span>
+        <p class="label hero-label">{site.descriptorCaps.el}</p>
+        <div class="hero-headline" data-motion="off">
+          <h1 id="hero-title" class="display-xl hero-title hero-h1">
+            {lines.map((line, i) => (
+              <>
+                {i > 0 && ' '}
+                <span class="hero-line">{line}</span>
+              </>
+            ))}
+          </h1>
+          <div class="hero-ghosts" aria-hidden="true">
+            {ghosts.map((g) => (
+              <div class={`display-xl hero-title hero-ghost hero-ghost-${g}`}>
+                {lines.map((line) => (
+                  <span class="hero-line">{line}</span>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div class="hero-rule" aria-hidden="true">
+          <RegMark size={14} />
+          <span class="hero-rule-line"></span>
+        </div>
+        <p class="hero-lead">{ownerCopy.el.intro}</p>
+        <div class="hero-actions">
+          <a href={routes.quote} class="btn btn-primary">
+            <span>{t('requestQuote')}</span>
+            <Icon name="arrow-right" size={20} />
+          </a>
+          <a href={routes.services} class="btn btn-secondary">
+            {t('ourServices')}
+          </a>
+        </div>
+        <a href={routes.about} class="hero-about">
+          <span class="link">{heroText.el.aboutLink}</span>
+          <Icon name="arrow-right" size={18} />
         </a>
       </div>
     </div>
@@ -96,13 +116,7 @@ const ghosts = ['c', 'm', 'y'] as const;
 
 <style>
   @layer components {
-    /*
-     * Shared measures. The arches mark is 840 × 205 (aspect 0.244). Small screens: above the
-     * text, bleeding off the right edge. From 64rem: large at the right, bleeding off the edge.
-     */
     .hero {
-      --hero-mark-top: calc(var(--header-h) + clamp(1.25rem, 6svh, 3.5rem));
-      --hero-mark-w: min(128vw, (100svh - var(--header-h)) * 1.2);
       position: relative;
       display: flex;
       min-height: 100vh;
@@ -110,7 +124,7 @@ const ghosts = ['c', 'm', 'y'] as const;
       overflow: clip;
     }
 
-    /* Decorative layer: trim marks, SVG mark and (inserted by the script) the scene canvas. */
+    /* Decorative layer for the scene canvas (inserted by the script). */
     .hero-stage {
       position: absolute;
       inset: 0;
@@ -119,21 +133,11 @@ const ghosts = ['c', 'm', 'y'] as const;
     .hero-trim {
       display: none;
     }
-    .hero-mark {
-      position: absolute;
-      top: var(--hero-mark-top);
-      left: calc(var(--gutter) + 6vw);
-      width: var(--hero-mark-w);
-    }
-    .hero-mark :global(svg) {
-      width: 100%;
-      height: auto;
-      overflow: visible;
-    }
     /*
      * The canvas scrolls with the hero and sits above the header (z-index 40) so the plates can
-     * fly into the header logo. Multiply keeps paper, grain and text untouched: white is neutral.
-     * Nothing between it and the root may create a stacking context, or the blend breaks.
+     * fly into the header logo. Multiply keeps paper, background, grain and text untouched: white
+     * is neutral. Nothing between it and the root may create a stacking context, or the blend
+     * breaks.
      */
     .hero-stage :global(.hero-canvas) {
       position: absolute;
@@ -145,10 +149,51 @@ const ghosts = ['c', 'm', 'y'] as const;
       mix-blend-mode: multiply;
       pointer-events: none;
     }
-    .hero[data-scene='live'] .hero-mark {
+    .hero[data-docked] .hero-stage :global(.hero-canvas) {
       visibility: hidden;
     }
-    .hero[data-docked] .hero-stage :global(.hero-canvas) {
+
+    .hero-inner {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      min-height: 100svh;
+      padding-top: calc(var(--header-h) + clamp(0.25rem, 2svh, 1.25rem));
+      /* Clear of the mobile call/Viber bar. */
+      padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+    }
+
+    /* Mobile and tablet: art on top, copy below. */
+    .hero-grid {
+      display: grid;
+      flex: 1;
+      grid-template-columns: minmax(0, 1fr);
+      align-content: center;
+      row-gap: clamp(1rem, 3svh, 2rem);
+    }
+
+    /*
+     * Art box: 900 × 620 raster units (choreography.ts ART), the 840-wide mark centred in it.
+     * Every pose of the scene stays inside it.
+     */
+    .hero-art {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      aspect-ratio: 900 / 620;
+    }
+    .hero-mark {
+      width: calc(100% * 840 / 900);
+    }
+    .hero-mark :global(svg) {
+      display: block;
+      width: 100%;
+      height: auto;
+      overflow: visible;
+    }
+    .hero[data-scene='live'] .hero-mark {
       visibility: hidden;
     }
 
@@ -174,22 +219,9 @@ const ghosts = ['c', 'm', 'y'] as const;
       --dy: -26px;
     }
 
-    .hero-inner {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-end;
-      min-height: 100vh;
-      min-height: 100svh;
-      padding-top: calc(
-        var(--hero-mark-top) + var(--hero-mark-w) * 0.244 + clamp(2rem, 6svh, 3.5rem)
-      );
-      /* Clear of the mobile call/Viber bar. */
-      padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
-    }
-
     .hero-copy {
       position: relative;
+      max-width: 46rem;
     }
     .hero-sentinel {
       position: absolute;
@@ -200,7 +232,7 @@ const ghosts = ['c', 'm', 'y'] as const;
       pointer-events: none;
     }
     .hero-label {
-      margin-bottom: clamp(1rem, 2vw, 1.75rem);
+      margin-bottom: clamp(0.875rem, 2.2svh, 1.5rem);
     }
     .hero-headline {
       position: relative;
@@ -249,18 +281,62 @@ const ghosts = ['c', 'm', 'y'] as const;
       color: var(--color-yellow);
     }
 
+    /* Registration hairline: ties the headline to its lead, like a register line on the sheet. */
+    .hero-rule {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      max-width: 34rem;
+      margin-top: clamp(1.25rem, 3svh, 2rem);
+      color: var(--color-key);
+    }
+    .hero-rule :global(svg) {
+      flex: none;
+    }
+    .hero-rule-line {
+      flex: 1;
+      height: 1px;
+      background-color: var(--color-key);
+    }
+    .hero-lead {
+      max-width: 44ch;
+      margin-top: clamp(0.875rem, 2svh, 1.25rem);
+      font-size: var(--text-lead);
+      line-height: var(--text-lead--line-height);
+      color: var(--color-key);
+      text-wrap: pretty;
+    }
+
     .hero-actions {
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
-      margin-top: clamp(1.75rem, 3.5vw, 3rem);
+      margin-top: clamp(1.5rem, 3.5svh, 2.25rem);
+    }
+
+    .hero-about {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-height: 2.75rem;
+      margin-top: clamp(0.5rem, 1.5svh, 1rem);
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: var(--color-key);
+      text-decoration: none;
+    }
+    .hero-about:hover .link {
+      background-size: 100% 2px;
+    }
+    .hero-about :global(svg) {
+      transition: transform var(--dur-base) var(--ease-out);
     }
 
     .hero-foot {
       display: flex;
       align-items: center;
       gap: 1rem;
-      margin-top: clamp(2rem, 6svh, 3.5rem);
+      margin-top: clamp(1.5rem, 4svh, 3rem);
       color: var(--color-key);
     }
     .hero-foot-rule {
@@ -328,6 +404,11 @@ const ghosts = ['c', 'm', 'y'] as const;
         flex-direction: row;
         flex-wrap: wrap;
       }
+      /* Tablets: the art sits at the right, above the copy. */
+      .hero-art {
+        justify-self: end;
+        max-width: 36rem;
+      }
       /* Crop marks at the four corners of the sheet, under the header band. */
       .hero-trim {
         --m: clamp(8px, 1.2vw, 16px);
@@ -338,6 +419,7 @@ const ghosts = ['c', 'm', 'y'] as const;
         right: var(--gutter);
         bottom: 0.75rem;
         left: var(--gutter);
+        pointer-events: none;
       }
     }
 
@@ -347,24 +429,39 @@ const ghosts = ['c', 'm', 'y'] as const;
       }
     }
 
+    /*
+     * Desktop: copy in the left seven twelfths, art in the right five, both vertically centred.
+     * The headline is sized to its column so it keeps two lines (the longer line is about 8.6 em).
+     * The art also shrinks on short viewports so the copy and the foot keep their room.
+     */
     @media (min-width: 64rem) {
-      .hero {
-        --hero-mark-top: calc(var(--header-h) + clamp(1.25rem, 7svh, 5rem));
-        --hero-mark-w: min(68vw, (100svh - var(--header-h)) * 1.15);
-      }
-      .hero-mark {
-        right: -6vw;
-        left: auto;
-      }
       .hero-inner {
-        padding-top: calc(var(--header-h) + 2rem);
+        padding-top: calc(var(--header-h) + clamp(1rem, 4svh, 2.5rem));
+      }
+      .hero-grid {
+        grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+        align-items: center;
+        column-gap: calc(var(--grid-gap) * 2);
+      }
+      .hero-copy {
+        grid-row: 1;
+        grid-column: 1;
+        max-width: none;
+      }
+      .hero-art {
+        grid-row: 1;
+        grid-column: 2;
+        width: min(100%, (100svh - var(--header-h) - 10rem) * 900 / 620);
+        max-width: none;
+      }
+      .hero .hero-title {
+        font-size: clamp(2.5rem, 6vw - 0.4rem, 5.5rem);
       }
     }
 
-    /* Wide screens: larger plates so the composition fills the sheet (still above the copy). */
-    @media (min-width: 90rem) {
-      .hero {
-        --hero-mark-w: min(74vw, (100svh - var(--header-h)) * 1.3);
+    @media (prefers-reduced-motion: no-preference) {
+      .hero-about:hover :global(svg) {
+        transform: translateX(3px);
       }
     }
 

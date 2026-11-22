@@ -4,8 +4,12 @@
  *
  * Markup contract (src/components/contact/MapEmbed.astro): `[data-map-consent]` with
  * `data-map-src` and `data-map-title`, holding `[data-map-placeholder]` and
- * `button[data-map-load]`.
+ * `button[data-map-load]`. While the map loads the box carries `data-loading` (the styles print a
+ * halftone screen over it), removed when the iframe reports `load`, or after LOADING_MAX_MS so
+ * a blocked or slow map is never kept hidden behind the screen.
  */
+const LOADING_MAX_MS = 6000;
+
 const initMap = (box: HTMLElement): void => {
   const button = box.querySelector<HTMLButtonElement>('[data-map-load]');
   const placeholder = box.querySelector<HTMLElement>('[data-map-placeholder]');
@@ -24,6 +28,13 @@ const initMap = (box: HTMLElement): void => {
       iframe.loading = 'lazy';
       iframe.referrerPolicy = 'no-referrer-when-downgrade';
       iframe.setAttribute('allowfullscreen', '');
+      box.dataset.loading = '';
+      const loaded = (): void => {
+        window.clearTimeout(timer);
+        delete box.dataset.loading;
+      };
+      const timer = window.setTimeout(loaded, LOADING_MAX_MS);
+      iframe.addEventListener('load', loaded, { once: true });
 
       placeholder.remove();
       box.append(iframe);
