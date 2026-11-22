@@ -7,13 +7,18 @@ import { telHref } from '~/lib/links';
 
 interface Props {
   locale: Locale;
+  /**
+   * Home only: the header lies over the full-screen hero, transparent, as part of its
+   * composition, and becomes the solid paper bar once the hero copy scrolls under it.
+   */
+  overHero?: boolean;
 }
-const { locale } = Astro.props;
+const { locale, overHero = false } = Astro.props;
 const path = Astro.url.pathname;
 const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
 ---
 
-<header class="site-header" data-header>
+<header class="site-header" data-header data-over-hero={overHero ? '' : undefined}>
   <div class="wrap flex h-full items-center justify-between gap-6">
     <a href={routes.home} class="site-header-logo" aria-label={t('homeLinkLabel', locale)}>
       <Logo variant="compact" id="header-logo" class="h-9 w-auto lg:h-10" />
@@ -69,6 +74,7 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
       </button>
     </div>
   </div>
+  <span class="header-progress" data-scroll-progress aria-hidden="true"></span>
 </header>
 
 <dialog id="site-menu" class="site-menu" aria-label={t('menuDialogLabel', locale)} data-menu>
@@ -135,6 +141,63 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
     }
     .site-header[data-scrolled] {
       border-bottom-color: var(--color-line);
+    }
+
+    /*
+     * Home: the header lies over the hero, transparent and without the hairline, as part of the
+     * hero composition. It becomes the solid paper bar once the hero copy reaches it
+     * (data-solid, set below) or the hero's arches have docked into the logo (data-docked).
+     */
+    .site-header[data-over-hero] {
+      position: fixed;
+      right: 0;
+      left: 0;
+      background-color: transparent;
+      transition:
+        background-color var(--dur-base) linear,
+        border-color var(--dur-base) linear;
+    }
+    .site-header[data-over-hero]:not([data-solid], [data-docked]) {
+      border-bottom-color: transparent;
+    }
+    .site-header[data-over-hero]:is([data-solid], [data-docked]),
+    :global(html.no-js) .site-header[data-over-hero] {
+      background-color: var(--color-paper);
+      border-bottom-color: var(--color-line);
+    }
+    /*
+     * Logo arches on the home page. With the live hero scene (data-scene) they are hidden while
+     * the 3D arches are in the hero and appear as those dock: opacity follows --dock (0-1),
+     * scrubbed, so no transition. Before the intro they wait hidden.
+     */
+    .site-header[data-over-hero] .site-header-logo :global(.logo-plate) {
+      transition: opacity var(--dur-slow) var(--ease-out);
+    }
+    :global(html.hero-intro) .site-header[data-over-hero] .site-header-logo :global(.logo-plate) {
+      opacity: 0;
+    }
+    .site-header[data-scene] .site-header-logo :global(.logo-plate) {
+      opacity: var(--dock, 0);
+      transition: none;
+    }
+
+    /* CMYK hairline along the bottom edge, filled by the motion layer via --scroll-progress. */
+    .header-progress {
+      position: absolute;
+      right: 0;
+      bottom: -1px;
+      left: 0;
+      height: 2px;
+      background-image: linear-gradient(
+        90deg,
+        var(--color-cyan) 0 25%,
+        var(--color-magenta) 25% 50%,
+        var(--color-yellow) 50% 75%,
+        var(--color-key) 75% 100%
+      );
+      transform: scaleX(var(--scroll-progress, 0));
+      transform-origin: left center;
+      pointer-events: none;
     }
     .site-header-logo {
       display: inline-flex;
@@ -255,6 +318,27 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
     new IntersectionObserver(([entry]) => {
       header.toggleAttribute('data-scrolled', !entry?.isIntersecting);
     }).observe(sentinel);
+  }
+
+  // Home: over the hero, the bar turns solid once the top of the hero copy passes under it.
+  if (header?.hasAttribute('data-over-hero')) {
+    const heroSentinel = document.querySelector('[data-hero-sentinel]');
+    if (heroSentinel) {
+      const headerHeight = header.offsetHeight;
+      new IntersectionObserver(
+        ([entry]) => {
+          if (!entry) return;
+          const line = entry.rootBounds?.top ?? headerHeight;
+          header.toggleAttribute(
+            'data-solid',
+            !entry.isIntersecting && entry.boundingClientRect.top < line,
+          );
+        },
+        { rootMargin: `-${headerHeight}px 0px 0px 0px` },
+      ).observe(heroSentinel);
+    } else {
+      header.setAttribute('data-solid', '');
+    }
   }
 
   // Full-screen menu: native modal <dialog> traps focus, closes on Esc and makes the page inert.

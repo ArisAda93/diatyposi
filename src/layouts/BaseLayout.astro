@@ -4,6 +4,7 @@
  * mobile floating contact bar. Every page renders exactly one <h1> inside the default slot.
  */
 import '~/styles/global.css';
+import '~/styles/motion.css';
 import Header from '~/components/Header.astro';
 import Footer from '~/components/Footer.astro';
 import FloatingContact from '~/components/FloatingContact.astro';
@@ -21,6 +22,8 @@ interface Props {
   noindex?: boolean;
   /** Emit the LocalBusiness JSON-LD (home and contact). */
   structuredData?: boolean;
+  /** Home only: the header sits over the full-screen hero and is part of its composition. */
+  heroHeader?: boolean;
   locale?: Locale;
 }
 
@@ -30,6 +33,7 @@ const {
   ogImage = '/og.jpg',
   noindex = false,
   structuredData = false,
+  heroHeader = false,
   locale = defaultLocale,
 } = Astro.props;
 
@@ -120,12 +124,15 @@ const jsonLd = structuredData ? JSON.stringify(buildLocalBusiness(siteUrl, local
     <a href="#main" class="skip-link">
       {t('skipLink', locale)}
     </a>
-    <Header locale={locale} />
+    <Header locale={locale} overHero={heroHeader} />
     <main id="main" tabindex="-1" class="flex-1 outline-none">
       <slot />
     </main>
     <Footer locale={locale} />
     <FloatingContact locale={locale} />
+    <script>
+      import '~/scripts/motion';
+    </script>
   </body>
 </html>
 

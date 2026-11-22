@@ -1,0 +1,195 @@
+/*
+ * Site-wide motion layer (driven by src/scripts/motion.ts).
+ *
+ * Every rule is keyed on `html.mo-on` (set by the script only when motion is allowed) plus a state
+ * class the script adds per element, so without JS, or with reduced motion, nothing here applies
+ * and the page shows its composed state. Only transform, translate, text-shadow, box-shadow, mask
+ * and custom properties change: no layout.
+ */
+
+/* Registered so they can transition (one-shot registration and the halftone print-in). */
+@property --mo-reg {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+@property --mo-ht {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+@property --mo-sweep {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
+
+@layer components {
+  /* ---------------------------------------------------------------------------------------- */
+  /* Registration: C/M/Y copies of a heading converge on the key text (--mo-reg 1 → 0).        */
+  /* The copies are text-shadows under the text, so the key glyphs stay crisp and readable;     */
+  /* at rest their alpha is 0 and the script removes the class.                                */
+  /* ---------------------------------------------------------------------------------------- */
+  html.mo-on .mo-reg {
+    --mo-reg-d: calc(var(--mo-reg) * 0.075em);
+    --mo-reg-a: min(1, calc(var(--mo-reg) * 2.5));
+    text-shadow:
+      calc(var(--mo-reg-d) * -1) calc(var(--mo-reg-d) * -0.5) 0 rgb(0 174 239 / var(--mo-reg-a)),
+      var(--mo-reg-d) calc(var(--mo-reg-d) * -0.25) 0 rgb(237 0 140 / var(--mo-reg-a)),
+      calc(var(--mo-reg-d) * -0.35) calc(var(--mo-reg-d) * 0.7) 0 rgb(255 241 0 / var(--mo-reg-a));
+  }
+  /* Headings already on screen at load converge once. */
+  html.mo-on .mo-reg-intro {
+    transition: --mo-reg 950ms var(--ease-out) 120ms;
+  }
+
+  /* ---------------------------------------------------------------------------------------- */
+  /* Depth entry and pointer tilt share one transform built from custom properties:           */
+  /*   --mo-d     depth remaining, 1 (tilted back, lowered, smaller) → 0 (rest)                */
+  /*   --mo-amp   rotation amplitude (smaller for tall panels)                                 */
+  /*   --mo-s0    start scale (≤ 0.96): small enough that the edge rotated towards the viewer  */
+  /*              never projects wider than the element's own box (no horizontal overflow)     */
+  /*   --mo-rx/ry pointer tilt, --mo-lift hover lift (replaces the .card-lift 2px hover lift)   */
+  /*   --mo-fit   tilt scale that keeps the near edge inside the viewport (usually 1)           */
+  /* The perspective and the 10deg match PERSPECTIVE and DEPTH_TILT in motion.ts.              */
+  /* ---------------------------------------------------------------------------------------- */
+  html.mo-on :is(.mo-d-live, .mo-tilt-live) {
+    transform-origin: 50% 50%;
+    transform: perspective(1000px) translateY(calc(var(--mo-d, 0) * 48px - var(--mo-lift, 0) * 2px))
+      rotateX(calc(var(--mo-d, 0) * var(--mo-amp, 1) * 10deg + var(--mo-rx, 0deg)))
+      rotateY(var(--mo-ry, 0deg))
+      scale(calc((1 - var(--mo-d, 0) * (1 - var(--mo-s0, 0.96))) * var(--mo-fit, 1)));
+  }
+
+  /* Tilt: a C/M/Y plate shadow falls opposite the tilt (--mo-px/py, up to 2px per plate). */
+  html.mo-on .mo-tilt-live {
+    box-shadow:
+      calc(var(--mo-px, 0) * 1px) calc(var(--mo-py, 0) * 1px) 0
+        rgb(0 174 239 / calc(var(--mo-lift, 0) * 0.85)),
+      calc(var(--mo-px, 0) * 2px) calc(var(--mo-py, 0) * 2px) 0
+        rgb(237 0 140 / calc(var(--mo-lift, 0) * 0.85)),
+      calc(var(--mo-px, 0) * 3px) calc(var(--mo-py, 0) * 3px) 0
+        rgb(255 241 0 / calc(var(--mo-lift, 0) * 0.85));
+  }
+  /* Ink sheen that follows the pointer (only where the element's ::after is free). */
+  html.mo-on .mo-sheen-rel {
+    position: relative;
+  }
+  html.mo-on .mo-tilt-live.mo-sheen::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background: radial-gradient(
+      circle at var(--mo-sx, 50%) var(--mo-sy, 50%),
+      rgb(255 255 255 / 0.6),
+      rgb(255 255 255 / 0) 60%
+    );
+    mix-blend-mode: soft-light;
+    opacity: var(--mo-lift, 0);
+  }
+
+  /* ---------------------------------------------------------------------------------------- */
+  /* Magnetic buttons: the pull uses `translate`, so it composes with the hover/press          */
+  /* transform; the plate shadow points towards the pointer (--mo-bx/by, default bottom-right). */
+  /* ---------------------------------------------------------------------------------------- */
+  html.mo-on .mo-mag-live {
+    translate: var(--mo-mx, 0px) var(--mo-my, 0px);
+  }
+  html.mo-on.mo-fine .mo-mag:hover {
+    transform: translate(calc(var(--mo-bx, 1) * -2px), calc(var(--mo-by, 1) * -2px));
+    box-shadow:
+      calc(var(--mo-bx, 1) * 2px) calc(var(--mo-by, 1) * 2px) 0 var(--color-cyan),
+      calc(var(--mo-bx, 1) * 4px) calc(var(--mo-by, 1) * 4px) 0 var(--color-magenta),
+      calc(var(--mo-bx, 1) * 6px) calc(var(--mo-by, 1) * 6px) 0 var(--color-yellow);
+  }
+  /* Press still snaps the plates into register. */
+  html.mo-on.mo-fine .mo-mag:active {
+    transform: translate(0, 0);
+    box-shadow: 0 0 0 transparent;
+  }
+
+  /* ---------------------------------------------------------------------------------------- */
+  /* Halftone print-in: the element shows through a dot screen whose dots grow (--mo-ht) while */
+  /* a solid band sweeps across (--mo-sweep). The script removes all three classes at the end. */
+  /* ---------------------------------------------------------------------------------------- */
+  html.mo-on .mo-ht {
+    --mo-ht-pitch: 12px;
+    -webkit-mask-image:
+      linear-gradient(100deg, #000 calc(var(--mo-sweep) - 30%), transparent var(--mo-sweep)),
+      radial-gradient(
+        circle at center,
+        #000 var(--mo-ht),
+        transparent calc(var(--mo-ht) + min(var(--mo-ht), 0.75px))
+      );
+    mask-image:
+      linear-gradient(100deg, #000 calc(var(--mo-sweep) - 30%), transparent var(--mo-sweep)),
+      radial-gradient(
+        circle at center,
+        #000 var(--mo-ht),
+        transparent calc(var(--mo-ht) + min(var(--mo-ht), 0.75px))
+      );
+    -webkit-mask-size:
+      100% 100%,
+      var(--mo-ht-pitch) var(--mo-ht-pitch);
+    mask-size:
+      100% 100%,
+      var(--mo-ht-pitch) var(--mo-ht-pitch);
+    -webkit-mask-repeat: no-repeat, repeat;
+    mask-repeat: no-repeat, repeat;
+  }
+  /* Colour bars and other small pieces use a finer screen. */
+  html.mo-on .mo-ht-fine {
+    --mo-ht-pitch: 6px;
+  }
+  html.mo-on .mo-ht-in {
+    /* 0.75 × pitch is past the half diagonal, so neighbouring dots merge into a solid. */
+    --mo-ht: calc(var(--mo-ht-pitch) * 0.75);
+    --mo-sweep: 130%;
+    transition:
+      --mo-ht 900ms var(--ease-in-out),
+      --mo-sweep 1100ms var(--ease-in-out) 250ms;
+  }
+
+  /* ---------------------------------------------------------------------------------------- */
+  /* Header logo: scroll-velocity misregistration. --mo-logo is set on the <svg> in SVG user   */
+  /* units; each plate moves along its own direction and the key plate stays as the reference. */
+  /* ---------------------------------------------------------------------------------------- */
+  html.mo-on .site-header .logo-plate-c {
+    translate: calc(var(--mo-logo, 0) * -1px) calc(var(--mo-logo, 0) * -0.4px);
+  }
+  html.mo-on .site-header .logo-plate-m {
+    translate: calc(var(--mo-logo, 0) * 0.8px) calc(var(--mo-logo, 0) * -0.6px);
+  }
+  html.mo-on .site-header .logo-plate-y {
+    translate: calc(var(--mo-logo, 0) * -0.25px) calc(var(--mo-logo, 0) * 1px);
+  }
+
+  /*
+   * The composed page, whatever state an element is in: in print (a page printed before scrolling
+   * must not show start states) and, as belt and braces, with reduced motion (the script already
+   * removes `mo-on` then).
+   */
+  @media print, (prefers-reduced-motion: reduce) {
+    html.mo-on :is(.mo-d-live, .mo-tilt-live) {
+      transform: none;
+    }
+    html.mo-on .mo-tilt-live {
+      box-shadow: none;
+    }
+    html.mo-on .mo-reg {
+      text-shadow: none;
+    }
+    html.mo-on .mo-ht {
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
+    html.mo-on :is(.mo-mag-live, .site-header .logo-plate) {
+      translate: none;
+    }
+    html.mo-on .mo-tilt-live.mo-sheen::after {
+      content: none;
+    }
+  }
+}

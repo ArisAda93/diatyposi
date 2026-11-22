@@ -34,8 +34,8 @@ const plates = [...ARCH_PLATES].reverse().map((p) => {
 ---
 
 {photo ? (
-  <div class="about-photo crop-frame">
-    <div class="media about-photo-media">
+  <div class="about-photo crop-frame" data-reveal="depth">
+    <div class="media about-photo-media" data-tilt>
       <Photo
         image={photo.image}
         alt={photo.alt.el}
@@ -44,8 +44,8 @@ const plates = [...ARCH_PLATES].reverse().map((p) => {
     </div>
   </div>
 ) : (
-  <div class="about-photo crop-frame" aria-hidden="true">
-    <div class="about-sheet">
+  <div class="about-photo crop-frame" aria-hidden="true" data-reveal="depth">
+    <div class="about-sheet" data-tilt>
       <div class="about-arches">
         {plates.map((p) => (
           <span class:list={['about-plate', `about-plate-${p.id}`]} style={p.style} />

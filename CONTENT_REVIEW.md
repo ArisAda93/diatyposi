@@ -275,6 +275,12 @@ Every Greek string on the site that is **not** the owner’s own wording, for th
 | `message.dateLabel`       | Επιθυμητή ημερομηνία                                                                                                                            |
 | `message.messageLabel`    | Μήνυμα                                                                                                                                          |
 
+## `src/i18n/pages/hero.ts` — `heroText`
+
+| Key         | Text   |
+| ----------- | ------ |
+| `scrollCue` | Κύλιση |
+
 ## `src/i18n/pages/home.ts` — `homeText`
 
 | Key                      | Text                                                                                                                                                                       |

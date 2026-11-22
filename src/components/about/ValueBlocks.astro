@@ -28,7 +28,11 @@ const blocks = ownerCopy.el.values.map((value, i) => ({
 
     <ul class="values-grid">
       {blocks.map((b) => (
-        <li class:list={['value', `value-${b.plate}`, { 'on-ink': b.plate === 'k' }]}>
+        <li
+          class:list={['value', `value-${b.plate}`, { 'on-ink': b.plate === 'k' }]}
+          data-reveal="depth"
+          data-tilt
+        >
           <div class="value-top" aria-hidden="true">
             <span class="value-plate">{b.plate.toUpperCase()}</span>
             <RegMark size={22} />

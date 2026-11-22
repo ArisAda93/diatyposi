@@ -69,7 +69,6 @@ export const initGallery = (root: HTMLElement): void => {
   };
 
   if (filterBar && chips.length > 0) {
-    filterBar.hidden = false;
     chips.forEach((chip) => {
       chip.addEventListener('click', () => {
         applyFilter(chip.dataset.filter ?? ALL, true);

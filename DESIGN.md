@@ -13,12 +13,12 @@ The site is built the way a print job is made. Every visual device comes from th
 | **Plate separation**            | Service icons on hover, logo mark                       | Four stacked copies (C, M, Y, K) split by a few px, then snap back into register.                             |
 | **Colour bar**                  | Hero foot, footer top, values strip                     | The control strip printed at the edge of every press sheet: four solid patches plus tints.                    |
 
-**Two big moments only.**
+**Signature moments.** (Round 1 limited the site to two; the owner's round-2 direction makes the whole site feel alive: see §7.)
 
-1. **Hero (home).** The four arches arrive as separate ink plates, slightly out of register and multiply-blended, then snap into register (the overlaps switch to the logo's knock-out stacking at the snap). The headline is painted at first paint (LCP-safe) with C/M/Y ghosts offset from it; the ghosts snap into register with the plates. Total under 1.8 s, once per session (`sessionStorage`), GSAP, transforms and a CSS variable only. Reduced motion: the composed state, no animation.
+1. **Hero (home).** Round 2 (§7): a WebGL scene (OGL, loaded after first paint) of the four arches as extruded CMYK plates. Overprint blending, an exploded stack, pointer parallax and an ambient arch field across the whole sheet. Intro once per session (`sessionStorage`): the plates arrive from depth out of register and snap into the stack while the headline's C/M/Y ghosts converge. The headline is painted at first paint (LCP-safe). On scroll the plates collapse into register and dock into the header logo. Without WebGL, under reduced motion or before load, the static SVG mark shows (a short CSS intro plays on it where motion is allowed). Reduced motion: the composed state, no animation.
 2. **Process (home).** A sticky poster builds plate by plate (Y → M → C → K) while four steps scroll past (GSAP ScrollTrigger, no pinning or scroll-jacking: the poster is CSS `position: sticky`). Reduced motion or no JS: all plates printed, steps static.
 
-Everything else is quiet: short CSS transitions on hover and focus, no scroll-triggered fades on every section, no parallax, no custom cursor.
+Round 1 kept everything else quiet. Round 2 replaces that with a site-wide motion layer (§7). Still no scroll-jacking, no pinning that traps the visitor, and no custom cursor.
 
 ## 2. Palette (sampled from the logo raster, median of pure pixels)
 
@@ -94,7 +94,7 @@ Hover: buttons get a CMY plate shadow that collapses into register on press; lin
 
 1. **Hero (one screen).** A press sheet with crop marks at its four corners. The arches mark sits large at the right, overlapping the sheet edge; the red spaced label “ΔΙΑΦΗΜΙΣΗ – ΕΚΤΥΠΩΣΕΙΣ” above a two-line h1 “Η ιδέα σας… / γίνεται δημιουργία!”, left aligned over 8 columns. Two buttons. A colour bar along the sheet foot.
 2. **Intro.** Asymmetric: the owner's paragraph set large (lead) across columns 4–11, a small red label on the left column.
-3. **Services bento.** h2 left, link right. A 12-column bento of nine cards in three treatments (paper, ink, yellow), varied spans, each with number, custom icon and the owner's service title, linking to its section on Υπηρεσίες.
+3. **Services showcase** (round 2, §7). h2 left, link right. Desktop: a sticky 3D “plate” previews the active service (photo, icon, number, lead sentence). The change between services is a C/M/Y registration transition. Beside it, an index of the nine services as large typographic rows linking to their chapters on Υπηρεσίες. Active row: hover, keyboard focus, or the row at the viewport centre while scrolling. Phones: rows with thumbnails.
 4. **Process (moment 2).** Two columns: sticky poster on the left (builds Y → M → C → K), four numbered steps on the right, each a screen-height block on desktop. Plate readout chips (Y M C K) under the poster.
 5. **Selected work.** An editorial, staggered set of four images of different sizes with category labels, “Δείτε όλα τα έργα”.
 6. **Values strip.** The owner's paragraph “Για εμάς…” on the left; on the right four rows, each a colour-bar patch (C, M, Y, K) and one value in display type.
@@ -103,7 +103,7 @@ Hover: buttons get a CMY plate shadow that collapses into register on press; lin
 
 ### Υπηρεσίες
 
-Page header (h1, short intro). Desktop: a sticky index of the nine services in the left column; right, nine anchored sections that alternate image side and treatment, each with number, h2 (owner's title), description, a “Συνήθεις εργασίες” list, an image in a crop-marked frame and “Ζητήστε προσφορά για αυτό” (pre-selects the service in the form). Mobile: the index becomes a horizontal chip row.
+Page header (h1, short intro). Desktop: a slim sticky rail index of the nine services with CMYK reading-progress fill. Beside it, nine calm chapters on paper (round 2, §7). Each chapter has: a plate-colour rule; a folio with icon and number; h2 (owner's title); the photo in a crop-marked 3D frame that straightens on scroll; a giant outlined number behind; the description at lead size; “Συνήθεις εργασίες” as tag chips; and “Ζητήστε προσφορά για αυτό”, which pre-selects the service in the form. Mobile: the index becomes a horizontal chip row.
 
 ### Έργα
 
@@ -125,6 +125,27 @@ Plain reading page (max 68ch), honest about what the site does (no cookies, no a
 
 “Misprint”: a huge 404 printed in C, M, Y and K plates out of register; hovering or focusing the home button snaps it into register. A short line and a button home.
 
-## 7. Notes on skills
+## 7. Round 2: the living sheet
+
+The owner asked for one unified header and hero, a full-hero motion graphic built from the logo, a site that feels alive with 3D interactivity while scrolling, and better services sections.
+
+- **Unified hero and header (home).** The header sits transparent over a full-viewport hero and belongs to its composition. It turns into the solid paper bar once the hero has scrolled away.
+- **The plates in 3D.** A WebGL scene (OGL, loaded after first paint) extrudes the logo's four arches into solid CMYK plates. The plates float in an exploded stack with overprint blending, follow the pointer with damped parallax, and sit over a quiet field of the arch motif. On scroll, the plates collapse into register and **dock into the header logo**: the hero art becomes the logo. The fallback is the static SVG mark (no WebGL, reduced motion, or before load).
+- **Motion layer (every page)**, driven by data attributes:
+  - heading registration reveal (C/M/Y converge);
+  - 3D depth entry;
+  - halftone print-in for photos;
+  - pointer tilt with an ink sheen;
+  - magnetic buttons whose plate shadow follows the pointer;
+  - a CMYK scroll-progress hairline;
+  - scroll-velocity misregistration on the header logo.
+
+  Every effect is off under reduced motion, except the scroll-progress hairline, which is a direct, non-animated mapping of the scroll position. Pointer effects are off on touch devices. No effect hides content when JS is unavailable.
+
+- **Statement.** An interactive halftone field prints the arches in dots, which swell around the pointer.
+- **Services (home).** A sticky 3D "plate" previews the active service; the change between services is a registration transition. Beside it, a large typographic index of the nine services.
+- **Services page.** Calm editorial chapters: a photo in a 3D frame that straightens on scroll, a giant outlined number, a plate-colour rule, product tags, and a rail index with CMYK progress.
+
+## 8. Notes on skills
 
 The `design-taste-frontend` skill was loaded. Its craft rules were followed (left-aligned layouts, one system, real hover layer, no fade-on-scroll, honest copy, stand-ins listed). Where it conflicts with this brief, the brief wins: the brief asks for grain, halftone, crop marks and CMYK overprint (the skill reserves effects for tech sites), visible stand-in labels, and placeholder contact values.

@@ -41,8 +41,8 @@ const sizes = [
       {featured.map((item, i) => {
         const category = serviceBySlug(item.service)?.text.el.short;
         return (
-          <li class={`work-item work-pos-${i % 4}`}>
-            <a href={routes.work} class="work-link">
+          <li class={`work-item work-pos-${i % 4}`} data-reveal="depth">
+            <a href={routes.work} class="work-link" data-tilt>
               <div class="media media-halftone work-media">
                 <Photo image={item.image} alt={item.text.el.alt} sizes={sizes[i % 4] ?? '92vw'} />
                 {item.standIn && <span class="work-chip">{t('standInLabel')}</span>}

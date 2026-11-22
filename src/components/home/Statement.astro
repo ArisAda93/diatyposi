@@ -1,7 +1,11 @@
 ---
 /**
  * Home statement: full-bleed ink section with the owner's closing line in display type over a
- * faint halftone print of the arches (decorative; geometry from logo-paths.ts).
+ * halftone print of the arches (decorative; geometry from logo-paths.ts).
+ *
+ * With JS, src/scripts/halftone-field.ts draws an interactive halftone field on the canvas (dots
+ * print in on scroll, swell around the pointer, ripple on touch) and sets `.is-field`, which hides
+ * the static SVG print. Without JS the SVG print shows.
  */
 import { ARCH, ARCH_PLATES } from '~/components/logo-paths';
 import { ownerCopy } from '~/data/site';
@@ -14,7 +18,7 @@ const brand = at >= 0 ? closing.slice(0, at + sep.length - 1) : '';
 const line = at >= 0 ? closing.slice(at + sep.length) : closing;
 ---
 
-<section class="on-ink statement" aria-labelledby="statement-title">
+<section class="on-ink statement" aria-labelledby="statement-title" data-statement>
   <svg
     class="statement-arches"
     xmlns="http://www.w3.org/2000/svg"
@@ -40,6 +44,7 @@ const line = at >= 0 ? closing.slice(at + sep.length) : closing;
       ))}
     </g>
   </svg>
+  <canvas class="statement-field" aria-hidden="true" data-statement-field></canvas>
 
   <div class="wrap section statement-inner">
     <h2 id="statement-title" class="statement-text">
@@ -71,6 +76,17 @@ const line = at >= 0 ? closing.slice(at + sep.length) : closing;
     .statement-arches circle {
       fill: currentColor;
     }
+    .statement.is-field .statement-arches {
+      display: none;
+    }
+    .statement-field {
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
     .statement-inner {
       position: relative;
     }
@@ -88,3 +104,9 @@ const line = at >= 0 ? closing.slice(at + sep.length) : closing;
     }
   }
 </style>
+
+<script>
+  import { initHalftoneField } from '~/scripts/halftone-field';
+
+  document.querySelectorAll<HTMLElement>('[data-statement]').forEach(initHalftoneField);
+</script>

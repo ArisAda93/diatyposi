@@ -1,20 +1,49 @@
 /**
- * Home hero intro (signature moment 1).
+ * Home hero: decides between the live WebGL scene and the static composition, and plays the
+ * once-per-session intro.
  *
- * The four arch plates arrive as separate inks, multiply-blended and slightly out of register,
- * then snap into register with a small overshoot while the C/M/Y ghosts of the headline converge
- * on the key text. At the snap the arches switch to the logo's knock-out stacking. About 1.45 s.
+ * Static composition (CSS default, no JS, reduced motion, no usable WebGL, or any failure): the
+ * logo arches as SVG in the scene's position, the header logo with its arches, no animation.
  *
- * Contract with BaseLayout: `html.hero-intro` is set before first paint only when the intro should
- * play (once per session, never with reduced motion). The CSS default is the final composed state;
- * the start state lives under `html.hero-intro` / `.hero.is-playing` (Hero.astro). Only CSS custom
- * properties and opacity are tweened. When the timeline ends, the classes and inline styles are
- * removed so the composed CSS state holds.
+ * Live scene (src/scripts/hero-scene/scene.ts, OGL): loaded with a dynamic import after first
+ * paint, never in the critical path. It takes over from the SVG without a jump: its first frame
+ * draws the arches exactly where the SVG has them, then the canvas fades in over it.
+ *
+ * Intro contract with BaseLayout: `html.hero-intro` is set before first paint only when the intro
+ * should play (once per session, never with reduced motion) and is removed by BaseLayout after 4 s
+ * as a safety net. While it is present the SVG plates are hidden and the headline's C/M/Y ghosts
+ * sit out of register (Hero.astro). Then either
+ *  - the 3D intro plays (the plates arrive from depth), if the scene is ready within
+ *    INTRO_DEADLINE, or
+ *  - the SVG intro plays (CSS keyframes on the SVG plates), and the scene, if available, takes
+ *    over afterwards.
+ * In both cases the ghosts converge on the headline (CSS, `.hero.is-intro`).
  */
+import type { HeroScene, SceneElements } from './hero-scene/scene';
 
 const PLAYED_KEY = 'dt-hero-played';
-/** Print order: yellow, magenta, cyan, key. */
-const PLATE_ORDER = ['y', 'm', 'c', 'k'] as const;
+/** How long the intro waits for the 3D scene before playing the SVG version instead (ms). */
+const INTRO_DEADLINE = 1500;
+/** Length of the CSS intros (Hero.astro keyframes plus the last plate's delay), ms. */
+const INTRO_SVG_MS = 1750;
+const INTRO_GHOSTS_MS = 1600;
+/** requestIdleCallback timeout for loading the scene when no intro plays (ms). */
+const IDLE_TIMEOUT = 2000;
+
+/**
+ * Context attributes for the probe. OGL later asks the same canvas for its context and gets this
+ * one back. `failIfMajorPerformanceCaveat` keeps software renderers on the static composition.
+ */
+const GL_ATTRIBUTES: WebGLContextAttributes = {
+  alpha: false,
+  antialias: true,
+  depth: true,
+  stencil: false,
+  premultipliedAlpha: false,
+  preserveDrawingBuffer: false,
+  powerPreference: 'low-power',
+  failIfMajorPerformanceCaveat: true,
+};
 
 const markPlayed = (): void => {
   try {
@@ -24,75 +53,217 @@ const markPlayed = (): void => {
   }
 };
 
-/** GSAP is loaded on demand so it never blocks first paint. */
-const loadGsap = async () => {
+/**
+ * Frees the GPU side of a canvas we will not use (its buffers, programs and the context itself)
+ * instead of waiting for garbage collection, which browsers cap at a handful of live contexts.
+ */
+const releaseContext = (canvas: HTMLCanvasElement): void => {
   try {
-    return (await import('gsap')).gsap;
+    // Asking again returns the existing context (null for the other WebGL version).
+    const gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl');
+    if (gl && !gl.isContextLost()) gl.getExtension('WEBGL_lose_context')?.loseContext();
   } catch {
-    // Chunk failed to load (offline, blocked): the caller shows the composed hero instead.
+    // Nothing to release.
+  }
+};
+
+/** A canvas with a usable hardware WebGL context (WebGL 2, or WebGL 1 with what OGL needs). */
+const createCanvas = (): HTMLCanvasElement | null => {
+  try {
+    const canvas = document.createElement('canvas');
+    if (canvas.getContext('webgl2', GL_ATTRIBUTES)) return canvas;
+    const gl = canvas.getContext('webgl', GL_ATTRIBUTES);
+    if (gl?.getExtension('OES_vertex_array_object') && gl.getExtension('ANGLE_instanced_arrays')) {
+      return canvas;
+    }
+    if (gl) releaseContext(canvas);
+    return null;
+  } catch {
     return null;
   }
 };
 
-export const initHero = async (): Promise<void> => {
+/** Runs after the first frame has been painted. */
+const afterFirstPaint = (task: () => void): void => {
+  requestAnimationFrame(() => requestAnimationFrame(task));
+};
+
+/** Runs once the page has loaded and the main thread is idle. */
+const whenIdle = (task: () => void): void => {
+  const schedule = (): void => {
+    if (typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(task, { timeout: IDLE_TIMEOUT });
+    } else {
+      window.setTimeout(task, 200);
+    }
+  };
+  if (document.readyState === 'complete') schedule();
+  else window.addEventListener('load', schedule, { once: true });
+};
+
+export const initHero = (): void => {
   const root = document.documentElement;
-  if (!root.classList.contains('hero-intro')) return;
-
   const hero = document.querySelector<HTMLElement>('[data-hero]');
-  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const plates = hero
-    ? PLATE_ORDER.map((id) =>
-        hero.querySelector<SVGGElement>(`.logo-plate[data-plate="${id}"]`),
-      ).filter((el): el is SVGGElement => el !== null)
-    : [];
-
-  if (!hero || reduceMotion || plates.length !== PLATE_ORDER.length) {
+  const stage = hero?.querySelector<HTMLElement>('[data-hero-stage]');
+  const markBox = hero?.querySelector<HTMLElement>('[data-hero-mark]');
+  const mark = markBox?.querySelector<SVGSVGElement>('svg');
+  if (!hero || !stage || !markBox || !mark) {
     root.classList.remove('hero-intro');
     return;
   }
 
-  const ghosts = Array.from(hero.querySelectorAll<HTMLElement>('[data-hero-ghost]'));
-  const gsap = await loadGsap();
-  if (!gsap) {
-    root.classList.remove('hero-intro');
-    return;
-  }
-  // BaseLayout's safety net may already have revealed the composed hero; never replay over it.
-  if (!root.classList.contains('hero-intro')) return;
+  const header = document.querySelector<HTMLElement>('[data-header]');
+  const elements: SceneElements = {
+    hero,
+    stage,
+    markBox,
+    mark,
+    copy: hero.querySelector<HTMLElement>('[data-hero-copy]'),
+    header,
+    headerLogo: header?.querySelector<SVGSVGElement>('.site-header-logo svg') ?? null,
+  };
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
 
-  markPlayed();
-  // Hand the start state from the pre-paint class to the hero itself (same frame, no flash).
-  hero.classList.add('is-playing');
-  root.classList.remove('hero-intro');
+  // The scroll cue's loop rests while the hero is off-screen.
+  new IntersectionObserver(([entry]) => {
+    hero.toggleAttribute('data-offscreen', !(entry?.isIntersecting ?? true));
+  }).observe(hero);
 
-  const animated: Element[] = [...plates, ...ghosts];
-  const finish = (): void => {
-    hero.classList.remove('is-playing', 'is-registered');
-    animated.forEach((el) => el.removeAttribute('style'));
+  let prepared: HeroScene | null = null; // created, not started
+  let scene: HeroScene | null = null; // running
+  let loading: Promise<HeroScene | null> | null = null;
+  let failed = false; // WebGL unusable on this page: stay static
+  let introState: 'none' | 'pending' | 'svg' | '3d' = 'none';
+
+  const onLost = (): void => {
+    scene = null;
+    prepared = null;
+    failed = true;
   };
 
-  const snapAt = 0.95;
-  const snap = { duration: 0.45, ease: 'back.out(2.4)' };
-  const tl = gsap.timeline({ onComplete: finish });
+  const buildScene = async (): Promise<HeroScene | null> => {
+    const canvas = createCanvas();
+    if (!canvas) {
+      failed = true;
+      return null;
+    }
+    try {
+      const { createHeroScene } = await import('./hero-scene/scene');
+      // Reduced motion may have been switched on while the chunk loaded.
+      if (reduce.matches) {
+        releaseContext(canvas);
+        return null;
+      }
+      return createHeroScene(elements, canvas, onLost);
+    } catch {
+      // Chunk failed to load, or the GPU refused the scene (shaders, layout): free what the
+      // renderer allocated and keep the static composition.
+      releaseContext(canvas);
+      failed = true;
+      return null;
+    }
+  };
 
-  // 1. Plates come in one by one and settle slightly out of register.
-  plates.forEach((plate, i) => {
-    tl.fromTo(
-      plate,
-      { '--reg': 1, opacity: 0 },
-      { '--reg': 0.3, opacity: 1, duration: 0.5, ease: 'power3.out' },
-      i * 0.11,
-    );
+  const loadScene = (): Promise<HeroScene | null> => {
+    if (scene || failed) return Promise.resolve(null);
+    if (prepared) return Promise.resolve(prepared);
+    loading ??= buildScene()
+      .then((built) => {
+        prepared = built;
+        return built;
+      })
+      .finally(() => {
+        loading = null;
+      });
+    return loading;
+  };
+
+  /** Starts a prepared scene; false if it could not run (the static composition stays). */
+  const run = (built: HeroScene, intro: boolean): boolean => {
+    prepared = null;
+    scene = built;
+    if (built.start({ intro })) return true;
+    scene = null;
+    return false;
+  };
+
+  const startAlive = async (): Promise<void> => {
+    if (reduce.matches || scene || failed) return;
+    const built = await loadScene();
+    if (built && built === prepared && !scene && !reduce.matches && introState !== 'svg') {
+      run(built, false);
+    }
+  };
+
+  const playGhosts = (): void => {
+    hero.classList.add('is-intro');
+    window.setTimeout(() => hero.classList.remove('is-intro'), INTRO_GHOSTS_MS);
+  };
+
+  const playSvgIntro = (): void => {
+    if (!root.classList.contains('hero-intro')) {
+      // BaseLayout's safety net already showed the composed hero: never replay over it.
+      introState = 'none';
+      whenIdle(() => void startAlive());
+      return;
+    }
+    introState = 'svg';
+    hero.classList.add('is-intro', 'is-intro-svg');
+    root.classList.remove('hero-intro');
+    window.setTimeout(() => {
+      hero.classList.remove('is-intro', 'is-intro-svg');
+      introState = 'none';
+      whenIdle(() => void startAlive());
+    }, INTRO_SVG_MS);
+  };
+
+  reduce.addEventListener('change', () => {
+    if (reduce.matches) {
+      scene?.destroy();
+      prepared?.destroy();
+      scene = null;
+      prepared = null;
+      // Stop any intro where it is: composed state, no animation.
+      hero.classList.remove('is-intro', 'is-intro-svg');
+      root.classList.remove('hero-intro');
+    } else {
+      whenIdle(() => void startAlive());
+    }
   });
-  if (ghosts.length > 0) {
-    tl.fromTo(ghosts, { '--hl': 1 }, { '--hl': 0.45, duration: 0.85, ease: 'power1.inOut' }, 0);
+
+  if (!root.classList.contains('hero-intro')) {
+    whenIdle(() => void startAlive());
+    return;
+  }
+  if (reduce.matches) {
+    root.classList.remove('hero-intro');
+    return;
   }
 
-  // 2. Everything snaps into register together.
-  tl.to(plates, { '--reg': 0, ...snap }, snapAt);
-  tl.call(() => hero.classList.add('is-registered'), [], snapAt + 0.14);
-  if (ghosts.length > 0) {
-    tl.to(ghosts, { '--hl': 0, ...snap }, snapAt);
-    tl.to(ghosts, { opacity: 0, duration: 0.2, ease: 'none' }, snapAt + 0.3);
-  }
+  introState = 'pending';
+  markPlayed();
+  const deadline = window.setTimeout(() => {
+    if (introState === 'pending') playSvgIntro();
+  }, INTRO_DEADLINE);
+
+  afterFirstPaint(() => {
+    void loadScene().then((built) => {
+      if (introState !== 'pending') return; // too late: the SVG intro is playing or done
+      if (!built || !root.classList.contains('hero-intro') || reduce.matches) {
+        window.clearTimeout(deadline);
+        playSvgIntro();
+        return;
+      }
+      window.clearTimeout(deadline);
+      // start() draws the first frame and hides the SVG mark before the pre-paint class goes.
+      if (!run(built, true)) {
+        // The scene died while loading (context lost): play the SVG intro instead.
+        playSvgIntro();
+        return;
+      }
+      introState = '3d';
+      playGhosts();
+      root.classList.remove('hero-intro');
+    });
+  });
 };

@@ -22,11 +22,18 @@ const { item, shape, category, large, priority = false } = Astro.props;
 const copy = item.text.el;
 ---
 
-<li class="work-item" data-work-item data-shape={shape} data-service={item.service}>
+<li
+  class="work-item"
+  data-work-item
+  data-shape={shape}
+  data-service={item.service}
+  data-reveal="depth"
+>
   <a
     href={large.src}
     class="work-tile"
     aria-describedby="work-open-hint"
+    data-tilt
     data-work-tile
     data-large-src={large.src}
     data-large-srcset={large.srcset}

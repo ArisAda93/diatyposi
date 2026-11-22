@@ -2,7 +2,8 @@
 /**
  * Filterable gallery for /erga/. Data: `portfolio` in src/data/site.ts (images in
  * src/assets/portfolio/). Without JS every tile shows and links to its large image; the filter
- * chips stay hidden because they cannot work. With JS (src/scripts/gallery.ts) the chips filter,
+ * chips stay hidden (`html.no-js`, removed by BaseLayout before first paint) because they cannot
+ * work, so with JS they are visible from first paint (no layout shift). With JS (src/scripts/gallery.ts) the chips filter,
  * the count is announced and the tiles open the lightbox.
  */
 import { getImage as optimizeImage } from 'astro:assets';
@@ -44,7 +45,7 @@ const tiles = await Promise.all(
 ---
 
 <div class="work-gallery" data-gallery>
-  <div class="work-filters" data-filter-bar hidden>
+  <div class="work-filters" data-filter-bar>
     <div class="work-chips" role="group" aria-label={text.filterGroupLabel}>
       <button type="button" class="work-chip" aria-pressed="true" data-filter={ALL}>
         {text.filterAll}
@@ -86,6 +87,9 @@ const tiles = await Promise.all(
       flex-direction: column;
       gap: 0.75rem;
       margin-bottom: clamp(1.5rem, 1rem + 2vw, 2.5rem);
+    }
+    :global(.no-js) .work-filters {
+      display: none;
     }
     /* Phones: one sideways-scrolling row; padding keeps focus outlines inside the scroll box. */
     .work-chips {

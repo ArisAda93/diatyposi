@@ -6,7 +6,7 @@
 import BaseLayout from '~/layouts/BaseLayout.astro';
 import Hero from '~/components/home/Hero.astro';
 import Intro from '~/components/home/Intro.astro';
-import ServicesBento from '~/components/home/ServicesBento.astro';
+import ServicesShowcase from '~/components/home/ServicesShowcase.astro';
 import Process from '~/components/home/Process.astro';
 import WorkTeaser from '~/components/home/WorkTeaser.astro';
 import Values from '~/components/home/Values.astro';
@@ -15,10 +15,10 @@ import ContactBand from '~/components/ContactBand.astro';
 import { homeText } from '~/i18n/pages/home';
 ---
 
-<BaseLayout description={homeText.el.metaDescription} structuredData>
+<BaseLayout description={homeText.el.metaDescription} structuredData heroHeader>
   <Hero />
   <Intro />
-  <ServicesBento />
+  <ServicesShowcase />
   <Process />
   <WorkTeaser />
   <Values />

@@ -27,8 +27,8 @@ const rows = ownerCopy.el.values.map((value, i) => ({ value, ink: inks[i] ?? ink
 
     <ul class="values-list col-span-12 lg:col-span-6 lg:col-start-7" role="list">
       {rows.map(({ value, ink }) => (
-        <li class="value-row" style={`--ink:var(--color-${ink.id})`}>
-          <span class="value-bar" aria-hidden="true">
+        <li class="value-row" style={`--ink:var(--color-${ink.id})`} data-reveal="depth">
+          <span class="value-bar" aria-hidden="true" data-halftone="fine">
             <span />
             <span />
             <span />

@@ -19,7 +19,7 @@ const plates = ['c', 'm', 'y', 'k'] as const;
 <BaseLayout title={text.meta.title} description={text.meta.description} noindex>
   <section class="np wrap" aria-labelledby="np-title">
     <div class="np-sheet" aria-hidden="true">
-      <div class="np-art crop-frame">
+      <div class="np-art crop-frame" data-tilt>
         {plates.map((plate) => (
           <span class={`np-plate np-plate-${plate}`}>404</span>
         ))}

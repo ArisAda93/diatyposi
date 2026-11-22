@@ -1,12 +1,20 @@
 ---
 /**
- * Home hero: a press sheet with crop marks, the arches mark bleeding off its right edge, the
- * owner's headline and the two main actions.
+ * Home hero: one full-screen press sheet that starts at the very top of the page, with the header
+ * lying over it as part of the composition (Header.astro, `overHero`).
  *
- * Signature moment 1 (src/scripts/hero.ts): the CSS below describes the FINAL composed state.
- * The out-of-register start is applied only while `html.hero-intro` (set before first paint by
- * BaseLayout) or `.hero.is-playing` (set by the script) is present. The h1 is painted at first
- * paint in its final place; the C/M/Y ghost copies (aria-hidden) carry the misregistration.
+ * - The stage (decorative, aria-hidden) holds the crop-marked trim and the logo arches as SVG:
+ *   the static composition, shown at first paint, without JS, with reduced motion and without
+ *   WebGL. src/scripts/hero.ts loads the live scene (src/scripts/hero-scene/) after first paint;
+ *   its canvas is inserted into the stage, draws the arches exactly where the SVG has them and
+ *   fades in over it.
+ * - The copy sits bottom-left: the red label, the owner's headline (painted at first paint, the
+ *   LCP element) and the two actions. The scene keeps a clear zone behind it.
+ * - The foot carries the colour bar, the scroll cue and a registration mark.
+ *
+ * The CSS describes the composed state. Intro start states apply only under `html.hero-intro`
+ * (set before first paint by BaseLayout) and while `.hero.is-intro` / `.is-intro-svg` are set
+ * by the script.
  */
 import Logo from '~/components/Logo.astro';
 import Icon from '~/components/Icon.astro';
@@ -14,6 +22,8 @@ import ColorBar from '~/components/ColorBar.astro';
 import RegMark from '~/components/RegMark.astro';
 import { ownerCopy, routes, site } from '~/data/site';
 import { t } from '~/i18n/ui';
+import { heroText } from '~/i18n/pages/hero';
+import { capsEl } from '~/lib/text';
 
 // Two lines, broken after “σας…”.
 const headline = ownerCopy.el.headline;
@@ -23,49 +33,57 @@ const ghosts = ['c', 'm', 'y'] as const;
 ---
 
 <section class="hero" aria-labelledby="hero-title" data-hero>
-  <div class="wrap">
-    <div class="hero-sheet crop-frame">
-      <div class="hero-mark-wrap" aria-hidden="true">
-        <Logo variant="mark" id="hero-mark" />
-      </div>
+  <div class="hero-stage" aria-hidden="true" data-hero-stage data-motion="off">
+    <div class="hero-trim crop-frame"></div>
+    <div class="hero-mark" data-hero-mark>
+      <Logo variant="mark" id="hero-mark" />
+    </div>
+  </div>
 
-      <div class="hero-copy">
-        <p class="label hero-label">{site.descriptorCaps.el}</p>
-        <div class="hero-headline">
-          <h1 id="hero-title" class="display-xl hero-title hero-h1">
-            {lines.map((line, i) => (
-              <>
-                {i > 0 && ' '}
+  <div class="wrap hero-inner">
+    <div class="hero-copy" data-hero-copy>
+      <span class="hero-sentinel" aria-hidden="true" data-hero-sentinel></span>
+      <p class="label hero-label">{site.descriptorCaps.el}</p>
+      <div class="hero-headline" data-motion="off">
+        <h1 id="hero-title" class="display-xl hero-title hero-h1">
+          {lines.map((line, i) => (
+            <>
+              {i > 0 && ' '}
+              <span class="hero-line">{line}</span>
+            </>
+          ))}
+        </h1>
+        <div class="hero-ghosts" aria-hidden="true">
+          {ghosts.map((g) => (
+            <div class={`display-xl hero-title hero-ghost hero-ghost-${g}`}>
+              {lines.map((line) => (
                 <span class="hero-line">{line}</span>
-              </>
-            ))}
-          </h1>
-          <div class="hero-ghosts" aria-hidden="true">
-            {ghosts.map((g) => (
-              <div class={`display-xl hero-title hero-ghost hero-ghost-${g}`} data-hero-ghost>
-                {lines.map((line) => (
-                  <span class="hero-line">{line}</span>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-        <div class="hero-actions">
-          <a href={routes.quote} class="btn btn-primary">
-            <span>{t('requestQuote')}</span>
-            <Icon name="arrow-right" size={20} />
-          </a>
-          <a href={routes.services} class="btn btn-secondary">
-            {t('ourServices')}
-          </a>
+              ))}
+            </div>
+          ))}
         </div>
       </div>
+      <div class="hero-actions">
+        <a href={routes.quote} class="btn btn-primary">
+          <span>{t('requestQuote')}</span>
+          <Icon name="arrow-right" size={20} />
+        </a>
+        <a href={routes.services} class="btn btn-secondary">
+          {t('ourServices')}
+        </a>
+      </div>
+    </div>
 
-      <div class="hero-foot" aria-hidden="true">
-        <ColorBar tints={4} />
-        <span class="hero-foot-rule"></span>
-        <RegMark size={22} />
-      </div>
+    <div class="hero-foot" aria-hidden="true">
+      <ColorBar tints={4} />
+      <span class="hero-foot-rule"></span>
+      <span class="hero-cue">
+        <span class="hero-cue-label">{capsEl(heroText.el.scrollCue)}</span>
+        <span class="hero-cue-track">
+          <span class="hero-cue-drop"></span>
+        </span>
+      </span>
+      <RegMark size={22} />
     </div>
   </div>
 </section>
@@ -73,63 +91,113 @@ const ghosts = ['c', 'm', 'y'] as const;
 <script>
   import { initHero } from '~/scripts/hero';
 
-  void initHero();
+  initHero();
 </script>
 
 <style>
   @layer components {
+    /*
+     * Shared measures. The arches mark is 840 × 205 (aspect 0.244). Small screens: above the
+     * text, bleeding off the right edge. From 64rem: large at the right, bleeding off the edge.
+     */
     .hero {
-      --hero-y: clamp(1.25rem, 2.5vw, 2.5rem);
-      padding-block: var(--hero-y);
+      --hero-mark-top: calc(var(--header-h) + clamp(1.25rem, 6svh, 3.5rem));
+      --hero-mark-w: min(128vw, (100svh - var(--header-h)) * 1.2);
+      position: relative;
+      display: flex;
+      min-height: 100vh;
+      min-height: 100svh;
       overflow: clip;
     }
 
-    /* The press sheet. Crop marks come from .crop-frame, tightened to stay inside the gutter. */
-    .hero-sheet {
-      --sheet-pad: clamp(1.25rem, 3.2vw, 3rem);
-      --m: clamp(8px, 1.2vw, 16px);
-      --g: clamp(4px, 0.5vw, 7px);
-      display: grid;
-      gap: clamp(1.5rem, 3vw, 2.5rem);
-      padding: var(--sheet-pad);
-    }
-
-    /*
-     * Arches mark: bleeds past the right trim into the gutter and stops at the screen edge. While
-     * the intro moves the plates, anything outside the section is clipped by .hero.
-     */
-    .hero-mark-wrap {
-      position: relative;
-      z-index: 0;
-      margin-left: 16%;
-      margin-right: calc(4px - var(--sheet-pad) - var(--gutter));
+    /* Decorative layer: trim marks, SVG mark and (inserted by the script) the scene canvas. */
+    .hero-stage {
+      position: absolute;
+      inset: 0;
       pointer-events: none;
     }
-    .hero-mark-wrap :global(svg) {
+    .hero-trim {
+      display: none;
+    }
+    .hero-mark {
+      position: absolute;
+      top: var(--hero-mark-top);
+      left: calc(var(--gutter) + 6vw);
+      width: var(--hero-mark-w);
+    }
+    .hero-mark :global(svg) {
       width: 100%;
       height: auto;
       overflow: visible;
     }
-    .hero-mark-wrap :global(.logo-plate[data-plate='y']) {
+    /*
+     * The canvas scrolls with the hero and sits above the header (z-index 40) so the plates can
+     * fly into the header logo. Multiply keeps paper, grain and text untouched: white is neutral.
+     * Nothing between it and the root may create a stacking context, or the blend breaks.
+     */
+    .hero-stage :global(.hero-canvas) {
+      position: absolute;
+      inset: 0;
+      z-index: 45;
+      display: block;
+      width: 100%;
+      height: 100%;
+      mix-blend-mode: multiply;
+      pointer-events: none;
+    }
+    .hero[data-scene='live'] .hero-mark {
+      visibility: hidden;
+    }
+    .hero[data-docked] .hero-stage :global(.hero-canvas) {
+      visibility: hidden;
+    }
+
+    /* SVG plate offsets for the CSS intro, in print order Y, M, C, K. */
+    .hero-mark :global(.logo-plate[data-plate='y']) {
+      --pi: 0;
       --dx: 34px;
       --dy: 24px;
     }
-    .hero-mark-wrap :global(.logo-plate[data-plate='m']) {
+    .hero-mark :global(.logo-plate[data-plate='m']) {
+      --pi: 1;
       --dx: -28px;
       --dy: 18px;
     }
-    .hero-mark-wrap :global(.logo-plate[data-plate='c']) {
+    .hero-mark :global(.logo-plate[data-plate='c']) {
+      --pi: 2;
       --dx: -36px;
       --dy: -20px;
     }
-    .hero-mark-wrap :global(.logo-plate[data-plate='k']) {
+    .hero-mark :global(.logo-plate[data-plate='k']) {
+      --pi: 3;
       --dx: 24px;
       --dy: -26px;
     }
 
+    .hero-inner {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      min-height: 100vh;
+      min-height: 100svh;
+      padding-top: calc(
+        var(--hero-mark-top) + var(--hero-mark-w) * 0.244 + clamp(2rem, 6svh, 3.5rem)
+      );
+      /* Clear of the mobile call/Viber bar. */
+      padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+    }
+
     .hero-copy {
       position: relative;
-      z-index: 1;
+    }
+    .hero-sentinel {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1px;
+      height: 1px;
+      pointer-events: none;
     }
     .hero-label {
       margin-bottom: clamp(1rem, 2vw, 1.75rem);
@@ -164,7 +232,6 @@ const ghosts = ['c', 'm', 'y'] as const;
       position: absolute;
       inset: 0;
       mix-blend-mode: multiply;
-      transform: translate(calc(var(--hl, 0) * var(--gx)), calc(var(--hl, 0) * var(--gy)));
     }
     .hero-ghost-c {
       --gx: -0.06em;
@@ -193,6 +260,7 @@ const ghosts = ['c', 'm', 'y'] as const;
       display: flex;
       align-items: center;
       gap: 1rem;
+      margin-top: clamp(2rem, 6svh, 3.5rem);
       color: var(--color-key);
     }
     .hero-foot-rule {
@@ -200,26 +268,59 @@ const ghosts = ['c', 'm', 'y'] as const;
       height: 1px;
       background-color: var(--color-line);
     }
-
-    /* Intro start state: pre-paint class from BaseLayout, then .is-playing from hero.ts. */
-    :global(html.hero-intro) .hero-mark-wrap :global(.logo-plate),
-    .hero.is-playing .hero-mark-wrap :global(.logo-plate) {
-      --reg: 1;
-      opacity: 0;
-      mix-blend-mode: multiply;
-      transform: translate(calc(var(--reg) * var(--dx)), calc(var(--reg) * var(--dy)));
+    .hero-cue {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
     }
-    /* At the snap the arches switch to the logo's knock-out stacking. */
-    .hero.is-playing.is-registered .hero-mark-wrap :global(.logo-plate) {
-      mix-blend-mode: normal;
+    .hero-cue-label {
+      font-family: var(--font-display);
+      font-size: 0.6875rem;
+      font-weight: 750;
+      line-height: 1;
+      letter-spacing: 0.24em;
+      color: var(--color-muted);
+    }
+    .hero-cue-track {
+      position: relative;
+      width: 1px;
+      height: 2rem;
+      overflow: hidden;
+      background-color: var(--color-line);
+    }
+    .hero-cue-drop {
+      position: absolute;
+      top: 0;
+      left: -1px;
+      width: 3px;
+      height: 0.75rem;
+      background-color: var(--color-key);
+      animation: hero-cue 2.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+    }
+    .hero[data-offscreen] .hero-cue-drop {
+      animation-play-state: paused;
+    }
+
+    /* Intro start state: pre-paint class from BaseLayout. */
+    :global(html.hero-intro) .hero-mark :global(.logo-plate) {
+      opacity: 0;
     }
     :global(html.hero-intro) .hero-ghosts,
-    .hero.is-playing .hero-ghosts {
+    .hero.is-intro .hero-ghosts {
       display: block;
     }
-    :global(html.hero-intro) .hero-ghost,
-    .hero.is-playing .hero-ghost {
-      --hl: 1;
+    :global(html.hero-intro) .hero .hero-ghost {
+      transform: translate(var(--gx), var(--gy));
+    }
+    /* Ghosts converge on the key headline and fade (both intros). */
+    .hero.is-intro .hero-ghost {
+      animation: hero-ghost-in 1.5s both;
+    }
+    /* SVG intro (no WebGL, or the scene was late): plates print in, out of register, then snap. */
+    .hero.is-intro-svg .hero-mark :global(.logo-plate) {
+      mix-blend-mode: multiply;
+      animation: hero-plate-in 1.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+      animation-delay: calc(var(--pi, 0) * 110ms);
     }
 
     @media (min-width: 40rem) {
@@ -227,23 +328,105 @@ const ghosts = ['c', 'm', 'y'] as const;
         flex-direction: row;
         flex-wrap: wrap;
       }
+      /* Crop marks at the four corners of the sheet, under the header band. */
+      .hero-trim {
+        --m: clamp(8px, 1.2vw, 16px);
+        --g: clamp(4px, 0.5vw, 7px);
+        position: absolute;
+        display: block;
+        top: calc(var(--header-h) + 0.75rem);
+        right: var(--gutter);
+        bottom: 0.75rem;
+        left: var(--gutter);
+      }
+    }
+
+    @media (min-width: 48rem) {
+      .hero-inner {
+        padding-bottom: clamp(1.75rem, 4svh, 2.75rem);
+      }
     }
 
     @media (min-width: 64rem) {
-      .hero-sheet {
-        grid-template-rows: 1fr auto;
-        min-height: min(calc(100svh - var(--header-h) - 2 * var(--hero-y)), 62rem);
+      .hero {
+        --hero-mark-top: calc(var(--header-h) + clamp(1.25rem, 7svh, 5rem));
+        --hero-mark-w: min(68vw, (100svh - var(--header-h)) * 1.15);
       }
-      .hero-mark-wrap {
-        position: absolute;
-        top: clamp(2rem, 9%, 6rem);
-        right: max(-9%, calc(4px - var(--gutter)));
-        width: min(64%, calc((100svh - var(--header-h)) * 1.1));
-        margin: 0;
+      .hero-mark {
+        right: -6vw;
+        left: auto;
       }
-      .hero-copy {
-        align-self: end;
+      .hero-inner {
+        padding-top: calc(var(--header-h) + 2rem);
       }
+    }
+
+    /* Wide screens: larger plates so the composition fills the sheet (still above the copy). */
+    @media (min-width: 90rem) {
+      .hero {
+        --hero-mark-w: min(74vw, (100svh - var(--header-h)) * 1.3);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .hero-cue-drop {
+        animation: none;
+        transform: translateY(0.625rem);
+      }
+      /* Reduced motion switched on mid-intro: show the composed state at once. */
+      .hero.is-intro .hero-ghost,
+      .hero.is-intro-svg .hero-mark :global(.logo-plate) {
+        animation: none;
+      }
+      .hero.is-intro .hero-ghosts {
+        display: none;
+      }
+    }
+  }
+
+  @keyframes hero-cue {
+    0% {
+      transform: translateY(-0.75rem);
+    }
+    70%,
+    100% {
+      transform: translateY(2rem);
+    }
+  }
+
+  @keyframes hero-ghost-in {
+    0% {
+      transform: translate(var(--gx), var(--gy));
+      opacity: 1;
+      animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+    }
+    55% {
+      transform: translate(calc(var(--gx) * 0.45), calc(var(--gy) * 0.45));
+      animation-timing-function: cubic-bezier(0.3, 1.5, 0.5, 1);
+    }
+    85% {
+      transform: translate(0, 0);
+      opacity: 1;
+    }
+    100% {
+      transform: translate(0, 0);
+      opacity: 0;
+    }
+  }
+
+  @keyframes hero-plate-in {
+    0% {
+      opacity: 0;
+      transform: translate(var(--dx), var(--dy));
+    }
+    55% {
+      opacity: 1;
+      transform: translate(calc(var(--dx) * 0.3), calc(var(--dy) * 0.3));
+      animation-timing-function: cubic-bezier(0.3, 1.5, 0.5, 1);
+    }
+    100% {
+      opacity: 1;
+      transform: translate(0, 0);
     }
   }
 </style>
