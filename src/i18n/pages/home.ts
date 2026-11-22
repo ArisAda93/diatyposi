@@ -74,21 +74,21 @@ export const homeText = {
         /** Button label by number of chips pressed; {count} is replaced by the number. */
         cta: {
           none: 'Ζητήστε προσφορά',
-          one: 'Ζητήστε προσφορά για 1 προϊόν',
-          many: 'Ζητήστε προσφορά για {count} προϊόντα',
+          one: 'Ζητήστε προσφορά για 1 επιλογή',
+          many: 'Ζητήστε προσφορά για {count} επιλογές',
         },
         /** Announced politely to screen readers after each chip press. */
         status: {
           none: 'Δεν έχετε σημειώσει κάτι ακόμη.',
-          one: 'Σημειώσατε 1 προϊόν.',
-          many: 'Σημειώσατε {count} προϊόντα.',
+          one: 'Σημειώσατε 1 επιλογή.',
+          many: 'Σημειώσατε {count} επιλογές.',
         },
       },
       /** Three modest promises beside the button (no numbers or years). */
       promises: [
         'Σχεδιασμός και εκτύπωση στο ίδιο μέρος, χωρίς να τρέχετε αλλού.',
         'Βλέπετε δοκίμιο και εγκρίνετε πριν τυπωθεί οτιδήποτε.',
-        'Ένας άνθρωπος φροντίζει τη δουλειά σας από την αρχή ως το τέλος.',
+        'Προσωπική εξυπηρέτηση, από την πρώτη ιδέα ως την παράδοση.',
       ],
     },
 

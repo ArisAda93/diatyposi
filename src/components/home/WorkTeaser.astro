@@ -53,11 +53,7 @@ const speeds = ['0', '-0.06', '0.02', '-0.05'];
             <div class="work-plx" data-parallax={speeds[i % 4] ?? '0'}>
               <a href={routes.work} class="work-link" data-tilt>
                 <div class="media media-halftone work-media">
-                  <Photo
-                    image={item.image}
-                    alt={item.text.el.alt}
-                    sizes={sizes[i % 4] ?? '92vw'}
-                  />
+                  <Photo image={item.image} alt={item.text.el.alt} sizes={sizes[i % 4] ?? '92vw'} />
                   {item.standIn && <span class="work-chip">{t('standInLabel')}</span>}
                 </div>
                 <div class="work-cap">

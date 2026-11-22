@@ -90,241 +90,223 @@ const sketchDelay = (seconds: number): string | undefined =>
   aria-hidden="true"
   focusable="false"
 >
-  {
-    show('idea') && (
-      <g class="ij-obj ij-obj-idea">
-        <g transform="rotate(-2 300 300)">
-          <rect class="ij-paper" x="118" y="108" width="364" height="384" />
-          <path class="ij-line ij-draw" pathLength="1" d="M118 108H482V492H118Z" />
-          <path class="ij-line ij-hair ij-draw" pathLength="1" d={rings} />
-        </g>
-        <g transform="translate(436 500) rotate(-24)">
-          <rect class="ij-paper" x="-64" y="-7" width="120" height="14" />
-          <rect class="ij-tint" x="56" y="-7" width="14" height="14" />
-          <path class="ij-ink" d="M-80 -2.2L-86 0L-80 2.2Z" />
-          <path
-            class="ij-line ij-draw"
-            pathLength="1"
-            d="M-64 -7H70V7H-64ZM56 -7V7M-64 -7L-86 0L-64 7"
-          />
-          <path class="ij-line ij-hair ij-draw" pathLength="1" d="M-64 0H56" />
-        </g>
+  {show('idea') && (
+    <g class="ij-obj ij-obj-idea">
+      <g transform="rotate(-2 300 300)">
+        <rect class="ij-paper" x="118" y="108" width="364" height="384" />
+        <path class="ij-line ij-draw" pathLength="1" d="M118 108H482V492H118Z" />
+        <path class="ij-line ij-hair ij-draw" pathLength="1" d={rings} />
       </g>
-    )
-  }
-
-  {
-    show('mark') && (
-      <g class="ij-obj ij-obj-mark">
-        <rect class="ij-paper" x="110" y="100" width="380" height="400" />
-        <path class="ij-line ij-hair ij-draw" pathLength="1" d="M110 100H490V500H110Z" />
-        <path class="ij-line ij-hair ij-draw" pathLength="1" d={cropMarks} />
-        <path
-          class="ij-line ij-hair ij-draw"
-          pathLength="1"
-          d={`${target(300, 82)}${target(300, 518)}`}
-        />
-        {colourBar.map((patch) => (
-          <rect class={patch.cls} x={patch.x} y="466" width="14" height="10" />
-        ))}
-      </g>
-    )
-  }
-
-  {
-    show('card') && (
-      <g class="ij-obj ij-obj-card">
-        <g transform="rotate(8 330 300)">
-          <rect class="ij-tint" x="150" y="200" width="340" height="200" />
-          <path class="ij-line ij-hair ij-draw" pathLength="1" d="M150 200H490V400H150Z" />
-        </g>
-        <rect class="ij-paper" x="130" y="190" width="340" height="220" />
-        <path class="ij-line ij-draw" pathLength="1" d="M130 190H470V410H130Z" />
-        <path class="ij-line ij-hair ij-draw" pathLength="1" d="M300 236V364" />
-        <path class="ij-line ij-bold ij-draw" pathLength="1" d="M318 266H440" />
-        <path
-          class="ij-line ij-hair ij-draw"
-          pathLength="1"
-          d="M318 284H404M318 332H446M318 348H430M318 364H392"
-        />
-      </g>
-    )
-  }
-
-  {
-    show('shirt') && (
-      <g class="ij-obj ij-obj-shirt">
-        <path
-          class="ij-paper"
-          d="M262 128C275 150 325 150 338 128L410 152L470 228L426 258L396 232V500H204V232L174 258L130 228L190 152Z"
-        />
+      <g transform="translate(436 500) rotate(-24)">
+        <rect class="ij-paper" x="-64" y="-7" width="120" height="14" />
+        <rect class="ij-tint" x="56" y="-7" width="14" height="14" />
+        <path class="ij-ink" d="M-80 -2.2L-86 0L-80 2.2Z" />
         <path
           class="ij-line ij-draw"
           pathLength="1"
-          d="M262 128C275 150 325 150 338 128L410 152L470 228L426 258L396 232V500H204V232L174 258L130 228L190 152Z"
+          d="M-64 -7H70V7H-64ZM56 -7V7M-64 -7L-86 0L-64 7"
         />
-        <path
-          class="ij-line ij-hair ij-draw"
-          pathLength="1"
-          d="M254 131C268 162 332 162 346 131M137 219L181 249M463 219L419 249M204 486H396"
-        />
+        <path class="ij-line ij-hair ij-draw" pathLength="1" d="M-64 0H56" />
       </g>
-    )
-  }
+    </g>
+  )}
 
-  {
-    show('sign') && (
-      <g class="ij-obj ij-obj-sign">
-        <rect class="ij-tint" x="100" y="132" width="400" height="390" />
-        <rect class="ij-paper" x="124" y="156" width="352" height="100" />
-        <path class="ij-paper" d="M124 266H476L462 300H138Z" />
-        <rect class="ij-paper" x="136" y="318" width="196" height="184" />
-        <rect class="ij-paper" x="360" y="318" width="104" height="204" />
-        <path
-          class="ij-line ij-draw"
-          pathLength="1"
-          d="M64 522H536M100 522V132H500V522M88 120H512V132H88Z"
-        />
-        <path class="ij-line ij-draw" pathLength="1" d="M124 156H476V256H124Z" />
-        <path class="ij-line ij-draw" pathLength="1" d="M124 266H476L462 300H138Z" />
-        <path class="ij-line ij-hair ij-draw" pathLength="1" d={awningStripes} />
-        <path
-          class="ij-line ij-draw"
-          pathLength="1"
-          d="M136 318H332V502H136ZM128 502H340M234 318V502"
-        />
-        <path
-          class="ij-line ij-hair ij-draw"
-          pathLength="1"
-          d="M156 470L204 350M172 474L212 374M254 470L302 350"
-        />
-        <path class="ij-line ij-draw" pathLength="1" d="M360 522V318H464V522M376 446V470" />
-        <path class="ij-line ij-hair ij-draw" pathLength="1" d="M374 332H450V420H374Z" />
-      </g>
-    )
-  }
+  {show('mark') && (
+    <g class="ij-obj ij-obj-mark">
+      <rect class="ij-paper" x="110" y="100" width="380" height="400" />
+      <path class="ij-line ij-hair ij-draw" pathLength="1" d="M110 100H490V500H110Z" />
+      <path class="ij-line ij-hair ij-draw" pathLength="1" d={cropMarks} />
+      <path
+        class="ij-line ij-hair ij-draw"
+        pathLength="1"
+        d={`${target(300, 82)}${target(300, 518)}`}
+      />
+      {colourBar.map((patch) => (
+        <rect class={patch.cls} x={patch.x} y="466" width="14" height="10" />
+      ))}
+    </g>
+  )}
 
-  {
-    show('gift') && (
-      <g class="ij-obj ij-obj-gift">
-        <path class="ij-paper" d="M190 214V430A100 20 0 0 0 390 430V214Z" />
-        <path class="ij-tint" d="M190 214A100 20 0 1 0 390 214A100 20 0 1 0 190 214Z" />
-        <path
-          class="ij-line ij-draw"
-          pathLength="1"
-          d="M190 214V430A100 20 0 0 0 390 430V214M190 214A100 20 0 1 0 390 214A100 20 0 1 0 190 214"
-        />
-        <path
-          class="ij-line ij-draw"
-          pathLength="1"
-          d="M390 252C446 252 458 276 458 314C458 356 432 380 390 384M390 278C424 278 434 292 434 315C434 340 420 356 390 358"
-        />
-        <path
-          class="ij-line ij-hair ij-draw"
-          pathLength="1"
-          d="M202 216A88 15 0 1 0 378 216A88 15 0 1 0 202 216M150 462H430"
-        />
-        <path
-          class="ij-line ij-hair ij-draw"
-          pathLength="1"
-          d="M262 176C250 154 274 142 262 118M300 180C288 158 312 146 300 122M338 176C326 154 350 142 338 118"
-        />
+  {show('card') && (
+    <g class="ij-obj ij-obj-card">
+      <g transform="rotate(8 330 300)">
+        <rect class="ij-tint" x="150" y="200" width="340" height="200" />
+        <path class="ij-line ij-hair ij-draw" pathLength="1" d="M150 200H490V400H150Z" />
       </g>
-    )
-  }
+      <rect class="ij-paper" x="130" y="190" width="340" height="220" />
+      <path class="ij-line ij-draw" pathLength="1" d="M130 190H470V410H130Z" />
+      <path class="ij-line ij-hair ij-draw" pathLength="1" d="M300 236V364" />
+      <path class="ij-line ij-bold ij-draw" pathLength="1" d="M318 266H440" />
+      <path
+        class="ij-line ij-hair ij-draw"
+        pathLength="1"
+        d="M318 284H404M318 332H446M318 348H430M318 364H392"
+      />
+    </g>
+  )}
 
-  {
-    show('social') && (
-      <g class="ij-obj ij-obj-social">
-        <path
-          class="ij-paper"
-          d="M230 84H370A26 26 0 0 1 396 110V490A26 26 0 0 1 370 516H230A26 26 0 0 1 204 490V110A26 26 0 0 1 230 84Z"
-        />
-        <rect class="ij-tint" x="216" y="170" width="168" height="168" />
-        <path
-          class="ij-line ij-draw"
-          pathLength="1"
-          d="M230 84H370A26 26 0 0 1 396 110V490A26 26 0 0 1 370 516H230A26 26 0 0 1 204 490V110A26 26 0 0 1 230 84Z"
-        />
-        <path
-          class="ij-line ij-hair ij-draw"
-          pathLength="1"
-          d="M216 112V488A14 14 0 0 0 230 502H370A14 14 0 0 0 384 488V112A14 14 0 0 0 370 98H230A14 14 0 0 0 216 112Z"
-        />
-        <path class="ij-line ij-draw" pathLength="1" d="M284 91H316" />
-        <path
-          class="ij-line ij-hair ij-draw"
-          pathLength="1"
-          d="M224 146A12 12 0 1 0 248 146A12 12 0 1 0 224 146M258 153H300M216 170H384M216 338H384"
-        />
-        <path class="ij-line ij-bold ij-draw" pathLength="1" d="M258 141H330M272 492H328" />
-        <path
-          class="ij-m ij-multiply"
-          d="M232 372C219 363 220 351 227 351C230 351 232 354 232 356C232 354 234 351 237 351C244 351 245 363 232 372Z"
-        />
-        <path
-          class="ij-line ij-hair ij-draw"
-          pathLength="1"
-          d="M232 372C219 363 220 351 227 351C230 351 232 354 232 356C232 354 234 351 237 351C244 351 245 363 232 372ZM254 354H274V367H264L258 373V367H254ZM222 392H370M222 406H346M222 420H300"
-        />
-      </g>
-    )
-  }
+  {show('shirt') && (
+    <g class="ij-obj ij-obj-shirt">
+      <path
+        class="ij-paper"
+        d="M262 128C275 150 325 150 338 128L410 152L470 228L426 258L396 232V500H204V232L174 258L130 228L190 152Z"
+      />
+      <path
+        class="ij-line ij-draw"
+        pathLength="1"
+        d="M262 128C275 150 325 150 338 128L410 152L470 228L426 258L396 232V500H204V232L174 258L130 228L190 152Z"
+      />
+      <path
+        class="ij-line ij-hair ij-draw"
+        pathLength="1"
+        d="M254 131C268 162 332 162 346 131M137 219L181 249M463 219L419 249M204 486H396"
+      />
+    </g>
+  )}
+
+  {show('sign') && (
+    <g class="ij-obj ij-obj-sign">
+      <rect class="ij-tint" x="100" y="132" width="400" height="390" />
+      <rect class="ij-paper" x="124" y="156" width="352" height="100" />
+      <path class="ij-paper" d="M124 266H476L462 300H138Z" />
+      <rect class="ij-paper" x="136" y="318" width="196" height="184" />
+      <rect class="ij-paper" x="360" y="318" width="104" height="204" />
+      <path
+        class="ij-line ij-draw"
+        pathLength="1"
+        d="M64 522H536M100 522V132H500V522M88 120H512V132H88Z"
+      />
+      <path class="ij-line ij-draw" pathLength="1" d="M124 156H476V256H124Z" />
+      <path class="ij-line ij-draw" pathLength="1" d="M124 266H476L462 300H138Z" />
+      <path class="ij-line ij-hair ij-draw" pathLength="1" d={awningStripes} />
+      <path
+        class="ij-line ij-draw"
+        pathLength="1"
+        d="M136 318H332V502H136ZM128 502H340M234 318V502"
+      />
+      <path
+        class="ij-line ij-hair ij-draw"
+        pathLength="1"
+        d="M156 470L204 350M172 474L212 374M254 470L302 350"
+      />
+      <path class="ij-line ij-draw" pathLength="1" d="M360 522V318H464V522M376 446V470" />
+      <path class="ij-line ij-hair ij-draw" pathLength="1" d="M374 332H450V420H374Z" />
+    </g>
+  )}
+
+  {show('gift') && (
+    <g class="ij-obj ij-obj-gift">
+      <path class="ij-paper" d="M190 214V430A100 20 0 0 0 390 430V214Z" />
+      <path class="ij-tint" d="M190 214A100 20 0 1 0 390 214A100 20 0 1 0 190 214Z" />
+      <path
+        class="ij-line ij-draw"
+        pathLength="1"
+        d="M190 214V430A100 20 0 0 0 390 430V214M190 214A100 20 0 1 0 390 214A100 20 0 1 0 190 214"
+      />
+      <path
+        class="ij-line ij-draw"
+        pathLength="1"
+        d="M390 252C446 252 458 276 458 314C458 356 432 380 390 384M390 278C424 278 434 292 434 315C434 340 420 356 390 358"
+      />
+      <path
+        class="ij-line ij-hair ij-draw"
+        pathLength="1"
+        d="M202 216A88 15 0 1 0 378 216A88 15 0 1 0 202 216M150 462H430"
+      />
+      <path
+        class="ij-line ij-hair ij-draw"
+        pathLength="1"
+        d="M262 176C250 154 274 142 262 118M300 180C288 158 312 146 300 122M338 176C326 154 350 142 338 118"
+      />
+    </g>
+  )}
+
+  {show('social') && (
+    <g class="ij-obj ij-obj-social">
+      <path
+        class="ij-paper"
+        d="M230 84H370A26 26 0 0 1 396 110V490A26 26 0 0 1 370 516H230A26 26 0 0 1 204 490V110A26 26 0 0 1 230 84Z"
+      />
+      <rect class="ij-tint" x="216" y="170" width="168" height="168" />
+      <path
+        class="ij-line ij-draw"
+        pathLength="1"
+        d="M230 84H370A26 26 0 0 1 396 110V490A26 26 0 0 1 370 516H230A26 26 0 0 1 204 490V110A26 26 0 0 1 230 84Z"
+      />
+      <path
+        class="ij-line ij-hair ij-draw"
+        pathLength="1"
+        d="M216 112V488A14 14 0 0 0 230 502H370A14 14 0 0 0 384 488V112A14 14 0 0 0 370 98H230A14 14 0 0 0 216 112Z"
+      />
+      <path class="ij-line ij-draw" pathLength="1" d="M284 91H316" />
+      <path
+        class="ij-line ij-hair ij-draw"
+        pathLength="1"
+        d="M224 146A12 12 0 1 0 248 146A12 12 0 1 0 224 146M258 153H300M216 170H384M216 338H384"
+      />
+      <path class="ij-line ij-bold ij-draw" pathLength="1" d="M258 141H330M272 492H328" />
+      <path
+        class="ij-m ij-multiply"
+        d="M232 372C219 363 220 351 227 351C230 351 232 354 232 356C232 354 234 351 237 351C244 351 245 363 232 372Z"
+      />
+      <path
+        class="ij-line ij-hair ij-draw"
+        pathLength="1"
+        d="M232 372C219 363 220 351 227 351C230 351 232 354 232 356C232 354 234 351 237 351C244 351 245 363 232 372ZM254 354H274V367H264L258 373V367H254ZM222 392H370M222 406H346M222 420H300"
+      />
+    </g>
+  )}
 
   <g
     class="ij-mark"
     style={stage ? markVars : undefined}
     transform={stage ? undefined : placeAttr(step)}
   >
-    {
-      showSketch && (
-        <g class="ij-sketch">
-          <path class="ij-line ij-hair ij-guide" d="M-104 -28H104M0 -100V44" />
-          <path
-            class="ij-line ij-draw"
-            pathLength="1"
-            style={sketchDelay(0)}
-            d="M-52 -42A36 36 0 1 1 20 -42A36 36 0 1 1 -52 -42M-49 -48A35 37 -8 0 1 18 -35"
-          />
-          <path
-            class="ij-line ij-draw"
-            pathLength="1"
-            style={sketchDelay(0.35)}
-            d="M-20 -56H49M44 -61V7M50 2H-19M-14 8V-61"
-          />
-          <path
-            class="ij-line ij-draw"
-            pathLength="1"
-            style={sketchDelay(0.7)}
-            d="M-46 22A46 46 0 0 1 46 22M22 22A22 22 0 0 0 -22 22M-52 22H-18M18 22H52"
-          />
-          <text class="ij-sketch-word" x="0" y="58" text-anchor="middle">
-            {name}
-          </text>
-          <path
-            class="ij-line ij-draw"
-            pathLength="1"
-            style={sketchDelay(1.1)}
-            d="M-74 70C-30 75 30 66 76 70"
-          />
+    {showSketch && (
+      <g class="ij-sketch">
+        <path class="ij-line ij-hair ij-guide" d="M-104 -28H104M0 -100V44" />
+        <path
+          class="ij-line ij-draw"
+          pathLength="1"
+          style={sketchDelay(0)}
+          d="M-52 -42A36 36 0 1 1 20 -42A36 36 0 1 1 -52 -42M-49 -48A35 37 -8 0 1 18 -35"
+        />
+        <path
+          class="ij-line ij-draw"
+          pathLength="1"
+          style={sketchDelay(0.35)}
+          d="M-20 -56H49M44 -61V7M50 2H-19M-14 8V-61"
+        />
+        <path
+          class="ij-line ij-draw"
+          pathLength="1"
+          style={sketchDelay(0.7)}
+          d="M-46 22A46 46 0 0 1 46 22M22 22A22 22 0 0 0 -22 22M-52 22H-18M18 22H52"
+        />
+        <text class="ij-sketch-word" x="0" y="58" text-anchor="middle">
+          {name}
+        </text>
+        <path
+          class="ij-line ij-draw"
+          pathLength="1"
+          style={sketchDelay(1.1)}
+          d="M-74 70C-30 75 30 66 76 70"
+        />
+      </g>
+    )}
+    {showPlates &&
+      plates.map((p) => (
+        <g class={`ij-plate ij-plate-${p.id}`} style={plateStyle(p)}>
+          {p.id === 'y' && <circle class="ij-y" cx="-16" cy="-42" r="36" />}
+          {p.id === 'm' && <path class="ij-m" d={ARCH_M} />}
+          {p.id === 'c' && <rect class="ij-c" x="-14" y="-56" width="58" height="58" />}
+          {p.id === 'k' && (
+            <text class="ij-k ij-word" x="0" y="58" text-anchor="middle">
+              {name}
+            </text>
+          )}
         </g>
-      )
-    }
-    {
-      showPlates &&
-        plates.map((p) => (
-          <g class={`ij-plate ij-plate-${p.id}`} style={plateStyle(p)}>
-            {p.id === 'y' && <circle class="ij-y" cx="-16" cy="-42" r="36" />}
-            {p.id === 'm' && <path class="ij-m" d={ARCH_M} />}
-            {p.id === 'c' && <rect class="ij-c" x="-14" y="-56" width="58" height="58" />}
-            {p.id === 'k' && (
-              <text class="ij-k ij-word" x="0" y="58" text-anchor="middle">
-                {name}
-              </text>
-            )}
-          </g>
-        ))
-    }
+      ))}
   </g>
 </svg>
 

@@ -55,9 +55,7 @@ const sizes = '(min-width: 1024px) min(35vw, 520px), (min-width: 768px) 46vw, ca
   data-bg-accent={ink}
 >
   <div class="svcp-ghost" aria-hidden="true">
-    <span class="svcp-ghost-num" data-parallax="0.24">
-      {num}
-    </span>
+    <span class="svcp-ghost-num" data-parallax="0.24" data-num={num}></span>
   </div>
   <span class="svcp-rule" aria-hidden="true" data-motion="off" data-svcp-rule></span>
 
@@ -111,8 +109,6 @@ const sizes = '(min-width: 1024px) min(35vw, 520px), (min-width: 768px) 46vw, ca
       position: relative;
       isolation: isolate;
       padding-block: clamp(3.5rem, 2rem + 5vw, 7rem);
-      /* Below 64rem the sticky chip bar sits under the header: land anchors below both. */
-      scroll-margin-top: 3rem;
     }
     /* `--svcp-stroke` is the giant number's outline, `--svcp-dots` the under-plate's strength:
        yellow is light on paper and stays full, the darker inks are held back behind the text. */
@@ -168,6 +164,11 @@ const sizes = '(min-width: 1024px) min(35vw, 520px), (min-width: 768px) 46vw, ca
       font-variant-numeric: tabular-nums;
       color: transparent;
       -webkit-text-stroke: 2px var(--svcp-stroke);
+    }
+    /* Drawn from `data-num`, not text: an outline-only numeral is decoration, so it stays out of
+       the accessibility tree and out of contrast checks. */
+    .svcp-ghost-num::before {
+      content: attr(data-num);
     }
 
     .svcp-folio {
@@ -332,12 +333,6 @@ const sizes = '(min-width: 1024px) min(35vw, 520px), (min-width: 768px) 46vw, ca
       }
       .svcp-body {
         padding-top: 1.5rem;
-      }
-    }
-
-    @media (min-width: 64rem) {
-      .svcp {
-        scroll-margin-top: 0;
       }
     }
   }

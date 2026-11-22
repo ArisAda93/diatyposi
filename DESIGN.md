@@ -6,7 +6,7 @@ The site is built the way a print job is made. Every visual device comes from th
 
 | Device                          | Where it is used                                        | Rule                                                                                                          |
 | ------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| **CMYK overprint**              | Logo arches, process poster, 404, icon plates           | Overlapping inks use `mix-blend-mode: multiply`, so C+M makes blue, M+Y red, C+Y green, as on press.          |
+| **CMYK overprint**              | Logo arches, journey mark, 404, icon plates             | Overlapping inks use `mix-blend-mode: multiply`, so C+M makes blue, M+Y red, C+Y green, as on press.          |
 | **Crop and registration marks** | Hero sheet corners, framed images, section starts       | Thin key-black hairlines, never more than one framed object per screen.                                       |
 | **Halftone dots**               | Image hover reveal, statement section, about-photo slot | CSS radial-gradient dots, low contrast, masked.                                                               |
 | **Paper**                       | Every light section                                     | Warm off-white with a faint fixed grain (SVG noise, 3.5% opacity). Dark sections read as solid key-black ink. |
@@ -15,8 +15,8 @@ The site is built the way a print job is made. Every visual device comes from th
 
 **Signature moments.** (Round 1 limited the site to two; the owner's round-2 direction makes the whole site feel alive: see §7.)
 
-1. **Hero (home).** Round 2 (§7): a WebGL scene (OGL, loaded after first paint) of the four arches as extruded CMYK plates. Overprint blending, an exploded stack, pointer parallax and an ambient arch field across the whole sheet. Intro once per session (`sessionStorage`): the plates arrive from depth out of register and snap into the stack while the headline's C/M/Y ghosts converge. The headline is painted at first paint (LCP-safe). On scroll the plates collapse into register and dock into the header logo. Without WebGL, under reduced motion or before load, the static SVG mark shows (a short CSS intro plays on it where motion is allowed). Reduced motion: the composed state, no animation.
-2. **Process (home).** A sticky poster builds plate by plate (Y → M → C → K) while four steps scroll past (GSAP ScrollTrigger, no pinning or scroll-jacking: the poster is CSS `position: sticky`). Reduced motion or no JS: all plates printed, steps static.
+1. **Hero (home).** Round 3 (§8): a WebGL scene (OGL, loaded after first paint) of the four arches as extruded CMYK plates running the metamorphosis loop (mark → registration target → wave → mark), with overprint blending and pointer parallax, over the site-wide living background. Intro once per session (`sessionStorage`): the plates arrive from depth out of register and snap into the stack while the headline's C/M/Y ghosts converge. The headline is painted at first paint (LCP-safe). On scroll the plates return to the mark and hand over to the header logo. Without WebGL, under reduced motion or before load, the static SVG mark shows (a short CSS intro plays on it where motion is allowed). Reduced motion: the composed state, no animation.
+2. **Μία ιδέα. Παντού. (home, round 3).** A sample mark is sketched, printed and placed on product after product on a CSS-sticky stage while the steps scroll past (no pinning or scroll-jacking). Reduced motion or no JS: every step shows its finished illustration.
 
 Round 1 kept everything else quiet. Round 2 replaces that with a site-wide motion layer (§7). Still no scroll-jacking, no pinning that traps the visitor, and no custom cursor.
 
@@ -92,14 +92,13 @@ Hover: buttons get a CMY plate shadow that collapses into register on press; lin
 
 ### Αρχική
 
-1. **Hero (one screen).** A press sheet with crop marks at its four corners. The arches mark sits large at the right, overlapping the sheet edge; the red spaced label “ΔΙΑΦΗΜΙΣΗ – ΕΚΤΥΠΩΣΕΙΣ” above a two-line h1 “Η ιδέα σας… / γίνεται δημιουργία!”, left aligned over 8 columns. Two buttons. A colour bar along the sheet foot.
-2. **Intro.** Asymmetric: the owner's paragraph set large (lead) across columns 4–11, a small red label on the left column.
-3. **Services showcase** (round 2, §7). h2 left, link right. Desktop: a sticky 3D “plate” previews the active service (photo, icon, number, lead sentence). The change between services is a C/M/Y registration transition. Beside it, an index of the nine services as large typographic rows linking to their chapters on Υπηρεσίες. Active row: hover, keyboard focus, or the row at the viewport centre while scrolling. Phones: rows with thumbnails.
-4. **Process (moment 2).** Two columns: sticky poster on the left (builds Y → M → C → K), four numbered steps on the right, each a screen-height block on desktop. Plate readout chips (Y M C K) under the poster.
-5. **Selected work.** An editorial, staggered set of four images of different sizes with category labels, “Δείτε όλα τα έργα”.
-6. **Values strip.** The owner's paragraph “Για εμάς…” on the left; on the right four rows, each a colour-bar patch (C, M, Y, K) and one value in display type.
-7. **Statement.** Full-bleed ink section, halftone arches in the background, the tagline in display-l paper type.
-8. **Contact band.** Yellow band, ink text, a short line and two buttons (offer, call).
+1. **Hero (one screen, round 3 §8).** One composed block on the left 7 of 12 columns: the red label, the two-line h1 “Η ιδέα σας… / γίνεται δημιουργία!”, a registration hairline, the owner's intro paragraph as its lead, two buttons and “Γνωρίστε μας”. On the right, the arches in motion (the metamorphosis loop). Crop marks, a colour bar and the scroll cue at the sheet foot. Phones: the art above the copy.
+2. **Services showcase** (round 2, §7). h2 left, link right. Desktop: a sticky 3D “plate” previews the active service (photo, icon, number, lead sentence) in that service's ink. The change between services is a C/M/Y registration transition. Beside it, an index of the nine services, in the owner's order, as large typographic rows linking to their chapters on Υπηρεσίες. Phones: rows with thumbnails.
+3. **Μία ιδέα. Παντού. (round 3 §8).** Replaces the process section. A sticky stage on desktop where one sample mark (“Η επωνυμία σας”) is sketched, printed plate by plate and then lands on a business card, a T-shirt, a shop sign, a mug and a social post, while seven short steps scroll past, each linking to its service. It closes with “Τι θα θέλατε να φτιάξουμε;”: toggle chips that build a quote link with every chosen service pre-selected, and three promises. Phones, reduced motion and no JS: each step shows its finished illustration.
+4. **Selected work.** An editorial, staggered set of four images of different sizes on their own parallax depths, with numbered captions, “Δείτε όλα τα έργα”.
+5. **Values strip.** The owner's paragraph “Για εμάς…” on the left; on the right four rows, each a colour-bar patch (C, M, Y, K) that prints in on scroll, and one value in display type.
+6. **Statement.** Full-bleed ink section, halftone arches in the background, the tagline in display-l paper type.
+7. **Contact band.** Yellow band, ink text, a short line and two buttons (offer, call).
 
 ### Υπηρεσίες
 
@@ -149,3 +148,14 @@ The owner asked for one unified header and hero, a full-hero motion graphic buil
 ## 8. Notes on skills
 
 The `design-taste-frontend` skill was loaded. Its craft rules were followed (left-aligned layouts, one system, real hover layer, no fade-on-scroll, honest copy, stand-ins listed). Where it conflicts with this brief, the brief wins: the brief asks for grain, halftone, crop marks and CMYK overprint (the skill reserves effects for tech sites), visible stand-in labels, and placeholder contact values.
+
+## 8. Round 3: the living site
+
+The owner asked for a reworked hero motion graphic built from the logo shapes, one unified hero instead of a hero plus an intro, a background that feels alive and three-dimensional on every page, professional parallax, a replacement for the process section, the services in the client's order, and more polish and feedback everywhere.
+
+- **Hero metamorphosis.** The four extruded plates run an 18 s loop: the logo mark (exploded in depth, breathing) → the registration target (the four arches turn to 0°, 90°, 180° and 270° and close into a ring with crosshair hairlines) → a wave (plates side by side, alternately upright and inverted) → back to the mark with the registration snap. Moves are staggered in print order Y, M, C, K and lift off the sheet mid-move. On scroll the plates return to the mark and hand over to the header logo, whose arches print in. Static SVG mark for reduced motion and no WebGL. Tuning: `src/scripts/hero-scene/choreography.ts` and the top of `scene.ts`.
+- **Unified hero.** The owner's intro is the headline's lead inside the hero; the separate intro section is gone.
+- **Living background (every page).** A fixed WebGL canvas behind all content (`LivingBackground.astro`, `src/scripts/living-background/`): a press sheet receding in perspective, printed with small arch marks on a halftone screen. Slow waves lift and grow them, the sheet dollies with the scroll, leans with the pointer, and swells around it. The ink balance follows the section in view (`data-bg-accent="cyan|magenta|yellow|key"`). Every ink's alpha is capped so that text keeps AA contrast even on a fully covered pixel. Light sections paint no background so the sheet shows; ink and yellow sections stay opaque. No WebGL: paper and grain. Reduced motion: one still frame.
+- **Parallax.** `data-parallax="<speed>"` (−0.4…0.4; positive recedes, negative leads) on decorative layers on every page, driven by the CSS `translate` property so it composes with other transforms. Off under reduced motion.
+- **Feedback.** Buttons lift on hover and focus and press in, with a C/M/Y ink ripple from the pointer; links draw their underline; toggles snap; the header nav draws a registration underline and marks the current page with a CMYK rule; the mobile menu opens with a registration wipe; form fields show focus, valid and invalid states; page changes use a short cross-document view transition. All off under reduced motion.
+- **Services order** (client's request): διαφημιστικά δώρα, μπλουζάκια και ρουχισμός, γραφιστικός σχεδιασμός, banners, επιγραφές, social media, ψηφιακές και offset εκτυπώσεις, κάρτες και έντυπα, προσκλητήρια. Every list follows `services` in `src/data/site.ts`.

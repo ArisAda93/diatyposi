@@ -12,10 +12,12 @@
  *   shown at first paint, without JS, with reduced motion and without WebGL. Its aspect ratio is
  *   the box every pose of the live scene fits in (hero-scene/choreography.ts ART, 900 × 620
  *   raster units, the 840-wide mark centred in it), so the mark, the ring and the wave are never
- *   cropped and never reach the copy. Desktop: the right column. Below 64rem: above the copy.
+ *   cropped and never reach the copy. Desktop: the right column, bleeding into the gutter.
+ *   Below 64rem: above the copy, capped by the screen height.
  * - The stage (decorative, aria-hidden) fills the hero; src/scripts/hero.ts inserts the scene's
  *   canvas there after first paint (src/scripts/hero-scene/). Its first frame draws the arches
- *   exactly where the SVG has them, then it fades in over it.
+ *   exactly where the SVG has them, then it fades in over it. On scroll the plates fade out in
+ *   the art column while the header logo's arches pulse in register (the rules are below).
  * - The sheet's crop-marked trim recedes slightly on scroll (`data-parallax`). The foot carries
  *   the colour bar, the scroll cue and a registration mark.
  *
@@ -134,15 +136,15 @@ const ghosts = ['c', 'm', 'y'] as const;
       display: none;
     }
     /*
-     * The canvas scrolls with the hero and sits above the header (z-index 40) so the plates can
-     * fly into the header logo. Multiply keeps paper, background, grain and text untouched: white
-     * is neutral. Nothing between it and the root may create a stacking context, or the blend
+     * The canvas scrolls with the hero and sits under the header (z-index 40): the plates never
+     * draw over the nav. Multiply keeps paper, background, grain and text untouched: white is
+     * neutral. Nothing between it and the root may create a stacking context, or the blend
      * breaks.
      */
     .hero-stage :global(.hero-canvas) {
       position: absolute;
       inset: 0;
-      z-index: 45;
+      z-index: 1;
       display: block;
       width: 100%;
       height: 100%;
@@ -153,35 +155,59 @@ const ghosts = ['c', 'm', 'y'] as const;
       visibility: hidden;
     }
 
+    /*
+     * Hand-off (hero-scene/scene.ts): the header logo's arches are always shown. While the hero
+     * plates fade out in the art column, they pulse out of register and snap back into it:
+     * --dock-reg is 0 at the top, rises mid hand-off and returns to 0 (with the small overshoot of
+     * --ease-snap) as the hero plates finish fading (choreography.ts registrationPulse). Offsets
+     * are in the logo's SVG units (about 4 px); the key plate stays put, as on press. Only with
+     * the live scene (data-scene), never under reduced motion. `transform` composes with the
+     * motion layer's `translate` on the same plates.
+     */
+    @media (prefers-reduced-motion: no-preference) {
+      :global(.site-header[data-scene] .site-header-logo .logo-plate-c) {
+        transform: translate(calc(var(--dock-reg, 0) * -48px), calc(var(--dock-reg, 0) * -20px));
+      }
+      :global(.site-header[data-scene] .site-header-logo .logo-plate-m) {
+        transform: translate(calc(var(--dock-reg, 0) * 40px), calc(var(--dock-reg, 0) * -30px));
+      }
+      :global(.site-header[data-scene] .site-header-logo .logo-plate-y) {
+        transform: translate(calc(var(--dock-reg, 0) * -18px), calc(var(--dock-reg, 0) * 42px));
+      }
+    }
+
     .hero-inner {
       position: relative;
       display: flex;
       flex-direction: column;
       min-height: 100vh;
       min-height: 100svh;
-      padding-top: calc(var(--header-h) + clamp(0.25rem, 2svh, 1.25rem));
+      padding-top: calc(var(--header-h) + clamp(0.25rem, 1svh, 0.75rem));
       /* Clear of the mobile call/Viber bar. */
       padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
     }
 
-    /* Mobile and tablet: art on top, copy below. */
+    /* Mobile and tablet: art on top, copy right under it. */
     .hero-grid {
       display: grid;
       flex: 1;
       grid-template-columns: minmax(0, 1fr);
-      align-content: center;
-      row-gap: clamp(1rem, 3svh, 2rem);
+      align-content: start;
+      row-gap: clamp(0.75rem, 2svh, 1.25rem);
     }
 
     /*
      * Art box: 900 × 620 raster units (choreography.ts ART), the 840-wide mark centred in it.
-     * Every pose of the scene stays inside it.
+     * Every pose of the scene stays inside it. Phones: at the right, at most a quarter of the
+     * screen below the header tall, so the label, headline, intro and first action fit above the
+     * call bar, and short landscape screens never cut a pose.
      */
     .hero-art {
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 100%;
+      justify-self: end;
+      width: min(100%, (100svh - var(--header-h)) * 0.25 * 900 / 620);
       aspect-ratio: 900 / 620;
     }
     .hero-mark {
@@ -404,10 +430,9 @@ const ghosts = ['c', 'm', 'y'] as const;
         flex-direction: row;
         flex-wrap: wrap;
       }
-      /* Tablets: the art sits at the right, above the copy. */
+      /* Tablets and landscape phones: larger, capped by width and by the screen height. */
       .hero-art {
-        justify-self: end;
-        max-width: 36rem;
+        width: min(100%, 36rem, (100svh - var(--header-h)) * 0.45 * 900 / 620);
       }
       /* Crop marks at the four corners of the sheet, under the header band. */
       .hero-trim {
@@ -430,16 +455,19 @@ const ghosts = ['c', 'm', 'y'] as const;
     }
 
     /*
-     * Desktop: copy in the left seven twelfths, art in the right five, both vertically centred.
-     * The headline is sized to its column so it keeps two lines (the longer line is about 8.6 em).
-     * The art also shrinks on short viewports so the copy and the foot keep their room.
+     * Desktop: copy in the left 6.5 twelfths, art in the right 5.5. The block is centred
+     * vertically between the header and the foot (equal gaps above and below), and the art's
+     * centre lines up with the copy's. The art fills its column and bleeds into the right gutter;
+     * it shrinks on short viewports so the copy and the foot keep their room. The headline is
+     * sized to its column so it keeps two lines (the longer line is about 8.6 em).
      */
     @media (min-width: 64rem) {
       .hero-inner {
-        padding-top: calc(var(--header-h) + clamp(1rem, 4svh, 2.5rem));
+        padding-top: calc(var(--header-h) + clamp(1.5rem, 4svh, 3rem));
       }
       .hero-grid {
-        grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+        grid-template-columns: minmax(0, 6.5fr) minmax(0, 5.5fr);
+        align-content: center;
         align-items: center;
         column-gap: calc(var(--grid-gap) * 2);
       }
@@ -451,11 +479,11 @@ const ghosts = ['c', 'm', 'y'] as const;
       .hero-art {
         grid-row: 1;
         grid-column: 2;
-        width: min(100%, (100svh - var(--header-h) - 10rem) * 900 / 620);
-        max-width: none;
+        width: min(100% + var(--gutter), (100svh - var(--header-h) - 10rem) * 900 / 620);
+        margin-right: calc(-1 * var(--gutter));
       }
       .hero .hero-title {
-        font-size: clamp(2.5rem, 6vw - 0.4rem, 5.5rem);
+        font-size: clamp(2.5rem, 5.6vw - 0.3rem, 5.25rem);
       }
     }
 

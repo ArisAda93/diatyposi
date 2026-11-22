@@ -1,18 +1,14 @@
 /**
  * Small, pure helpers for the hero scene: easing (including CSS cubic-bezier curves),
  * interpolation and the mapping from the logo's raster space (the coordinates of ARCH in
- * logo-paths.ts) to CSS pixels inside an <svg> box. No DOM access, so the docking maths can be
- * unit tested.
+ * logo-paths.ts) to CSS pixels inside an <svg> box, and the scroll hand-off to the header logo.
+ * No DOM access, so it can be unit tested.
  */
 
 export const clamp = (value: number, min = 0, max = 1): number =>
   Math.min(max, Math.max(min, value));
 
 export const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
-
-/** Geometric interpolation, for scales: halfway between 1 and 4 is 2, not 2.5. */
-export const lerpLog = (a: number, b: number, t: number): number =>
-  a > 0 && b > 0 ? a * Math.pow(b / a, t) : lerp(a, b, t);
 
 export const smoothstep = (edge0: number, edge1: number, x: number): number => {
   const t = clamp((x - edge0) / (edge1 - edge0));
@@ -127,73 +123,61 @@ export const placeInBox = (box: Box, viewBox: ViewBox, px: number, py: number): 
   };
 };
 
-/**
- * Scroll distance over which the plates travel into the header logo. It ends before the hero's
- * bottom edge reaches the header, so the canvas (which scrolls with the hero) still covers the
- * header logo when the arches dock.
- */
-export const dockDistance = (heroHeight: number, headerBottom: number): number =>
-  Math.max(1, Math.min(heroHeight * 0.7, heroHeight - headerBottom - 24));
-
-/** Scroll progress of the docking move, 0 at the top of the hero, 1 once docked. */
+/** Scroll progress of the hand-off, 0 at the top of the hero, 1 once the plates are gone. */
 export const dockProgress = (scrolled: number, distance: number): number =>
   distance > 0 ? clamp(scrolled / distance) : 1;
 
-/** Progress points of the docking path (see dockPath). */
-export const DOCK_PHASES = {
-  /** Travel left, shrink and settle below the header band by here. */
-  approach: 0.6,
-  /** Wait under the logo slot until here, then rise into it. */
-  rise: 0.85,
-} as const;
+/** Shortest and longest hand-off (px; the longest as a share of the viewport height). */
+export const HANDOFF_DISTANCE = { min: 120, maxShare: 0.5, squeeze: 0.9 } as const;
 
-/** Scale at the waypoint under the logo, relative to the docked (header logo) scale. */
-const WAYPOINT_SCALE = 1.6;
-
-export interface DockPathInput {
-  /** Plates at rest, in viewport px with the hero at the top of the viewport. */
-  rest: Placement;
-  /** Header logo arches, in viewport px. */
-  dock: Placement;
+export interface HandoffInput {
+  /** Top and bottom of the plates in the mark pose at rest (viewport px, hero at the top). */
+  top: number;
+  bottom: number;
   /** Lowest edge of the header band the plates must stay below (header bottom + margin), px. */
   bandBottom: number;
-  /** Half-height of the plates in raster units, including slack for tilt and misregistration. */
-  extent: number;
+  /**
+   * Top of the hero copy at rest, less the gap kept above it (viewport px), when the copy sits
+   * below the art (phones and tablets); null when it sits beside it (desktop).
+   */
+  copyTop: number | null;
+  viewportHeight: number;
 }
 
 /**
- * Where the plates are (viewport px and scale) at docking progress p, 0–1. The path never crosses
- * the header band before it reaches the logo slot:
- *  1. 0 → approach: they travel left to the x of the logo arches and shrink early (ease-out) to
- *     WAYPOINT_SCALE × the logo scale, while their top edge is held below `bandBottom`;
- *  2. approach → rise: they wait directly under the logo slot (the page keeps scrolling under them);
- *  3. rise → 1: they rise into the slot and shrink to the exact logo size.
+ * Scroll distance of the hand-off (the plates fade out in the art column while the header logo's
+ * arches pulse in register). The plates scroll with the page, so the fade ends about when their
+ * top would reach the header band (never shorter than HANDOFF_DISTANCE.min, never longer than a
+ * share of the viewport). When the copy sits below the art, it also ends before the room between
+ * the band and the rising copy gets smaller than the plates (`guardY` would have to choose).
  */
-export const dockPath = (p: number, input: DockPathInput): Placement => {
-  const { rest, dock, bandBottom, extent } = input;
-  const waypointScale = Math.min(rest.scale, dock.scale * WAYPOINT_SCALE);
-  const waypointY = bandBottom + extent * waypointScale;
-  const t = clamp(p);
-
-  if (t >= DOCK_PHASES.rise) {
-    const r = easeInOutCubic((t - DOCK_PHASES.rise) / (1 - DOCK_PHASES.rise));
-    return {
-      x: dock.x,
-      y: lerp(waypointY, dock.y, r),
-      scale: lerpLog(waypointScale, dock.scale, r),
-    };
+export const handoffDistance = (input: HandoffInput): number => {
+  const { top, bottom, bandBottom, copyTop, viewportHeight } = input;
+  let distance = clamp(
+    top - bandBottom,
+    HANDOFF_DISTANCE.min,
+    Math.max(HANDOFF_DISTANCE.min, viewportHeight * HANDOFF_DISTANCE.maxShare),
+  );
+  if (copyTop !== null) {
+    const squeeze = copyTop - bandBottom - (bottom - top);
+    distance = Math.min(distance, squeeze * HANDOFF_DISTANCE.squeeze);
   }
+  return Math.max(1, distance);
+};
 
-  const a = clamp(t / DOCK_PHASES.approach);
-  const move = easeInOutCubic(a);
-  const scale = lerpLog(rest.scale, waypointScale, easeOutCubic(a));
-  // Keep the top edge below the band. If the rest pose were already inside the band, ease the
-  // guard in instead of jumping at p = 0.
-  const floor = bandBottom + extent * scale;
-  const guard = Math.min(floor, lerp(rest.y, floor, clamp(a * 4)));
-  return {
-    x: lerp(rest.x, dock.x, move),
-    y: Math.max(lerp(rest.y, waypointY, move), guard),
-    scale,
-  };
+/**
+ * Viewport y of the plates' pivot during the hand-off: where the page puts it (`natural`), held
+ * below the header band (pivot − extentUp ≥ bandBottom) and above the copy (pivot + extentDown ≤
+ * copyTop, when the copy is below). If both cannot hold, the copy wins; handoffDistance makes the
+ * plates fade out before that can happen.
+ */
+export const guardY = (
+  natural: number,
+  extentUp: number,
+  extentDown: number,
+  bandBottom: number,
+  copyTop: number | null,
+): number => {
+  const y = Math.max(natural, bandBottom + extentUp);
+  return copyTop === null ? y : Math.min(y, copyTop - extentDown);
 };

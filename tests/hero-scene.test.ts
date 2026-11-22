@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { ARCH, ARCH_PLATES } from '../src/components/logo-paths';
 import {
   ART,
-  DOCK_BLEND,
+  HANDOFF,
   MARK,
   PERIOD,
+  PULSE_PEAK,
   RING,
   SEGMENTS,
   STAGGER,
@@ -13,13 +14,14 @@ import {
   blendPose,
   buildLayout,
   crosshairAt,
-  dockBlend,
   easeSnap,
+  handoff,
   loopTime,
   markPose,
   platePoseAt,
   poseBounds,
   registerPose,
+  registrationPulse,
   tiltAt,
   type PlateId,
   type PlateLayout,
@@ -37,18 +39,19 @@ import {
   type Point,
 } from '../src/scripts/hero-scene/geometry';
 import {
-  DOCK_PHASES,
+  HANDOFF_DISTANCE,
   clamp,
   cubicBezier,
-  dockDistance,
-  dockPath,
   dockProgress,
   easeInOutCubic,
   easeOutBack,
-  lerpLog,
+  guardY,
+  handoffDistance,
   placeInBox,
   smoothstep,
+  type HandoffInput,
 } from '../src/scripts/hero-scene/math';
+import { precompile, yieldToMain } from '../src/scripts/hero-scene/startup';
 
 const triangleArea = (a: Point, b: Point, c: Point): number =>
   ((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)) / 2;
@@ -141,10 +144,9 @@ describe('local outline, triangulation and extrusion', () => {
     expect(solid.wall[0]).toBe(0);
     expect(solid.wall[vertices - 1]).toBe(1);
   });
-
 });
 
-describe('placeInBox (docking target maths)', () => {
+describe('placeInBox (rest position of the plates)', () => {
   const markViewBox = { x: 690, y: 50, width: 840, height: 205 };
 
   it('maps the viewBox centre to the box centre at the box scale', () => {
@@ -175,13 +177,7 @@ describe('placeInBox (docking target maths)', () => {
   });
 });
 
-describe('docking progress and easing', () => {
-  it('ends the docking move before the hero bottom reaches the header', () => {
-    expect(dockDistance(900, 72)).toBe(630);
-    expect(dockDistance(300, 72)).toBe(204);
-    expect(dockDistance(50, 72)).toBe(1);
-  });
-
+describe('hand-off progress and easing', () => {
   it('clamps progress to 0–1', () => {
     expect(dockProgress(-20, 630)).toBe(0);
     expect(dockProgress(315, 630)).toBe(0.5);
@@ -220,82 +216,65 @@ describe('docking progress and easing', () => {
     expect(peak).toBeLessThan(1.15);
     expect(snap(1)).toBe(1);
   });
-
-  it('interpolates scales geometrically', () => {
-    expect(lerpLog(1, 4, 0.5)).toBeCloseTo(2, 9);
-    expect(lerpLog(1.2, 0.08, 0)).toBeCloseTo(1.2, 9);
-    expect(lerpLog(1.2, 0.08, 1)).toBeCloseTo(0.08, 9);
-  });
 });
 
-describe('dockPath (plates stay clear of the header band)', () => {
-  // 1440 × 900: plates at rest at the right, header logo arches at the top left.
-  const desktop = {
-    rest: { x: 1060, y: 265, scale: 1.27 },
-    dock: { x: 145, y: 25.3, scale: 40 / 440 },
-    bandBottom: 72 + 16,
-    extent: 130,
+describe('hand-off (the plates never reach the header band or the copy)', () => {
+  // 1440 × 900: copy beside the art; mark top and bottom at rest, header band at 72 + 12.
+  const desktop: HandoffInput = {
+    top: 380,
+    bottom: 580,
+    bandBottom: 84,
+    copyTop: null,
+    viewportHeight: 900,
   };
-  // 390 × 844: plates above the text, logo at the top left, buttons at the top right.
-  const mobile = {
-    rest: { x: 289, y: 184, scale: 0.594 },
-    dock: { x: 104, y: 26.4, scale: 36 / 440 },
-    bandBottom: 72 + 16,
-    extent: 130,
+  // 390 × 844: art above the copy (copy top less its gap at 265).
+  const mobile: HandoffInput = {
+    top: 130,
+    bottom: 208,
+    bandBottom: 84,
+    copyTop: 265,
+    viewportHeight: 844,
   };
-  const steps = Array.from({ length: 201 }, (_, i) => i / 200);
+
+  it('fades out about when the plates would reach the band, within the set limits', () => {
+    expect(handoffDistance(desktop)).toBeCloseTo(296, 9);
+    expect(handoffDistance({ ...desktop, top: 150 })).toBe(HANDOFF_DISTANCE.min);
+    expect(handoffDistance({ ...desktop, top: 2000 })).toBeCloseTo(
+      900 * HANDOFF_DISTANCE.maxShare,
+      9,
+    );
+  });
+
+  it('ends before the rising copy leaves the plates too little room', () => {
+    const squeeze = 265 - 84 - (208 - 130);
+    expect(handoffDistance(mobile)).toBeCloseTo(squeeze * HANDOFF_DISTANCE.squeeze, 9);
+    expect(handoffDistance({ ...mobile, copyTop: 0 })).toBe(1);
+  });
 
   for (const [name, input] of [
     ['desktop', desktop],
     ['mobile', mobile],
   ] as const) {
-    it(`${name}: starts at rest and ends exactly on the logo`, () => {
-      expect(dockPath(0, input)).toEqual(input.rest);
-      const end = dockPath(1, input);
-      expect(end.x).toBeCloseTo(input.dock.x, 9);
-      expect(end.y).toBeCloseTo(input.dock.y, 9);
-      expect(end.scale).toBeCloseTo(input.dock.scale, 9);
-    });
-
-    it(`${name}: keeps the top edge below the band until the rise, then only moves up`, () => {
-      for (const p of steps) {
-        const place = dockPath(p, input);
-        if (p < DOCK_PHASES.rise) {
-          expect(place.y - input.extent * place.scale).toBeGreaterThanOrEqual(
-            input.bandBottom - 1e-9,
-          );
-        } else {
-          expect(place.x).toBeCloseTo(input.dock.x, 9);
-        }
+    it(`${name}: holds the plates below the band and above the copy for the whole hand-off`, () => {
+      const pivot = (input.top + input.bottom) / 2;
+      const up = pivot - input.top;
+      const down = input.bottom - pivot;
+      const distance = handoffDistance(input);
+      for (let i = 0; i <= 200; i++) {
+        const scrolled = (distance * i) / 200;
+        const copyTop = input.copyTop === null ? null : input.copyTop - scrolled;
+        const y = guardY(pivot - scrolled, up, down, input.bandBottom, copyTop);
+        expect(y - up).toBeGreaterThanOrEqual(input.bandBottom - 1e-9);
+        if (copyTop !== null) expect(y + down).toBeLessThanOrEqual(copyTop + 1e-9);
       }
-    });
-
-    it(`${name}: shrinks early and never grows`, () => {
-      let previous = Infinity;
-      for (const p of steps) {
-        const { scale } = dockPath(p, input);
-        expect(scale).toBeLessThanOrEqual(previous + 1e-12);
-        previous = scale;
-      }
-      const atApproach = dockPath(DOCK_PHASES.approach, input);
-      expect(atApproach.scale).toBeCloseTo(input.dock.scale * 1.6, 9);
-      expect(atApproach.x).toBeCloseTo(input.dock.x, 9);
-    });
-
-    it(`${name}: is continuous where the rise begins`, () => {
-      const before = dockPath(DOCK_PHASES.rise - 1e-7, input);
-      const after = dockPath(DOCK_PHASES.rise, input);
-      expect(Math.abs(before.x - after.x)).toBeLessThan(1e-3);
-      expect(Math.abs(before.y - after.y)).toBeLessThan(1e-3);
-      expect(Math.abs(before.scale - after.scale)).toBeLessThan(1e-6);
     });
   }
 
-  it('eases the band guard in when the rest pose is already inside the band', () => {
-    const inside = { ...desktop, rest: { x: 1060, y: 120, scale: 1.27 } };
-    expect(dockPath(0, inside).y).toBe(120);
-    const later = dockPath(0.3, inside);
-    expect(later.y - inside.extent * later.scale).toBeGreaterThanOrEqual(inside.bandBottom - 1e-9);
+  it('lets the plates scroll with the page while there is room, and the copy win otherwise', () => {
+    expect(guardY(300, 40, 40, 84, null)).toBe(300);
+    expect(guardY(100, 40, 40, 84, null)).toBe(124);
+    expect(guardY(100, 40, 40, 84, 400)).toBe(124);
+    expect(guardY(100, 50, 50, 84, 150)).toBe(100);
   });
 });
 
@@ -379,13 +358,18 @@ describe('choreography (the plates’ metamorphosis loop)', () => {
     }
   });
 
-  it('keeps every value finite and every pose inside the art box the hero lays out', () => {
+  it('keeps every value finite, and every pose and the crosshair inside the art box', () => {
     for (const t of times(0, PERIOD, 1 / 60)) {
       const poses = posesAt(t);
       for (const pose of poses) {
         for (const field of fields) expect(Number.isFinite(pose[field])).toBe(true);
       }
       const b = poseBounds(poses, plateOutline);
+      for (const span of Object.values(crosshairAt(t))) {
+        if (span.from === span.to) continue;
+        const reach = Math.max(Math.abs(span.from), Math.abs(span.to)) * layout.crossReach;
+        expect(reach).toBeLessThanOrEqual(Math.min(ART.width, ART.height) / 2);
+      }
       expect(b.minX).toBeGreaterThanOrEqual(-ART.width / 2);
       expect(b.maxX).toBeLessThanOrEqual(ART.width / 2);
       expect(b.minY).toBeGreaterThanOrEqual(-ART.height / 2);
@@ -541,27 +525,59 @@ describe('choreography (the plates’ metamorphosis loop)', () => {
     }
   });
 
-  it('blends to the mark before it collapses into register for docking', () => {
-    const atTop = dockBlend(0);
-    expect(atTop.toMark).toBe(0);
-    expect(atTop.collapse).toBe(0);
-    const blended = dockBlend(DOCK_BLEND.toMark);
+  it('hands off: to the mark, collapse, then shrink and fade while the header prints in', () => {
+    const atTop = handoff(0);
+    expect(atTop).toEqual({ toMark: 0, collapse: 0, scale: 1, ink: 1, dock: 0 });
+    const blended = handoff(HANDOFF.toMark);
     expect(blended.toMark).toBe(1);
     expect(blended.collapse).toBeLessThan(0.05);
-    expect(dockBlend(DOCK_BLEND.collapseTo).collapse).toBe(1);
-    let previous = { toMark: 0, collapse: 0 };
+    expect(blended.ink).toBe(1);
+    const gone = handoff(1);
+    expect(gone.collapse).toBe(1);
+    expect(gone.scale).toBeCloseTo(1 - HANDOFF.shrink, 9);
+    expect(gone.ink).toBe(0);
+    expect(gone.dock).toBe(1);
+    let previous = atTop;
     for (const p of times(0, 1, 0.01)) {
-      const now = dockBlend(p);
+      const now = handoff(p);
       expect(now.toMark).toBeGreaterThanOrEqual(previous.toMark);
       expect(now.collapse).toBeGreaterThanOrEqual(previous.collapse);
+      expect(now.scale).toBeLessThanOrEqual(previous.scale);
+      expect(now.dock).toBeGreaterThanOrEqual(previous.dock);
+      expect(now.ink + now.dock).toBeCloseTo(1, 9);
       previous = now;
     }
     // Whatever the loop shows, a full blend lands on the mark pose.
     for (const t of [targetMid, segment('wave').holdStart + 1]) {
       for (const p of layout.plates) {
-        const docking = blendPose(platePoseAt(t, p, layout), markPose(p, t), blended.toMark);
+        const out = blendPose(platePoseAt(t, p, layout), markPose(p, t), blended.toMark);
         const mark = markPose(p, t);
-        for (const field of fields) expect(docking[field]).toBeCloseTo(mark[field], 9);
+        for (const field of fields) expect(out[field]).toBeCloseTo(mark[field], 9);
+      }
+    }
+  });
+
+  it('pulses the header logo out of register mid hand-off, then snaps it back exactly', () => {
+    expect(registrationPulse(0)).toBe(0);
+    expect(registrationPulse(1)).toBe(0);
+    expect(registrationPulse(PULSE_PEAK)).toBeCloseTo(1, 9);
+    for (const d of [0.1, 0.3, 0.5, 0.7]) expect(registrationPulse(d)).toBeGreaterThan(0);
+    const values = times(0, 1, 0.005).map((d) => registrationPulse(d));
+    // The snap passes register slightly (--ease-snap overshoot), and never jumps.
+    expect(Math.min(...values)).toBeLessThan(0);
+    expect(Math.min(...values)).toBeGreaterThan(-0.15);
+    expect(Math.max(...values)).toBeLessThanOrEqual(1 + 1e-9);
+    for (let i = 1; i < values.length; i++) {
+      expect(Math.abs((values[i] ?? 0) - (values[i - 1] ?? 0))).toBeLessThan(0.1);
+    }
+  });
+
+  it('turns C, M and K by at most half a turn per move', () => {
+    for (const move of SEGMENTS) {
+      for (const id of ['c', 'm', 'k'] as const) {
+        const before = platePoseAt(move.moveStart, plate(id), layout).rz;
+        const after = platePoseAt(move.end, plate(id), layout).rz;
+        expect(Math.abs(after - before)).toBeLessThanOrEqual(Math.PI + 1e-9);
       }
     }
   });
@@ -570,5 +586,86 @@ describe('choreography (the plates’ metamorphosis loop)', () => {
     expect(easeSnap(0)).toBe(0);
     expect(easeSnap(1)).toBe(1);
     expect(Math.max(...times(0, 1, 0.01).map((u) => easeSnap(u)))).toBeGreaterThan(1);
+  });
+});
+
+describe('start-up (short tasks, shaders linked in the background)', () => {
+  const sources = [
+    { vertex: 'v1', fragment: 'f1' },
+    { vertex: 'v2', fragment: 'f2' },
+  ];
+  /** A stand-in context: links finish after `doneAfter` status checks (never if Infinity). */
+  const fakeGl = (parallel: boolean, doneAfter: number) => {
+    const calls = { created: 0, deletedPrograms: 0, deletedShaders: 0, checks: 0 };
+    const gl = {
+      VERTEX_SHADER: 0x8b31,
+      FRAGMENT_SHADER: 0x8b30,
+      getExtension: (name: string) =>
+        parallel && name === 'KHR_parallel_shader_compile'
+          ? { COMPLETION_STATUS_KHR: 0x91b1 }
+          : null,
+      createProgram: () => {
+        calls.created += 1;
+        return {};
+      },
+      createShader: () => ({}),
+      shaderSource: () => undefined,
+      compileShader: () => undefined,
+      attachShader: () => undefined,
+      linkProgram: () => undefined,
+      isContextLost: () => false,
+      getProgramParameter: () => {
+        calls.checks += 1;
+        return calls.checks > doneAfter;
+      },
+      deleteProgram: () => {
+        calls.deletedPrograms += 1;
+      },
+      deleteShader: () => {
+        calls.deletedShaders += 1;
+      },
+    };
+    return { gl: gl as unknown as WebGLRenderingContextBase, calls };
+  };
+
+  it('yields through scheduler.yield where the browser has it, else via a new task', async () => {
+    const previous: unknown = Reflect.get(globalThis, 'scheduler');
+    Reflect.deleteProperty(globalThis, 'scheduler');
+    try {
+      await expect(yieldToMain()).resolves.toBeUndefined();
+      let used = 0;
+      Reflect.set(globalThis, 'scheduler', {
+        yield: () => {
+          used += 1;
+          return Promise.resolve();
+        },
+      });
+      await yieldToMain();
+      expect(used).toBe(1);
+    } finally {
+      if (previous === undefined) Reflect.deleteProperty(globalThis, 'scheduler');
+      else Reflect.set(globalThis, 'scheduler', previous);
+    }
+  });
+
+  it('links in the background, waits for the links, then drops its copies', async () => {
+    const { gl, calls } = fakeGl(true, 6);
+    await precompile(gl, sources, 2000);
+    expect(calls.created).toBe(2);
+    expect(calls.checks).toBeGreaterThan(6);
+    expect(calls.deletedPrograms).toBe(2);
+    expect(calls.deletedShaders).toBe(4);
+  });
+
+  it('does nothing without the extension, and gives up waiting after the timeout', async () => {
+    const without = fakeGl(false, 0);
+    await precompile(without.gl, sources, 2000);
+    expect(without.calls.created).toBe(0);
+
+    const stuck = fakeGl(true, Infinity);
+    const started = performance.now();
+    await precompile(stuck.gl, sources, 60);
+    expect(performance.now() - started).toBeGreaterThanOrEqual(55);
+    expect(stuck.calls.deletedPrograms).toBe(2);
   });
 });

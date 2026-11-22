@@ -17,10 +17,10 @@
  */
 import Icon from '~/components/Icon.astro';
 import JourneyArt from './journey/JourneyArt.astro';
-import { routes, serviceBySlug } from '~/data/site';
+import { routes, serviceBySlug, services } from '~/data/site';
 import { homeText } from '~/i18n/pages/home';
 import { capsEl } from '~/lib/text';
-import { JOURNEY_CHOICES, JOURNEY_STEPS } from '~/scripts/idea-journey';
+import { JOURNEY_STEPS, journeyChoices } from '~/scripts/idea-journey';
 
 const copy = homeText.el.journey;
 const pad = (n: number): string => String(n).padStart(2, '0');
@@ -33,7 +33,11 @@ const steps = JOURNEY_STEPS.map((step, index) => ({
   href: `${routes.services}#${step.service}`,
   linkLabel: serviceBySlug(step.service)?.text.el.short ?? copy.steps[step.id].title,
 }));
-const choices = JOURNEY_CHOICES.map((slug) => ({ slug, label: copy.chooser.options[slug] }));
+// Chips follow the owner's order of services (src/data/site.ts), not the order of the story.
+const choices = journeyChoices(services.map((service) => service.slug)).map((slug) => ({
+  slug,
+  label: copy.chooser.options[slug],
+}));
 const promiseInks = ['c', 'm', 'y'] as const;
 /** Readout swatches in print order. */
 const readoutInks = ['y', 'm', 'c', 'k'] as const;
@@ -43,7 +47,9 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
   <div class="wrap">
     <div class="ij-head">
       <p class="label mb-5">{capsEl(copy.label)}</p>
-      <h2 id="journey-title" class="h2 ij-title">{copy.heading}</h2>
+      <h2 id="journey-title" class="h2 ij-title">
+        {copy.heading}
+      </h2>
       <p class="lead muted mt-6 max-w-[48ch]">{copy.lead}</p>
       <div class="ij-deco" aria-hidden="true">
         <span class="ij-deco-dots halftone" data-parallax="-0.12"></span>
@@ -65,40 +71,44 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
           </div>
           <div class="ij-readout">
             <span class="ij-readout-inks">
-              {readoutInks.map((ink) => <span class={`ij-sw ij-sw-${ink}`} />)}
+              {readoutInks.map((ink) => (
+                <span class={`ij-sw ij-sw-${ink}`} />
+              ))}
             </span>
-            <span class="ij-count" data-journey-count>01 / {total}</span>
+            <span class="ij-count" data-journey-count>
+              01 / {total}
+            </span>
           </div>
         </div>
       </div>
 
       <ol class="ij-steps" role="list">
-        {
-          steps.map((step) => (
-            <li class="ij-step" data-journey-step={step.id}>
-              <div class="ij-still" aria-hidden="true">
-                <JourneyArt mode="still" step={step.id} />
-              </div>
-              <div class="ij-step-body">
-                <p class="ij-step-num" aria-hidden="true">
-                  {step.num} / {total}
-                </p>
-                <h3 class="h3 ij-step-title">{step.text.title}</h3>
-                <p class="muted ij-step-text">{step.text.text}</p>
-                <a href={step.href} class="ij-step-link">
-                  <span class="link">{step.linkLabel}</span>
-                  <Icon name="arrow-up-right" size={18} />
-                </a>
-              </div>
-            </li>
-          ))
-        }
+        {steps.map((step) => (
+          <li class="ij-step" data-journey-step={step.id}>
+            <div class="ij-still" aria-hidden="true">
+              <JourneyArt mode="still" step={step.id} />
+            </div>
+            <div class="ij-step-body">
+              <p class="ij-step-num" aria-hidden="true">
+                {step.num} / {total}
+              </p>
+              <h3 class="h3 ij-step-title">{step.text.title}</h3>
+              <p class="muted ij-step-text">{step.text.text}</p>
+              <a href={step.href} class="ij-step-link">
+                <span class="link">{step.linkLabel}</span>
+                <Icon name="arrow-up-right" size={18} />
+              </a>
+            </div>
+          </li>
+        ))}
       </ol>
     </div>
 
     <div class="ij-choose">
       <div class="ij-choose-main">
-        <h3 id="journey-choose-title" class="ij-choose-title">{copy.chooser.heading}</h3>
+        <h3 id="journey-choose-title" class="ij-choose-title">
+          {copy.chooser.heading}
+        </h3>
         <p id="journey-choose-hint" class="muted ij-js-only mt-4 max-w-[52ch]">
           {copy.chooser.hint}
         </p>
@@ -108,19 +118,17 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
           aria-labelledby="journey-choose-title"
           aria-describedby="journey-choose-hint"
         >
-          {
-            choices.map((choice) => (
-              <button
-                type="button"
-                class="ij-chip"
-                aria-pressed="false"
-                data-journey-choice={choice.slug}
-                disabled
-              >
-                {choice.label}
-              </button>
-            ))
-          }
+          {choices.map((choice) => (
+            <button
+              type="button"
+              class="ij-chip"
+              aria-pressed="false"
+              data-journey-choice={choice.slug}
+              disabled
+            >
+              {choice.label}
+            </button>
+          ))}
         </div>
         <a href={routes.quote} class="btn btn-primary ij-cta" data-journey-cta>
           <span data-journey-cta-label>{copy.chooser.cta.none}</span>
@@ -130,17 +138,12 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
       </div>
 
       <ul class="ij-promises" role="list">
-        {
-          copy.promises.map((promise, i) => (
-            <li>
-              <span
-                class={`ij-sw ij-sw-${promiseInks[i % promiseInks.length]}`}
-                aria-hidden="true"
-              />
-              <span>{promise}</span>
-            </li>
-          ))
-        }
+        {copy.promises.map((promise, i) => (
+          <li>
+            <span class={`ij-sw ij-sw-${promiseInks[i % promiseInks.length]}`} aria-hidden="true" />
+            <span>{promise}</span>
+          </li>
+        ))}
       </ul>
     </div>
   </div>
@@ -286,6 +289,7 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
       :global(html:not(.no-js)) .ij-step {
         display: flex;
         flex-direction: column;
+        align-items: stretch;
         justify-content: center;
         min-height: 68svh;
         padding-block: 2rem;

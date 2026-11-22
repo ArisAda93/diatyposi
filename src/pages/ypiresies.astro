@@ -68,6 +68,16 @@ const text = servicesText.el;
       backdrop-filter: blur(10px);
     }
 
+    /* While the bar sticks, anything scrolled into view (an anchor jump or keyboard focus) must
+       land below the header and the bar, not under them. The bar is the chip row's 0.5rem +
+       0.75rem padding around a 2.75rem chip (4rem) plus its 1px hairline; 1.5rem of air as the
+       page-wide rule in global.css keeps below the header alone. */
+    @media (max-width: 63.99rem) {
+      :global(html:has(.svcp-aside)) {
+        scroll-padding-top: calc(var(--header-h) + 4rem + 1px + 1.5rem);
+      }
+    }
+
     @media (min-width: 64rem) {
       .svcp-layout {
         display: grid;

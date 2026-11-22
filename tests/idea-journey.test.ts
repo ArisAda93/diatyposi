@@ -8,15 +8,16 @@ import { quoteHref, routes, services } from '../src/data/site';
 import { homeText } from '../src/i18n/pages/home';
 import { PRESELECT_PARAM, parsePreselect } from '../src/lib/quote';
 import {
-  JOURNEY_CHOICES,
   JOURNEY_STEPS,
   countText,
+  journeyChoices,
   journeyQuoteHref,
   pickActiveStep,
 } from '../src/scripts/idea-journey';
 
 const copy = homeText.el.journey;
 const slugs = services.map((s) => s.slug);
+const choices = journeyChoices(slugs);
 
 describe('journeyQuoteHref', () => {
   it('links to the plain quote form when nothing is picked', () => {
@@ -65,11 +66,11 @@ describe('countText (button label and status)', () => {
     expect(countText(0, copy.chooser.cta)).toBe('Ζητήστε προσφορά');
   });
   it('uses the singular for one', () => {
-    expect(countText(1, copy.chooser.cta)).toBe('Ζητήστε προσφορά για 1 προϊόν');
+    expect(countText(1, copy.chooser.cta)).toBe('Ζητήστε προσφορά για 1 επιλογή');
   });
   it('puts the number in the plural', () => {
-    expect(countText(3, copy.chooser.cta)).toBe('Ζητήστε προσφορά για 3 προϊόντα');
-    expect(countText(6, copy.chooser.status)).toBe('Σημειώσατε 6 προϊόντα.');
+    expect(countText(3, copy.chooser.cta)).toBe('Ζητήστε προσφορά για 3 επιλογές');
+    expect(countText(6, copy.chooser.status)).toBe('Σημειώσατε 6 επιλογές.');
   });
   it('treats a negative count as none', () => {
     expect(countText(-1, copy.chooser.status)).toBe(copy.chooser.status.none);
@@ -97,10 +98,16 @@ describe('journey data', () => {
     for (const step of JOURNEY_STEPS) expect(slugs).toContain(step.service);
   });
 
-  it('offers one chip per product in the story, in story order, each an existing service', () => {
-    const inStory = [...new Set(JOURNEY_STEPS.map((step) => step.service))];
-    expect([...JOURNEY_CHOICES]).toEqual(inStory);
-    for (const slug of JOURNEY_CHOICES) expect(slugs).toContain(slug);
+  it('offers each service of the story once, in the order of services', () => {
+    const inStory = new Set<string>(JOURNEY_STEPS.map((step) => step.service));
+    expect(choices).toEqual(slugs.filter((slug) => inStory.has(slug)));
+    expect(new Set(choices)).toEqual(inStory);
+  });
+
+  it('follows the order it is given, drops other and repeated slugs', () => {
+    const given = ['social-media', 'prosklitiria-kartes', 'kartes-fylladia-entypa', 'social-media'];
+    expect(journeyChoices(given)).toEqual(['social-media', 'kartes-fylladia-entypa']);
+    expect(journeyChoices([])).toEqual([]);
   });
 
   it('has copy for every step and a label for every chip', () => {
@@ -108,10 +115,8 @@ describe('journey data', () => {
       expect(copy.steps[step.id].title.length).toBeGreaterThan(0);
       expect(copy.steps[step.id].text.length).toBeGreaterThan(0);
     }
-    for (const slug of JOURNEY_CHOICES) {
-      expect(copy.chooser.options[slug].length).toBeGreaterThan(0);
-    }
-    expect(Object.keys(copy.chooser.options).sort()).toEqual([...JOURNEY_CHOICES].sort());
+    for (const slug of choices) expect(copy.chooser.options[slug].length).toBeGreaterThan(0);
+    expect(Object.keys(copy.chooser.options).sort()).toEqual([...choices].sort());
   });
 
   it('has unique step ids', () => {

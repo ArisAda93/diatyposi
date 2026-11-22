@@ -19,6 +19,11 @@
  *  - the SVG intro plays (CSS keyframes on the SVG plates), and the scene, if available, takes
  *    over afterwards.
  * In both cases the ghosts converge on the headline (CSS, `.hero.is-intro`).
+ *
+ * Ready signal: once the hero has settled (the live scene drew its first frame, or the page keeps
+ * the static composition), `data-hero-ready="1"` is set on <html> and `dt:hero-ready` is
+ * dispatched on document, once. The living background waits for it on the home page, so the two
+ * WebGL scenes never start up at the same time.
  */
 import type { HeroScene, SceneElements } from './hero-scene/scene';
 
@@ -44,6 +49,14 @@ const GL_ATTRIBUTES: WebGLContextAttributes = {
   preserveDrawingBuffer: false,
   powerPreference: 'low-power',
   failIfMajorPerformanceCaveat: true,
+};
+
+/** Signals that the hero has settled (see the file comment). Safe to call more than once. */
+const markReady = (): void => {
+  const root = document.documentElement;
+  if (root.dataset['heroReady'] === '1') return;
+  root.dataset['heroReady'] = '1';
+  document.dispatchEvent(new Event('dt:hero-ready'));
 };
 
 const markPlayed = (): void => {
@@ -110,6 +123,7 @@ export const initHero = (): void => {
   const mark = markBox?.querySelector<SVGSVGElement>('svg');
   if (!hero || !stage || !markBox || !mark) {
     root.classList.remove('hero-intro');
+    markReady();
     return;
   }
 
@@ -119,8 +133,8 @@ export const initHero = (): void => {
     stage,
     markBox,
     mark,
+    copy: hero.querySelector<HTMLElement>('[data-hero-copy]'),
     header,
-    headerLogo: header?.querySelector<SVGSVGElement>('.site-header-logo svg') ?? null,
   };
   const reduce = matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -154,7 +168,14 @@ export const initHero = (): void => {
         releaseContext(canvas);
         return null;
       }
-      return createHeroScene(elements, canvas, onLost);
+      // Built in short steps that yield to the main thread (hero-scene/startup.ts).
+      const built = await createHeroScene(elements, canvas, onLost);
+      // Reduced motion may have been switched on while it was being built.
+      if (reduce.matches) {
+        built.destroy();
+        return null;
+      }
+      return built;
     } catch {
       // Chunk failed to load, or the GPU refused the scene (shaders, layout): free what the
       // renderer allocated and keep the static composition.
@@ -188,11 +209,18 @@ export const initHero = (): void => {
   };
 
   const startAlive = async (): Promise<void> => {
-    if (reduce.matches || scene || failed) return;
+    if (scene) return;
+    if (reduce.matches || failed) {
+      markReady();
+      return;
+    }
     const built = await loadScene();
     if (built && built === prepared && !scene && !reduce.matches && introState !== 'svg') {
       run(built, false);
     }
+    // Live (first frame drawn) or settled on the static composition. A scene held back for the
+    // SVG intro signals once it starts.
+    if (scene || !built || failed || reduce.matches) markReady();
   };
 
   const playGhosts = (): void => {
@@ -226,6 +254,7 @@ export const initHero = (): void => {
       // Stop any intro where it is: composed state, no animation.
       hero.classList.remove('is-intro', 'is-intro-svg');
       root.classList.remove('hero-intro');
+      markReady();
     } else {
       whenIdle(() => void startAlive());
     }
@@ -237,6 +266,7 @@ export const initHero = (): void => {
   }
   if (reduce.matches) {
     root.classList.remove('hero-intro');
+    markReady();
     return;
   }
 
@@ -264,6 +294,7 @@ export const initHero = (): void => {
       introState = '3d';
       playGhosts();
       root.classList.remove('hero-intro');
+      markReady();
     });
   });
 };

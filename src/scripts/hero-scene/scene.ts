@@ -10,18 +10,24 @@
  *   depth parallax per plate) and drifts on its own on touch screens.
  * - Every pose fits the art box the hero lays out for it (choreography.ts ART, Hero.astro
  *   `.hero-art`), so no pose is cropped or reaches the copy.
- * - As the hero scrolls out (scrubbed, nothing pinned), the plates first blend to the mark from
- *   whatever pose they are in (the loop slows to a stop), then collapse into register, flatten and
- *   travel to the exact place and size of the header logo's arches, which then take over
- *   (`--dock` 0–1 and `data-docked` on [data-header]). The path (math.ts dockPath) shrinks them
- *   early and keeps them below the header band until they are under the logo slot. Scrolling back
- *   reverses it, and the loop resumes once the hero is back at the top.
+ * - Hand-off to the header logo as the hero scrolls out (scrubbed, nothing pinned; choreography.ts
+ *   handoff): the plates first blend to the mark from whatever pose they are in (the loop slows to
+ *   a stop), collapse into register and flatten, then shrink a little and fade out in the art
+ *   column. Meanwhile the header logo's arches (always shown) pulse out of register and snap
+ *   back (`--dock` 0–1 and `--dock-reg` on [data-header], styled in Hero.astro); `data-docked` is
+ *   set once the plates are gone. The plates scroll with the page, held below the header band and,
+ *   when the copy sits below the art, above the copy (math.ts guardY); the hand-off is short
+ *   enough that they are gone before those limits meet (handoffDistance). Scrolling back reverses
+ *   it, and the loop resumes once the hero is back at the top.
  * - Hand-over from the static SVG mark: the first frame draws the plates flat and in register at
  *   the SVG's exact position and size, the canvas fades in over it, then the plates come apart
  *   into the mark pose and the loop starts. With the intro, they arrive from depth instead (print
  *   order Y, M, C, K) and the loop starts once they have landed.
  *
- * The canvas scrolls with the hero and sits above the header (z-index), composited with
+ * Start-up runs in short steps that yield to the main thread (startup.ts): createHeroScene is
+ * async, and the canvas is only shown (and faded in) by start(), after the first real frame.
+ *
+ * The canvas scrolls with the hero and sits under the header (z-index), composited with
  * `mix-blend-mode: multiply`, so only ink shows and the paper, the living background, the grain
  * and the text stay as they are. One draw loop; it stops when the hero is off-screen, once docked,
  * and while the tab is hidden.
@@ -35,12 +41,13 @@ import {
   blendTilt,
   buildLayout,
   crosshairAt,
-  dockBlend,
+  handoff,
   markPose,
   markTilt,
   platePoseAt,
   poseBounds,
   registerPose,
+  registrationPulse,
   tiltAt,
   type PlateId,
   type PlateLayout,
@@ -50,14 +57,13 @@ import { extrude, sampleOutline, toLocal } from './geometry';
 import {
   clamp,
   damp,
-  dockDistance,
-  dockPath,
   dockProgress,
   easeInOutCubic,
   easeOutBack,
   easeOutCubic,
+  guardY,
+  handoffDistance,
   placeInBox,
-  smoothstep,
   type Placement,
   type ViewBox,
 } from './math';
@@ -69,6 +75,7 @@ import {
   quadVertex,
   shadowFragment,
 } from './shaders';
+import { precompile, yieldToMain } from './startup';
 
 export interface SceneElements {
   hero: HTMLElement;
@@ -78,9 +85,10 @@ export interface SceneElements {
   markBox: HTMLElement;
   /** The static SVG mark: its box is the rest position and size of the plates. */
   mark: SVGSVGElement;
+  /** Hero copy: when it sits below the art, the plates never reach it while they fade. */
+  copy: HTMLElement | null;
+  /** Receives `--dock`, `--dock-reg`, `data-scene` and `data-docked`. */
   header: HTMLElement | null;
-  /** Header logo <svg>: the docking target. */
-  headerLogo: SVGSVGElement | null;
 }
 
 export interface HeroScene {
@@ -120,17 +128,26 @@ const INTRO_FROM: Record<PlateId, { x: number; y: number; rz: number }> = {
   y: { x: -120, y: -110, rz: 0.14 },
   k: { x: 160, y: -80, rz: -0.16 },
 };
-/** Crosshair hairlines: width in CSS px, ink strength. */
-const HAIRLINE = { width: 1, alpha: 0.92 };
+/**
+ * Crosshair hairlines: width in CSS px, ink strength, and the scroll (px) over which they fade as
+ * the hero starts to move (they reach almost to the art box's edge, so they go first).
+ */
+const HAIRLINE = { width: 1.5, alpha: 1, scrollFade: 8 };
 /**
  * Contact shadow: ink strength, size relative to the plates' bounds, offset towards the lower
  * right (share of the bounds; light from the upper left), and depth below the rearmost plate
  * (raster units). Set alpha to 0 to remove it.
  */
 const SHADOW = { alpha: 0.07, spread: 1.3, offset: { x: 0.04, y: -0.1 }, depth: 40 };
-/** Docking: gap kept below the header band, and the plates' half-height with slack (raster). */
-const DOCK_MARGIN = 16;
-const PLATE_EXTENT = 130;
+/**
+ * Hand-off: gap kept below the header and above the copy (px), the mark's half-height with slack
+ * for breathing, tilt and misregistration (raster units), and slack on the measured extent of the
+ * plates for perspective and pointer tilt (share). The art box already keeps every pose clear of
+ * both at rest; the guard only matters while the page moves.
+ */
+const HANDOFF_GAP = { band: 4, copy: 8 };
+const MARK_EXTENT = 130;
+const EXTENT_SLACK = 1.04;
 /** Upper bound for drawing-buffer pixels (keeps 2560 px wide screens cheap). */
 const MAX_PIXELS = 6_000_000;
 const RESIZE_DEBOUNCE = 150;
@@ -138,6 +155,12 @@ const RESIZE_DEBOUNCE = 150;
 const hexToRgb = (hex: string): Float32Array => {
   const n = Number.parseInt(hex.replace('#', ''), 16);
   return new Float32Array([((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]);
+};
+
+const hexOf = (id: PlateId): string => {
+  const plate = ARCH_PLATES.find((p) => p.id === id);
+  if (!plate) throw new Error(`No logo plate ${id}`);
+  return plate.hex;
 };
 
 const viewBoxOf = (svg: SVGSVGElement): ViewBox | null => {
@@ -155,25 +178,34 @@ interface Metrics {
   heroLeft: number;
   /** Plates at rest, in hero coordinates. */
   rest: Placement;
-  /** Header logo arches, in viewport coordinates (the header is fixed). */
-  dock: Placement | null;
-  headerBottom: number;
-  /** Scroll distance of the docking move. */
+  /** Lowest edge the plates keep below (header bottom + gap), viewport px (the header is fixed). */
+  bandBottom: number;
+  /** Highest edge the plates keep above (copy top − gap) in hero coordinates; null beside it. */
+  copyTop: number | null;
+  /** Scroll distance of the hand-off. */
   distance: number;
 }
 
-export const createHeroScene = (
+/** Longest wait for the background shader links before building the programs anyway (ms). */
+const PRECOMPILE_TIMEOUT = 3000;
+
+/**
+ * Builds the scene in short steps that yield to the main thread in between (startup.ts): outline
+ * and layout, extrusion, background shader compile, one program per task, buffer upload, and a
+ * warm-up draw, so no single task stays long on a slow phone and the first visible frame is cheap.
+ * Rejects (the caller keeps the static composition) if the context is lost or a shader fails.
+ */
+export const createHeroScene = async (
   els: SceneElements,
   canvas: HTMLCanvasElement,
   onLost: () => void,
-): HeroScene => {
-  const { hero, stage, markBox, mark, header, headerLogo } = els;
+): Promise<HeroScene> => {
+  const { hero, stage, markBox, mark, copy, header } = els;
   const markViewBox = viewBoxOf(mark);
   if (!markViewBox) throw new Error('Hero mark has no viewBox');
-  // The group pivots on the centre of the mark; the same raster point is mapped into the header.
+  // The group pivots on the centre of the mark.
   const centerX = markViewBox.x + markViewBox.width / 2;
   const centerY = markViewBox.y + markViewBox.height / 2;
-  const headerViewBox = headerLogo ? viewBoxOf(headerLogo) : null;
 
   // The arch, measured and centred on its own anchor, so every plate turns about its middle.
   const archOutline = sampleOutline(ARCH, 9);
@@ -181,6 +213,11 @@ export const createHeroScene = (
   const layout = buildLayout(metrics, ARCH_PLATES, { x: centerX, y: centerY });
   const plateOutline = toLocal(archOutline, metrics.anchor.x, metrics.anchor.y);
 
+  await yieldToMain();
+  // Plates: one extruded arch (triangulated), shared by the four meshes.
+  const plateSolid = extrude(plateOutline, THICKNESS);
+
+  await yieldToMain();
   const renderer = new Renderer({
     canvas,
     dpr: 1,
@@ -190,45 +227,99 @@ export const createHeroScene = (
     powerPreference: 'low-power',
   });
   const gl = renderer.gl;
+  const ensureContext = (): void => {
+    if (gl.isContextLost()) throw new Error('Hero scene lost its WebGL context while building');
+  };
   gl.clearColor(1, 1, 1, 1);
-
   const camera = new Camera(gl, { fov: FOV, near: 1, far: 10_000 });
 
-  // Plates: one extruded arch, shared by the four meshes.
-  const plateSolid = extrude(plateOutline, THICKNESS);
+  // Shaders: linked in the background where the browser can, then one OGL program per task.
+  await precompile(
+    gl,
+    [
+      { vertex: plateVertex, fragment: plateFragment },
+      { vertex: plateVertex, fragment: depthFragment },
+      { vertex: quadVertex, fragment: lineFragment },
+      { vertex: quadVertex, fragment: shadowFragment },
+    ],
+    PRECOMPILE_TIMEOUT,
+  );
+  ensureContext();
+  const linked = (program: Program): Program => {
+    // OGL only warns when a shader fails; refuse the scene so the static composition stays.
+    if (!gl.getProgramParameter(program.program, gl.LINK_STATUS)) {
+      throw new Error('Hero scene shaders failed to link');
+    }
+    return program;
+  };
+
+  await yieldToMain();
+  const plateUniforms = {
+    uInk: { value: new Float32Array(3) },
+    uAlpha: { value: 1 },
+  };
+  const colorProgram = linked(
+    new Program(gl, {
+      vertex: plateVertex,
+      fragment: plateFragment,
+      uniforms: plateUniforms,
+      depthTest: true,
+      depthWrite: false,
+      cullFace: gl.BACK,
+    }),
+  );
+  colorProgram.setBlendFunc(gl.DST_COLOR, gl.ZERO);
+
+  await yieldToMain();
+  const depthProgram = linked(
+    new Program(gl, {
+      vertex: plateVertex,
+      fragment: depthFragment,
+      depthTest: true,
+      depthWrite: true,
+      cullFace: gl.BACK,
+    }),
+  );
+
+  await yieldToMain();
+  const keyInk = hexToRgb(hexOf('k'));
+  const lineUniforms = { uInk: { value: keyInk }, uAlpha: { value: 0 } };
+  const lineProgram = linked(
+    new Program(gl, {
+      vertex: quadVertex,
+      fragment: lineFragment,
+      uniforms: lineUniforms,
+      depthTest: false,
+      depthWrite: false,
+      cullFace: false,
+    }),
+  );
+  lineProgram.setBlendFunc(gl.DST_COLOR, gl.ZERO);
+
+  await yieldToMain();
+  const shadowUniforms = { uInk: { value: keyInk }, uAlpha: { value: 0 } };
+  const shadowProgram = linked(
+    new Program(gl, {
+      vertex: quadVertex,
+      fragment: shadowFragment,
+      uniforms: shadowUniforms,
+      depthTest: false,
+      depthWrite: false,
+      cullFace: false,
+    }),
+  );
+  shadowProgram.setBlendFunc(gl.DST_COLOR, gl.ZERO);
+
+  // Buffers and meshes.
+  await yieldToMain();
+  ensureContext();
   const plateGeometry = new Geometry(gl, {
     position: { size: 3, data: plateSolid.position },
     normal: { size: 3, data: plateSolid.normal },
     wall: { size: 1, data: plateSolid.wall },
     index: { data: plateSolid.index },
   });
-  const plateUniforms = {
-    uInk: { value: new Float32Array(3) },
-    uAlpha: { value: 1 },
-  };
-  const colorProgram = new Program(gl, {
-    vertex: plateVertex,
-    fragment: plateFragment,
-    uniforms: plateUniforms,
-    depthTest: true,
-    depthWrite: false,
-    cullFace: gl.BACK,
-  });
-  colorProgram.setBlendFunc(gl.DST_COLOR, gl.ZERO);
-  const depthProgram = new Program(gl, {
-    vertex: plateVertex,
-    fragment: depthFragment,
-    depthTest: true,
-    depthWrite: true,
-    cullFace: gl.BACK,
-  });
-
   const group = new Transform();
-  const hexOf = (id: PlateId): string => {
-    const plate = ARCH_PLATES.find((p) => p.id === id);
-    if (!plate) throw new Error(`No logo plate ${id}`);
-    return plate.hex;
-  };
   const plates = layout.plates.map((plateLayout: PlateLayout) => {
     const mesh = new Mesh(gl, {
       geometry: plateGeometry,
@@ -244,17 +335,6 @@ export const createHeroScene = (
     position: { size: 2, data: new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5]) },
     index: { data: new Uint16Array([0, 1, 2, 0, 2, 3]) },
   });
-  const keyInk = hexToRgb(hexOf('k'));
-  const lineUniforms = { uInk: { value: keyInk }, uAlpha: { value: 0 } };
-  const lineProgram = new Program(gl, {
-    vertex: quadVertex,
-    fragment: lineFragment,
-    uniforms: lineUniforms,
-    depthTest: false,
-    depthWrite: false,
-    cullFace: false,
-  });
-  lineProgram.setBlendFunc(gl.DST_COLOR, gl.ZERO);
   const makeLine = (): Mesh => {
     const mesh = new Mesh(gl, {
       geometry: quadGeometry,
@@ -267,30 +347,12 @@ export const createHeroScene = (
   const lineH = makeLine();
   const lineV = makeLine();
   const lines = [lineH, lineV];
-
-  const shadowUniforms = { uInk: { value: keyInk }, uAlpha: { value: 0 } };
-  const shadowProgram = new Program(gl, {
-    vertex: quadVertex,
-    fragment: shadowFragment,
-    uniforms: shadowUniforms,
-    depthTest: false,
-    depthWrite: false,
-    cullFace: false,
-  });
-  shadowProgram.setBlendFunc(gl.DST_COLOR, gl.ZERO);
   const shadow = new Mesh(gl, {
     geometry: quadGeometry,
     program: shadowProgram,
     frustumCulled: false,
   });
   shadow.setParent(group);
-
-  // OGL only warns when a shader fails; refuse the scene so the static composition stays.
-  for (const program of [colorProgram, depthProgram, lineProgram, shadowProgram]) {
-    if (!gl.getProgramParameter(program.program, gl.LINK_STATUS)) {
-      throw new Error('Hero scene shaders failed to link');
-    }
-  }
 
   // ---------------------------------------------------------------------------------------------
   // Measurements (on start, on resize, when fonts settle). Reads only; no writes in between.
@@ -302,7 +364,7 @@ export const createHeroScene = (
     const heroRect = hero.getBoundingClientRect();
     const markRect = mark.getBoundingClientRect();
     const headerRect = header?.getBoundingClientRect();
-    const logoRect = headerLogo?.getBoundingClientRect();
+    const copyRect = copy?.getBoundingClientRect();
     const scrollY = window.scrollY;
     const width = Math.max(1, heroRect.width);
     const height = Math.max(1, heroRect.height);
@@ -319,11 +381,16 @@ export const createHeroScene = (
       centerX,
       centerY,
     );
-    const dock =
-      logoRect && headerViewBox && logoRect.width > 0
-        ? placeInBox(logoRect, headerViewBox, centerX, centerY)
+    const bandBottom = (headerRect ? Math.max(0, headerRect.bottom) : 0) + HANDOFF_GAP.band;
+    // The copy counts only where it sits below the art (it shares the art's columns).
+    const copyTop =
+      copyRect &&
+      copyRect.width > 0 &&
+      copyRect.left < markRect.right &&
+      copyRect.right > markRect.left &&
+      copyRect.top >= markRect.bottom
+        ? copyRect.top - heroRect.top - HANDOFF_GAP.copy
         : null;
-    const headerBottom = headerRect ? Math.max(0, headerRect.bottom) : 0;
 
     // Drawing buffer: DPR capped at 2 (1.5 on small screens) and at MAX_PIXELS overall.
     let dpr = Math.min(window.devicePixelRatio || 1, width < 768 ? 1.5 : 2);
@@ -348,9 +415,16 @@ export const createHeroScene = (
       heroTop: heroRect.top + scrollY,
       heroLeft: heroRect.left,
       rest,
-      dock,
-      headerBottom,
-      distance: dockDistance(height, headerBottom),
+      bandBottom,
+      copyTop,
+      // Hero coordinates are viewport coordinates with the hero at the top.
+      distance: handoffDistance({
+        top: rest.y - MARK_EXTENT * rest.scale,
+        bottom: rest.y + MARK_EXTENT * rest.scale,
+        bandBottom,
+        copyTop,
+        viewportHeight: window.innerHeight,
+      }),
     };
   };
 
@@ -422,12 +496,18 @@ export const createHeroScene = (
   const cursor = { x: 0, y: 0, inside: false };
   const poses: PlatePose[] = [];
 
+  /**
+   * `--dock` (0–1): how far the hand-off to the header logo has gone. `--dock-reg`: how far out of
+   * register the header logo's arches are (choreography.ts registrationPulse: 0 at the top, out
+   * mid hand-off, snapping back to 0 as the hero plates finish fading), styled in Hero.astro.
+   */
   const setHeaderDock = (value: number): void => {
     if (!header) return;
     const rounded = Math.round(value * 1000) / 1000;
     if (rounded === lastDock) return;
     lastDock = rounded;
     header.style.setProperty('--dock', String(rounded));
+    header.style.setProperty('--dock-reg', registrationPulse(rounded).toFixed(3));
   };
 
   const setDocked = (state: boolean): void => {
@@ -483,11 +563,11 @@ export const createHeroScene = (
 
     const scrolled = window.scrollY - m.heroTop;
     const progress = dockProgress(scrolled, m.distance);
-    const { toMark, collapse } = dockBlend(progress);
+    const out = handoff(progress);
+    const { toMark } = out;
     const fadeIn = intro ? 1 : clamp(clock / FADE_IN);
     const alive = intro ? 1 : easeInOutCubic((clock - ALIVE.delay) / ALIVE.duration);
-    const dock = smoothstep(0.93, 1, progress);
-    const explode = alive * (1 - collapse);
+    const explode = alive * (1 - out.collapse);
     const introDone = !intro || clock >= INTRO_TOTAL;
 
     // The loop starts once the plates have landed, and slows to a stop as they blend to the mark.
@@ -505,24 +585,8 @@ export const createHeroScene = (
     pointer.y += (target.y - pointer.y) * follow;
     pointer.amount += ((fine && cursor.inside ? 1 : 0) - pointer.amount) * damp(2.5, dt);
 
-    // Group: along the docking path, which works in viewport px (the plates stay clear of the
-    // header band while the page scrolls under them), then back into hero coordinates.
-    let x = m.rest.x;
-    let y = m.rest.y;
-    let scale = m.rest.scale;
-    if (m.dock) {
-      const place = dockPath(progress, {
-        rest: m.rest,
-        dock: { x: m.dock.x - m.heroLeft, y: m.dock.y, scale: m.dock.scale },
-        bandBottom: m.headerBottom + DOCK_MARGIN,
-        extent: PLATE_EXTENT,
-      });
-      x = place.x;
-      y = place.y + scrolled;
-      scale = place.scale;
-    }
+    const scale = m.rest.scale * out.scale;
     const tilt = blendTilt(tiltAt(loopClock), markTilt(), toMark);
-    group.position.set(x - m.width / 2, m.height / 2 - y, 0);
     group.scale.set(scale, scale, scale);
     group.rotation.set(
       explode * (tilt.x - pointer.y * POINTER_TILT.x),
@@ -531,7 +595,7 @@ export const createHeroScene = (
     );
 
     // Plates: the loop pose, blended to the mark on scroll-out, then towards flat register by
-    // `explode` (the hand-over at the start, the collapse before docking).
+    // `explode` (the hand-over at the start, the collapse during the hand-off).
     poses.length = 0;
     let inkSum = 0;
     for (const p of plates) {
@@ -541,6 +605,9 @@ export const createHeroScene = (
         toMark,
       );
       const pose = blendPose(registerPose(p.layout), live, explode);
+      // Depth parallax with the pointer.
+      pose.x += pointer.x * pose.z * PARALLAX.x;
+      pose.y -= pointer.y * pose.z * PARALLAX.y;
       poses.push(pose);
 
       // Intro: the plate comes forward from depth (no overshoot) while its register offset snaps
@@ -557,21 +624,40 @@ export const createHeroScene = (
       const away = 1 - snap;
       const from = INTRO_FROM[p.layout.id];
       p.mesh.position.set(
-        pose.x + pointer.x * pose.z * PARALLAX.x + away * from.x,
-        pose.y - pointer.y * pose.z * PARALLAX.y + away * from.y,
+        pose.x + away * from.x,
+        pose.y + away * from.y,
         pose.z - (1 - ahead) * INTRO.depth,
       );
       p.mesh.rotation.set(pose.rx, 0, pose.rz + away * from.rz);
       p.mesh.scale.set(pose.scale, pose.scale, pose.scale * Math.max(0.001, explode));
-      p.alpha = ink * (1 - dock);
+      p.alpha = ink * out.ink;
       inkSum += ink;
     }
 
+    // Registration crosshair through the ring's centre (empty outside the target hold).
+    const cross = crosshairAt(loopClock);
+    const lineFade = 1 - clamp(scrolled / HAIRLINE.scrollFade);
+    lineUniforms.uAlpha.value = HAIRLINE.alpha * explode * fadeIn * (1 - toMark) * lineFade;
+    placeLine(lineH, cross.horizontal, false, scale);
+    placeLine(lineV, cross.vertical, true, scale);
+
+    // Footprint of the plates (group units, y up).
+    const b = poseBounds(poses, plateOutline);
+
+    // The plates scroll with the page, held below the header band and above the copy below them.
+    const y = guardY(
+      m.rest.y - scrolled,
+      b.maxY * scale * EXTENT_SLACK,
+      -b.minY * scale * EXTENT_SLACK,
+      m.bandBottom,
+      m.copyTop === null ? null : m.copyTop - scrolled,
+    );
+    group.position.set(m.rest.x - m.width / 2, m.height / 2 - (y + scrolled), 0);
+
     // Contact shadow: under the plates' current footprint, offset away from the light.
     const ink = inkSum / plates.length;
-    shadowUniforms.uAlpha.value = SHADOW.alpha * explode * fadeIn * ink * (1 - dock);
+    shadowUniforms.uAlpha.value = SHADOW.alpha * explode * fadeIn * ink * out.ink;
     if (shadowUniforms.uAlpha.value > 0.002) {
-      const b = poseBounds(poses, plateOutline);
       const w = b.maxX - b.minX;
       const h = b.maxY - b.minY;
       const back = Math.min(...poses.map((pose) => pose.z));
@@ -582,12 +668,6 @@ export const createHeroScene = (
       );
       shadow.scale.set(w * SHADOW.spread, h * SHADOW.spread, 1);
     }
-
-    // Registration crosshair through the ring's centre (empty outside the target hold).
-    const cross = crosshairAt(loopClock);
-    lineUniforms.uAlpha.value = HAIRLINE.alpha * explode * fadeIn * (1 - toMark);
-    placeLine(lineH, cross.horizontal, false, scale);
-    placeLine(lineV, cross.vertical, true, scale);
 
     render();
 
@@ -601,10 +681,10 @@ export const createHeroScene = (
         markBox.style.removeProperty('opacity');
       }
     }
-    setHeaderDock(Math.max(dock, 1 - fadeIn));
+    setHeaderDock(out.dock);
 
     if (progress >= 1 && introDone && handedOver) {
-      // Docked: the header logo has taken over; nothing left to draw until the user scrolls back.
+      // Handed off: the header logo has taken over; nothing to draw until the user scrolls back.
       setDocked(true);
       last = 0;
       return;
@@ -701,11 +781,38 @@ export const createHeroScene = (
     header?.removeAttribute('data-scene');
     header?.removeAttribute('data-docked');
     header?.style.removeProperty('--dock');
+    header?.style.removeProperty('--dock-reg');
     if (!gl.isContextLost()) gl.getExtension('WEBGL_lose_context')?.loseContext();
   };
 
+  /**
+   * One draw of every mesh with every program it uses, colour writes off and the canvas not yet
+   * shown: the driver's lazy first-draw work (vertex arrays, uploads, shader variants) happens
+   * here, in its own task, so the first visible frame is cheap.
+   */
+  const warmUp = (): void => {
+    renderer.bindFramebuffer();
+    renderer.setViewport(renderer.width * renderer.dpr, renderer.height * renderer.dpr);
+    camera.updateMatrixWorld();
+    group.updateMatrixWorld();
+    gl.colorMask(false, false, false, false);
+    for (const p of plates) {
+      drawDepth(p.mesh);
+      p.mesh.program = colorProgram;
+      p.mesh.draw({ camera });
+    }
+    lineH.draw({ camera });
+    shadow.draw({ camera });
+    gl.colorMask(true, true, true, true);
+  };
+
   // Measure once now so a layout problem fails here, before anything is shown.
+  await yieldToMain();
+  ensureContext();
   m = measure();
+  await yieldToMain();
+  ensureContext();
+  warmUp();
 
   // Listen from creation on: a prepared scene may wait (SVG intro, reduced motion) before start().
   canvas.addEventListener('webglcontextlost', onContextLost);
@@ -724,8 +831,8 @@ export const createHeroScene = (
     canvas.style.opacity = intro ? '1' : '0';
     stage.append(canvas);
 
-    // Header arches: hidden while the plates are in the hero, shown again as they dock.
-    setHeaderDock(intro ? 0 : 1);
+    // Header arches stay in register at the top; the hand-off pulses them (--dock-reg).
+    setHeaderDock(0);
     header?.setAttribute('data-scene', '');
     hero.dataset['scene'] = intro ? 'live' : 'fading';
     handedOver = intro;

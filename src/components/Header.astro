@@ -12,10 +12,14 @@
  * arrive staggered, and it wipes back up on close (Esc included). Page scroll is locked while it
  * is open. Every animation is off under reduced motion; the menu then opens and closes at once.
  *
+ * Home: the logo arches stay visible at all times; during the hero hand-off they snap through a
+ * short registration pulse (`--dock-reg`, set by the hero scene; Hero.astro owns those rules).
+ *
  * Hooks read by other scripts (keep them): `[data-header]`, `data-over-hero`, `data-solid`,
- * `data-docked`, `data-scene`, `--dock` (hero-scene/scene.ts), `.site-header-logo svg` (hero.ts),
- * `.site-header .logo-plate` and `[data-scroll-progress]` (motion.ts), `data-menu`,
- * `data-menu-open`, `data-menu-close` (script below).
+ * `data-docked`, `data-scene`, `--dock`, `--dock-reg` (hero-scene/scene.ts),
+ * `.site-header-logo .logo-plate-*` (Hero.astro), `.site-header .logo-plate` and
+ * `[data-scroll-progress]` (motion.ts), `data-menu`, `data-menu-open`, `data-menu-close` (script
+ * below).
  */
 import Logo from './Logo.astro';
 import Icon from './Icon.astro';
@@ -235,19 +239,16 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
     }
 
     /*
-     * Logo arches on the home page. With the live hero scene (data-scene) they are hidden while
-     * the 3D arches are in the hero and appear as those dock: opacity follows --dock (0-1),
-     * scrubbed, so no transition. Before the intro they wait hidden.
+     * Logo arches on the home page: always visible, so the mark is complete from first view.
+     * They wait hidden only while the once-per-session intro plays (html.hero-intro), then fade
+     * in. During the hero hand-off they snap through a registration pulse (--dock-reg; the
+     * translate rules live in Hero.astro).
      */
     .site-header[data-over-hero] .site-header-logo :global(.logo-plate) {
       transition: opacity var(--dur-slow) var(--ease-out);
     }
     :global(html.hero-intro) .site-header[data-over-hero] .site-header-logo :global(.logo-plate) {
       opacity: 0;
-    }
-    .site-header[data-scene] .site-header-logo :global(.logo-plate) {
-      opacity: var(--dock, 0);
-      transition: none;
     }
 
     /* CMYK hairline along the bottom edge, filled by the motion layer via --scroll-progress. */
@@ -658,11 +659,23 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
     /** The close wipe (menu-out, 300ms) plus a margin, in case animationend never fires. */
     const CLOSE_FALLBACK_MS = 420;
     let closing = false;
+    /** The pending close wipe's fallback timer and animationend listener (0 / null when idle). */
+    let fallbackTimer = 0;
+    let onWipeEnd: ((event: AnimationEvent) => void) | null = null;
+
+    /** Ends any close in progress: clears its timer and listener and the closing state. */
+    const settleClose = (): void => {
+      window.clearTimeout(fallbackTimer);
+      fallbackTimer = 0;
+      if (onWipeEnd) menu.removeEventListener('animationend', onWipeEnd);
+      onWipeEnd = null;
+      closing = false;
+      menu.removeAttribute('data-closing');
+    };
 
     const finishClose = (): void => {
       if (!closing) return;
-      closing = false;
-      menu.removeAttribute('data-closing');
+      settleClose();
       if (menu.open) menu.close();
     };
 
@@ -675,15 +688,13 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
       }
       closing = true;
       menu.setAttribute('data-closing', '');
-      const fallback = window.setTimeout(finishClose, CLOSE_FALLBACK_MS);
-      const onEnd = (event: AnimationEvent): void => {
+      fallbackTimer = window.setTimeout(finishClose, CLOSE_FALLBACK_MS);
+      onWipeEnd = (event: AnimationEvent): void => {
         // Only the sheet's own wipe (not a link's entry animation or the registration edge).
         if (event.target !== menu || event.pseudoElement) return;
-        menu.removeEventListener('animationend', onEnd);
-        window.clearTimeout(fallback);
         finishClose();
       };
-      menu.addEventListener('animationend', onEnd);
+      menu.addEventListener('animationend', onWipeEnd);
     };
 
     openBtn.addEventListener('click', () => {
@@ -698,9 +709,9 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
       close();
     });
     menu.addEventListener('close', () => {
-      // Also reached when the platform closes the dialog directly (a repeated Esc).
-      closing = false;
-      menu.removeAttribute('data-closing');
+      // Every close ends here, including a platform close (a repeated Esc, a link, a resize) in
+      // the middle of a wipe: drop that wipe's timer and listener so a quick re-open is not cut.
+      settleClose();
       openBtn.setAttribute('aria-expanded', 'false');
       openBtn.focus();
     });

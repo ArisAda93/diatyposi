@@ -110,19 +110,21 @@ void main() {
 
 /**
  * Ink never exceeds the glyph's cap (vAlpha ≤ cap; the caps keep text on the paper at AA). It
- * fades towards the viewport corners (vignette) and into the distance (fog), so the sheet has no
- * hard edge or horizon.
+ * fades towards the viewport corners (vignette, with a calmer but never empty centre) and into
+ * the distance (fog), so the sheet has no hard edge or horizon.
  */
 export const fieldFragment = /* glsl */ `${PRECISION}
 uniform vec2 uResolution;
-uniform vec2 uVignette;
+uniform vec4 uVignette;
 uniform vec3 uFog;
 varying vec3 vColor;
 varying float vAlpha;
 varying float vDepth;
 void main() {
   vec2 q = gl_FragCoord.xy / uResolution * 2.0 - 1.0;
-  float edge = 1.0 - smoothstep(uVignette.x, uVignette.y, length(q));
+  float r = length(q);
+  float edge = (1.0 - smoothstep(uVignette.x, uVignette.y, r)) *
+    mix(uVignette.z, 1.0, smoothstep(0.0, uVignette.w, r));
   float fog = mix(1.0, uFog.z, smoothstep(uFog.x, uFog.y, vDepth));
   float a = clamp(vAlpha * edge * fog, 0.0, 1.0);
   gl_FragColor = vec4(mix(vec3(1.0), vColor, a), 1.0);

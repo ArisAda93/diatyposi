@@ -1,10 +1,11 @@
 /**
  * Living background scene (OGL / WebGL), drawn on every page behind all content.
  *
- * A press sheet recedes in perspective, tilted away from the viewer and covered in small arch
- * glyphs (the logo's ARCH outline, flat) on a halftone screen. Slow travelling waves grow and
- * lift the glyphs like halftone dots breathing. They are mostly key ink at low alpha, with a few
- * C/M/Y accents that overprint where they meet.
+ * A press sheet recedes in perspective, tilted away from the viewer and covered in arch glyphs
+ * (the logo's ARCH outline, flat) on a halftone screen. Slow travelling waves grow, lift and ink
+ * the glyphs like halftone dots breathing: bands of printed arches roll across the sheet, the
+ * crests at full ink, and fog fades the far rows. Most glyphs are C/M/Y (the inks that can carry
+ * presence within the contrast caps), a minority key; lifted crests overprint where they meet.
  *
  * - Scroll: the sheet travels with the page at DOLLY of its speed, damped (SCROLL_LAG), which is
  *   the camera dollying along the sheet. Near rows move faster than far ones: real depth parallax.
@@ -12,80 +13,105 @@
  *   get a slow drift of the lean instead.
  * - Sections with `data-bg-accent` (wired in index.ts) blend the accent share and the key tint
  *   towards their ink while they hold the viewport centre (math.ts ACCENT_MIX).
- * - Contrast: each ink's alpha is capped so that text on the paper (TEXT_ON_PAPER) keeps
- *   MIN_CONTRAST on a pixel covered by a whole glyph, whatever the tuning below says.
+ * - Contrast: each ink's alpha is capped (math.ts inkCaps) so that text on the paper
+ *   (TEXT_ON_PAPER) keeps MIN_CONTRAST on a pixel covered by one glyph, whatever the tuning
+ *   below says.
  * - One draw loop, at full rate while something follows the visitor and at AMBIENT_FPS otherwise;
  *   paused while the tab is hidden. Reduced motion: one static frame, redrawn on resize only.
  * - Context loss or any GPU error: the canvas is removed and the paper shows (onLost).
+ * - Start-up never blocks the main thread for long: plain WebGL (no engine to evaluate), and
+ *   each step (shader compile, caps, glyph, instance data in batches, buffer upload, sizing,
+ *   first draw) runs in its own task. The shaders compile in the background
+ *   (KHR_parallel_shader_compile, polled once per frame) while the other steps run.
+ * - Low-end devices (math.ts densityFactor) draw a sparser grid, about 0.6× the glyphs.
  */
-import { Camera, Geometry, Mesh, Program, Renderer, Transform } from 'ogl';
 import { ARCH } from '~/components/logo-paths';
 import {
   BALANCED,
   MAX_TINT,
   bufferDpr,
   damp,
+  densityFactor,
   dampMix,
   dollyShift,
   glyphShape,
   gridFor,
   hexToRgb,
+  inkCaps,
   inkThresholds,
-  maxInkAlpha,
   mixFor,
-  mixRgb,
   mixSettled,
   parseCssColor,
+  perspectiveMatrix,
   sheetFrame,
+  sheetMatrix,
   shouldDraw,
   tintColor,
   toNdc,
   type Accent,
   type Grid,
   type GridOptions,
+  type InkCaps,
   type InkMix,
   type Rgb,
+  type VignetteOptions,
 } from './math';
 import { fieldFragment, fieldVertex } from './shaders';
+import { nextFrame, yieldToMain } from './tasks';
 
 // ================================================================================================
 // Tuning: every visual constant of the background lives here.
 // ================================================================================================
 
-/** Camera vertical field of view, degrees. */
-const FOV = 38;
-/** Sheet tilt about the horizontal axis, radians (negative: the top recedes from the viewer). */
-const TILT = -0.62;
+/** Camera vertical field of view, degrees (wider: stronger perspective). */
+const FOV = 46;
+/**
+ * Sheet tilt about the horizontal axis, radians (negative: the top recedes from the viewer). At
+ * −0.9 with FOV 46 the rows at the top of the screen sit about 2.2× farther away than those at
+ * the centre and 3.3× farther than those at the bottom: they visibly shrink towards the horizon.
+ */
+const TILT = -0.9;
 /** Sheet travel per px of page scroll (the content moves 1 px): below 1 reads as depth. */
-const DOLLY = 0.32;
+const DOLLY = 0.4;
 /** How fast the sheet catches up with the scroll, per second (lower lags more). */
-const SCROLL_LAG = 5;
+const SCROLL_LAG = 4;
 /** Pointer lean at full deflection (radians about x and y) and how fast it follows, per second. */
-const LEAN = { x: 0.035, y: 0.05, follow: 2.2 };
+const LEAN = { x: 0.05, y: 0.07, follow: 2 };
 /** Touch screens: autonomous lean drift, as a fraction of LEAN, and its speed (rad/s). */
-const DRIFT = { amount: 0.55, speed: 0.11 };
+const DRIFT = { amount: 0.6, speed: 0.11 };
 /** Halftone grid: pitch (px on the sheet) on small and large screens, instance cap, margins. */
 const GRID: GridOptions = {
-  pitchSmall: 40,
-  pitchLarge: 34,
+  pitchSmall: 46,
+  pitchLarge: 42,
   smallWidth: 480,
   largeWidth: 1440,
-  maxInstances: 6000,
+  maxInstances: 9000,
   margin: 0.18,
   extraRows: 3,
 };
-/** Points per radian on the glyph's arcs (the glyphs are small: a few suffice). */
+/** Points per radian on the glyph's arcs. */
 const GLYPH_ARC_STEPS = 3;
-/** Glyph width as a fraction of the pitch: floor, share of the wave, pointer swell. */
-const SIZE = { base: 0.16, wave: 0.34, swell: 0.28 };
+/**
+ * Glyph width as a fraction of the pitch: floor, share of the wave, pointer swell. The sum stays
+ * under 1, so neighbouring glyphs never overlap on the sheet (only lifted crests overprint). At
+ * 1440 px a glyph averages about 13 px at the centre and 20 px in the nearest rows.
+ */
+const SIZE = { base: 0.2, wave: 0.26, swell: 0.22 };
 /** Lift off the sheet towards the viewer, in pitches: share of the wave, pointer swell. */
-const LIFT = { wave: 0.55, swell: 0.9 };
-/** Ink as a fraction of each ink's alpha cap: floor, share of the wave, pointer swell. */
-const INK = { base: 0.3, wave: 0.6, swell: 0.55 };
+const LIFT = { wave: 0.85, swell: 1.3 };
+/**
+ * Ink as a fraction of each ink's alpha cap: floor, share of the wave, pointer swell. Floor plus
+ * wave is 1: the wave crests print at the cap, so the travelling waves read as bands of ink.
+ */
+const INK = { base: 0.35, wave: 0.65, swell: 0.4 };
 /** Pointer swell focus (larger is a tighter swell) and how fast it fades in and out, per second. */
-const SWELL = { focus: 7, follow: 3, track: 8 };
-/** Design ceiling of the ink alpha per plate (the contrast caps may lower these). */
-const ALPHA_MAX = { k: 0.12, c: 0.2, m: 0.15, y: 0.32 };
+const SWELL = { focus: 6, follow: 3, track: 8 };
+/**
+ * Design ceiling of the ink alpha per plate. The contrast caps (math.ts inkCaps) lower key, cyan
+ * and magenta to about 0.074, 0.148 and 0.086; yellow barely darkens the paper, so its ceiling
+ * here is what limits it.
+ */
+const ALPHA_MAX = { k: 0.12, c: 0.2, m: 0.15, y: 0.42 };
 /** Text colours set on the paper (red labels, muted text, key text) and the contrast they keep. */
 const TEXT_ON_PAPER = ['#C03529', '#5A5650', '#221F20'];
 /** WCAG AA (4.5) plus a margin for the paper grain drawn above the canvas. */
@@ -94,10 +120,13 @@ const MIN_CONTRAST = 4.6;
 const INKS = { k: '#221F20', c: '#00AEEF', m: '#ED008C', y: '#FFF100' };
 /** Fallback paper colour (html's background is read at start). */
 const PAPER_FALLBACK = '#FAFAF7';
-/** Vignette radii in NDC (1 = the middle of a screen edge, 1.41 = a corner). */
-const VIGNETTE = { inner: 0.5, outer: 1.5 };
+/**
+ * Vignette in NDC radii (1 = the middle of a screen edge, 1.41 = a corner): fades out from
+ * `inner` to `outer`, and the centre keeps `calm` of the ink, full again by `calmRadius`.
+ */
+const VIGNETTE: VignetteOptions = { inner: 0.8, outer: 1.6, calm: 0.7, calmRadius: 0.6 };
 /** Distance fog: starts and ends at these multiples of the camera distance; ink left at the end. */
-const FOG = { near: 0.95, far: 1.6, floor: 0.35 };
+const FOG = { near: 1, far: 2.1, floor: 0.22 };
 /** Section accent blend rate, per second. */
 const ACCENT_RATE = 1.8;
 /** Frame rate while only the ambient waves move. */
@@ -108,6 +137,8 @@ const MAX_PIXELS = 2_400_000;
 /** Reduced motion: the wave phase of the single static frame, seconds. */
 const STATIC_TIME = 14;
 const RESIZE_DEBOUNCE = 150;
+/** Start-up: instance slots written per task. */
+const SLOT_BATCH = 2048;
 
 // ================================================================================================
 
@@ -134,7 +165,111 @@ interface Metrics {
   grid: Grid;
 }
 
-const toVec3 = (rgb: Rgb): Float32Array => new Float32Array(rgb);
+/** A canvas with its WebGL context (from the probe in index.ts). */
+export interface GLContext {
+  canvas: HTMLCanvasElement;
+  gl: WebGLRenderingContext | WebGL2RenderingContext;
+}
+
+/** Instanced drawing on WebGL 2 or on WebGL 1 with ANGLE_instanced_arrays. */
+interface Instancing {
+  divisor(location: number, divisor: number): void;
+  draw(indexCount: number, instances: number): void;
+}
+
+const instancingFor = (gl: WebGLRenderingContext | WebGL2RenderingContext): Instancing => {
+  if (typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext) {
+    const gl2: WebGL2RenderingContext = gl;
+    return {
+      divisor: (location, divisor) => gl2.vertexAttribDivisor(location, divisor),
+      draw: (count, instances) =>
+        gl2.drawElementsInstanced(gl2.TRIANGLES, count, gl2.UNSIGNED_SHORT, 0, instances),
+    };
+  }
+  const ext = gl.getExtension('ANGLE_instanced_arrays');
+  if (!ext) throw new Error('Instanced drawing is not available');
+  return {
+    divisor: (location, divisor) => ext.vertexAttribDivisorANGLE(location, divisor),
+    draw: (count, instances) =>
+      ext.drawElementsInstancedANGLE(gl.TRIANGLES, count, gl.UNSIGNED_SHORT, 0, instances),
+  };
+};
+
+/** Attribute locations, bound before linking (position must be 0: it is not instanced). */
+const POSITION = 0;
+const SLOT = 1;
+
+const UNIFORM_NAMES = [
+  'modelViewMatrix',
+  'projectionMatrix',
+  'uGrid',
+  'uRowStart',
+  'uShift',
+  'uPitch',
+  'uTime',
+  'uPointer',
+  'uPointerAmt',
+  'uFocus',
+  'uAspect',
+  'uSize',
+  'uLift',
+  'uInkAmt',
+  'uMix',
+  'uKey',
+  'uCyan',
+  'uMagenta',
+  'uYellow',
+  'uTint',
+  'uTintAmt',
+  'uCap',
+  'uResolution',
+  'uVignette',
+  'uFog',
+] as const;
+
+type UniformName = (typeof UNIFORM_NAMES)[number];
+
+/**
+ * Compiles and links the program without blocking: the calls only queue the work, and with
+ * KHR_parallel_shader_compile the link is polled once per frame until it has finished. Without
+ * the extension, the status read below waits for the driver, but in a task of its own.
+ */
+const linkProgram = async (
+  gl: WebGLRenderingContext | WebGL2RenderingContext,
+  check: () => void,
+): Promise<WebGLProgram> => {
+  const parallel = gl.getExtension('KHR_parallel_shader_compile');
+  const vertex = gl.createShader(gl.VERTEX_SHADER);
+  const fragment = gl.createShader(gl.FRAGMENT_SHADER);
+  const program = gl.createProgram();
+  if (!vertex || !fragment || !program) throw new Error('WebGL objects could not be created');
+  gl.shaderSource(vertex, fieldVertex);
+  gl.shaderSource(fragment, fieldFragment);
+  gl.compileShader(vertex);
+  gl.compileShader(fragment);
+  gl.attachShader(program, vertex);
+  gl.attachShader(program, fragment);
+  gl.bindAttribLocation(program, POSITION, 'position');
+  gl.bindAttribLocation(program, SLOT, 'slot');
+  gl.linkProgram(program);
+
+  if (parallel) {
+    while (!gl.getProgramParameter(program, parallel.COMPLETION_STATUS_KHR)) {
+      await nextFrame();
+      check();
+    }
+  } else {
+    await yieldToMain();
+    check();
+  }
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    // Refuse the scene so the paper stays.
+    throw new Error('Living background shaders failed to link');
+  }
+  gl.deleteShader(vertex);
+  gl.deleteShader(fragment);
+  return program;
+};
 
 /** The paper as painted on <html>, so the cleared canvas matches it exactly. */
 const readPaper = (): Rgb =>
@@ -142,103 +277,155 @@ const readPaper = (): Rgb =>
   hexToRgb(PAPER_FALLBACK);
 
 /** Alpha cap per plate: the design ceiling, lowered until every text colour keeps its contrast. */
-const alphaCaps = (paper: Rgb): Record<keyof typeof INKS, number> => {
-  const texts = TEXT_ON_PAPER.map(hexToRgb);
-  const cap = (ink: Rgb, ceiling: number): number =>
-    Math.min(ceiling, ...texts.map((text) => maxInkAlpha(paper, ink, text, MIN_CONTRAST)));
-  const key = hexToRgb(INKS.k);
-  const accents = [hexToRgb(INKS.c), hexToRgb(INKS.m), hexToRgb(INKS.y)];
-  return {
-    // Key glyphs may be tinted towards any accent: the cap must hold for every tinted key too.
-    k: Math.min(
-      cap(key, ALPHA_MAX.k),
-      ...accents.map((ink) => cap(mixRgb(key, ink, MAX_TINT), ALPHA_MAX.k)),
-    ),
-    c: cap(hexToRgb(INKS.c), ALPHA_MAX.c),
-    m: cap(hexToRgb(INKS.m), ALPHA_MAX.m),
-    y: cap(hexToRgb(INKS.y), ALPHA_MAX.y),
-  };
+const alphaCaps = (paper: Rgb): InkCaps =>
+  inkCaps(
+    paper,
+    { k: hexToRgb(INKS.k), c: hexToRgb(INKS.c), m: hexToRgb(INKS.m), y: hexToRgb(INKS.y) },
+    TEXT_ON_PAPER.map(hexToRgb),
+    ALPHA_MAX,
+    MIN_CONTRAST,
+    MAX_TINT,
+  );
+
+/** Glyph density for this device (math.ts densityFactor). */
+const deviceDensity = (width: number): number => {
+  const nav = navigator as Navigator & { deviceMemory?: number };
+  return densityFactor({
+    cores: navigator.hardwareConcurrency || undefined,
+    memory: typeof nav.deviceMemory === 'number' ? nav.deviceMemory : undefined,
+    coarse: matchMedia('(pointer: coarse)').matches,
+    width,
+  });
 };
 
-export const createLivingBackground = (
+/**
+ * Builds the scene step by step, yielding to the main thread between steps (see the file
+ * comment). Rejects, with nothing inserted into the page, if the context is lost meanwhile or the
+ * GPU refuses the shaders; the caller then frees the context and the paper stays.
+ */
+export const createLivingBackground = async (
   host: HTMLElement,
-  canvas: HTMLCanvasElement,
+  context: GLContext,
   options: LivingBackgroundOptions,
+): Promise<LivingBackground> => {
+  const { canvas, gl } = context;
+  let lostEarly = false;
+  const onLostEarly = (): void => {
+    lostEarly = true;
+  };
+  canvas.addEventListener('webglcontextlost', onLostEarly);
+  const check = (): void => {
+    if (lostEarly || gl.isContextLost()) throw new Error('WebGL context lost during start-up');
+  };
+  const step = async (): Promise<void> => {
+    await yieldToMain();
+    check();
+  };
+
+  try {
+    // 1. Queue the shader compile first: the GPU works on it while the steps below run.
+    const linking = linkProgram(gl, check);
+    // A rejection is handled where it is awaited (step 6); keep it from being reported early.
+    linking.catch(() => undefined);
+    await step();
+
+    // 2. Colours and contrast caps.
+    const paper = readPaper();
+    const caps = alphaCaps(paper);
+    await step();
+
+    // 3. The glyph: one arch, one unit wide, centred.
+    const glyph = glyphShape(ARCH, GLYPH_ARC_STEPS);
+    await step();
+
+    // 4. Instance slots, in batches.
+    const slots = new Float32Array(GRID.maxInstances);
+    for (let from = 0; from < slots.length; from += SLOT_BATCH) {
+      const to = Math.min(slots.length, from + SLOT_BATCH);
+      for (let i = from; i < to; i++) slots[i] = i;
+      await step();
+    }
+
+    // 5. Buffers and attributes (state stays bound: nothing else draws in this context).
+    const instancing = instancingFor(gl);
+    const upload = (target: number, data: Float32Array | Uint16Array): void => {
+      const buffer = gl.createBuffer();
+      if (!buffer) throw new Error('WebGL buffer could not be created');
+      gl.bindBuffer(target, buffer);
+      gl.bufferData(target, data, gl.STATIC_DRAW);
+    };
+    upload(gl.ARRAY_BUFFER, glyph.position);
+    gl.enableVertexAttribArray(POSITION);
+    gl.vertexAttribPointer(POSITION, 2, gl.FLOAT, false, 0, 0);
+    instancing.divisor(POSITION, 0);
+    upload(gl.ARRAY_BUFFER, slots);
+    gl.enableVertexAttribArray(SLOT);
+    gl.vertexAttribPointer(SLOT, 1, gl.FLOAT, false, 0, 0);
+    instancing.divisor(SLOT, 1);
+    upload(gl.ELEMENT_ARRAY_BUFFER, glyph.index);
+    await step();
+
+    // 6. The program, once the GPU has linked it; uniform locations and fixed state.
+    const program = await linking;
+    check();
+    gl.useProgram(program);
+    const loc = {} as Record<UniformName, WebGLUniformLocation | null>;
+    UNIFORM_NAMES.forEach((name) => {
+      loc[name] = gl.getUniformLocation(program, name);
+    });
+    gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.CULL_FACE);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.DST_COLOR, gl.ZERO);
+    gl.clearColor(paper[0], paper[1], paper[2], 1);
+    gl.uniform1f(loc.uFocus, SWELL.focus);
+    gl.uniform3f(loc.uSize, SIZE.base, SIZE.wave, SIZE.swell);
+    gl.uniform2f(loc.uLift, LIFT.wave, LIFT.swell);
+    gl.uniform3f(loc.uInkAmt, INK.base, INK.wave, INK.swell);
+    const setRgb = (location: WebGLUniformLocation | null, hex: string): void => {
+      const [r, g, b] = hexToRgb(hex);
+      gl.uniform3f(location, r, g, b);
+    };
+    setRgb(loc.uKey, INKS.k);
+    setRgb(loc.uCyan, INKS.c);
+    setRgb(loc.uMagenta, INKS.m);
+    setRgb(loc.uYellow, INKS.y);
+    gl.uniform4f(loc.uCap, caps.k, caps.c, caps.m, caps.y);
+    gl.uniform4f(loc.uVignette, VIGNETTE.inner, VIGNETTE.outer, VIGNETTE.calm, VIGNETTE.calmRadius);
+    await step();
+
+    canvas.removeEventListener('webglcontextlost', onLostEarly);
+    return assemble(host, context, options, {
+      instancing,
+      loc,
+      indexCount: glyph.index.length,
+    });
+  } catch (error) {
+    canvas.removeEventListener('webglcontextlost', onLostEarly);
+    throw error;
+  }
+};
+
+interface Prepared {
+  instancing: Instancing;
+  loc: Record<UniformName, WebGLUniformLocation | null>;
+  indexCount: number;
+}
+
+/** The running scene: sizing, the draw loop and the events, on prepared GPU state. */
+const assemble = (
+  host: HTMLElement,
+  { canvas, gl }: GLContext,
+  options: LivingBackgroundOptions,
+  { instancing, loc, indexCount }: Prepared,
 ): LivingBackground => {
-  const paper = readPaper();
-  const caps = alphaCaps(paper);
   const cyan = hexToRgb(INKS.c);
   const magenta = hexToRgb(INKS.m);
   const yellow = hexToRgb(INKS.y);
-
-  const renderer = new Renderer({
-    canvas,
-    dpr: 1,
-    alpha: false,
-    depth: false,
-    antialias: true,
-    powerPreference: 'low-power',
-  });
-  const gl = renderer.gl;
-  gl.clearColor(paper[0], paper[1], paper[2], 1);
-
-  const camera = new Camera(gl, { fov: FOV, near: 1, far: 10_000 });
-
-  // One arch glyph, one unit wide, centred: the shape every instance draws.
-  const glyph = glyphShape(ARCH, GLYPH_ARC_STEPS);
-  const slots = new Float32Array(GRID.maxInstances);
-  for (let i = 0; i < slots.length; i++) slots[i] = i;
-  const geometry = new Geometry(gl, {
-    position: { size: 2, data: glyph.position },
-    index: { data: glyph.index },
-    slot: { size: 1, instanced: 1, data: slots },
-  });
-
-  const thresholds = new Float32Array(3);
-  const tint = new Float32Array(3);
-  const pointerNdc = new Float32Array(2);
-  const uniforms = {
-    uGrid: { value: new Float32Array(2) },
-    uRowStart: { value: 0 },
-    uShift: { value: 0 },
-    uPitch: { value: 1 },
-    uTime: { value: 0 },
-    uPointer: { value: pointerNdc },
-    uPointerAmt: { value: 0 },
-    uFocus: { value: SWELL.focus },
-    uAspect: { value: 1 },
-    uSize: { value: new Float32Array([SIZE.base, SIZE.wave, SIZE.swell]) },
-    uLift: { value: new Float32Array([LIFT.wave, LIFT.swell]) },
-    uInkAmt: { value: new Float32Array([INK.base, INK.wave, INK.swell]) },
-    uMix: { value: thresholds },
-    uKey: { value: toVec3(hexToRgb(INKS.k)) },
-    uCyan: { value: toVec3(cyan) },
-    uMagenta: { value: toVec3(magenta) },
-    uYellow: { value: toVec3(yellow) },
-    uTint: { value: tint },
-    uTintAmt: { value: 0 },
-    uCap: { value: new Float32Array([caps.k, caps.c, caps.m, caps.y]) },
-    uResolution: { value: new Float32Array(2) },
-    uVignette: { value: new Float32Array([VIGNETTE.inner, VIGNETTE.outer]) },
-    uFog: { value: new Float32Array(3) },
-  };
-  const program = new Program(gl, {
-    vertex: fieldVertex,
-    fragment: fieldFragment,
-    uniforms,
-    depthTest: false,
-    depthWrite: false,
-    cullFace: false,
-  });
-  program.setBlendFunc(gl.DST_COLOR, gl.ZERO);
-  // OGL only warns when a shader fails; refuse the scene so the paper stays.
-  if (!gl.getProgramParameter(program.program, gl.LINK_STATUS)) {
-    throw new Error('Living background shaders failed to link');
-  }
-
-  const sheet = new Transform();
-  const mesh = new Mesh(gl, { geometry, program, frustumCulled: false });
-  mesh.setParent(sheet);
+  const projection = new Float32Array(16);
+  const modelView = new Float32Array(16);
+  let instances = 0;
+  let sheetZ = 0;
 
   // ----------------------------------------------------------------------------------------------
   // Measurements (start and resize). The host is fixed and 100lvh tall, so mobile toolbars
@@ -246,41 +433,37 @@ export const createLivingBackground = (
   // ----------------------------------------------------------------------------------------------
 
   let m: Metrics | null = null;
+  let bufferWidth = 0;
+  let bufferHeight = 0;
 
   const measure = (): Metrics => {
     const width = Math.max(1, host.clientWidth);
     const height = Math.max(1, host.clientHeight);
     const dpr = bufferDpr(width, height, window.devicePixelRatio, MAX_DPR, MAX_PIXELS);
-    if (renderer.dpr !== dpr || renderer.width !== width || renderer.height !== height) {
-      renderer.dpr = dpr;
-      renderer.setSize(width, height);
-      // Let CSS own the box so a pending resize never shows a gap.
-      canvas.style.width = '100%';
-      canvas.style.height = '100%';
+    const w = Math.max(1, Math.floor(width * dpr));
+    const h = Math.max(1, Math.floor(height * dpr));
+    if (w !== bufferWidth || h !== bufferHeight) {
+      bufferWidth = w;
+      bufferHeight = h;
+      canvas.width = w;
+      canvas.height = h;
     }
+    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
 
     const frame = sheetFrame(width, height, FOV, TILT);
-    const grid = gridFor(frame, width, GRID);
-    camera.perspective({
-      aspect: width / height,
-      near: frame.distance * 0.05,
-      far: frame.distance * 8,
-    });
-    camera.position.set(0, 0, 0);
-    sheet.position.set(0, 0, -frame.distance);
+    const grid = gridFor(frame, width, GRID, deviceDensity(width));
+    perspectiveMatrix(projection, FOV, width / height, frame.distance * 0.05, frame.distance * 8);
+    sheetZ = -frame.distance;
     // gridFor keeps the count under the cap; never draw past the instance buffer regardless.
-    geometry.setInstancedCount(Math.min(grid.count, GRID.maxInstances));
+    instances = Math.min(grid.count, GRID.maxInstances);
 
-    uniforms.uGrid.value[0] = grid.cols;
-    uniforms.uGrid.value[1] = grid.rows;
-    uniforms.uRowStart.value = grid.rowStart;
-    uniforms.uPitch.value = grid.pitch;
-    uniforms.uAspect.value = width / height;
-    uniforms.uResolution.value[0] = gl.drawingBufferWidth;
-    uniforms.uResolution.value[1] = gl.drawingBufferHeight;
-    uniforms.uFog.value[0] = frame.distance * FOG.near;
-    uniforms.uFog.value[1] = frame.distance * FOG.far;
-    uniforms.uFog.value[2] = FOG.floor;
+    gl.uniformMatrix4fv(loc.projectionMatrix, false, projection);
+    gl.uniform2f(loc.uGrid, grid.cols, grid.rows);
+    gl.uniform1f(loc.uRowStart, grid.rowStart);
+    gl.uniform1f(loc.uPitch, grid.pitch);
+    gl.uniform1f(loc.uAspect, width / height);
+    gl.uniform2f(loc.uResolution, gl.drawingBufferWidth, gl.drawingBufferHeight);
+    gl.uniform3f(loc.uFog, frame.distance * FOG.near, frame.distance * FOG.far, FOG.floor);
     return { width, height, grid };
   };
 
@@ -305,29 +488,24 @@ export const createLivingBackground = (
 
   const applyMix = (current: InkMix): void => {
     const [c, cm] = inkThresholds(current);
-    thresholds[0] = c;
-    thresholds[1] = cm;
-    thresholds[2] = current.share;
-    tint.set(tintColor(current, cyan, magenta, yellow));
-    uniforms.uTintAmt.value = current.tint;
+    const [r, g, b] = tintColor(current, cyan, magenta, yellow);
+    gl.uniform3f(loc.uMix, c, cm, current.share);
+    gl.uniform3f(loc.uTint, r, g, b);
+    gl.uniform1f(loc.uTintAmt, current.tint);
   };
 
   const draw = (shift: number): void => {
     if (!m) return;
-    uniforms.uShift.value = shift;
-    uniforms.uTime.value = clock;
-    pointerNdc[0] = pointer.sx;
-    pointerNdc[1] = pointer.sy;
-    uniforms.uPointerAmt.value = pointer.amount;
-    sheet.rotation.set(TILT - lean.y * LEAN.x, lean.x * LEAN.y, 0);
+    gl.uniform1f(loc.uShift, shift);
+    gl.uniform1f(loc.uTime, clock);
+    gl.uniform2f(loc.uPointer, pointer.sx, pointer.sy);
+    gl.uniform1f(loc.uPointerAmt, pointer.amount);
+    sheetMatrix(modelView, TILT - lean.y * LEAN.x, lean.x * LEAN.y, sheetZ);
+    gl.uniformMatrix4fv(loc.modelViewMatrix, false, modelView);
     applyMix(mix);
 
-    renderer.bindFramebuffer();
-    renderer.setViewport(renderer.width * renderer.dpr, renderer.height * renderer.dpr);
     gl.clear(gl.COLOR_BUFFER_BIT);
-    camera.updateMatrixWorld();
-    sheet.updateMatrixWorld();
-    mesh.draw({ camera });
+    instancing.draw(indexCount, instances);
   };
 
   /** Reduced motion: a fixed sheet, no pointer swell, the balanced mix, a pleasing wave phase. */
@@ -485,8 +663,7 @@ export const createLivingBackground = (
     options.onLost();
   };
 
-  // Measure once now so a layout or GPU problem fails here, before anything is shown.
-  m = measure();
+  // Listen from here on: the scene may wait before start().
   canvas.addEventListener('webglcontextlost', onContextLost);
 
   const start = (): boolean => {
@@ -495,6 +672,14 @@ export const createLivingBackground = (
       lose();
       return false;
     }
+    let metrics: Metrics;
+    try {
+      metrics = measure();
+    } catch {
+      lose();
+      return false;
+    }
+    m = metrics;
     started = true;
     canvas.classList.add('living-bg-canvas');
     canvas.setAttribute('aria-hidden', 'true');
@@ -509,14 +694,17 @@ export const createLivingBackground = (
     try {
       if (reduce) drawStatic();
       else {
-        draw(dollyShift(follow, DOLLY, m.grid.pitch));
+        draw(dollyShift(follow, DOLLY, metrics.grid.pitch));
         lastDraw = performance.now();
       }
     } catch {
       lose();
       return false;
     }
-    requestAnimationFrame(() => canvas.classList.add('is-live'));
+    // Commit the canvas's start style (opacity 0) before going live, so the fade-in transition
+    // runs instead of the canvas appearing at full opacity in its first styled frame.
+    void getComputedStyle(canvas).opacity;
+    canvas.classList.add('is-live');
     request();
     return !destroyed;
   };

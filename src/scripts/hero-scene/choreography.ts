@@ -19,9 +19,9 @@
  * Each plate turns back to where it started over one loop, so the loop has no seam.
  *
  * Space ("group space"): logo raster units, y up, origin at the centre of the mark's viewBox (the
- * scene's pivot and docking point). A plate's pose is the position of its anchor (the centre of
- * the arch's bounding box), its depth z, its turn rz about z and tip rx about x (radians), and its
- * scale. Every pose stays inside the ART box, which the hero lays out for it (Hero.astro).
+ * scene's pivot). A plate's pose is the position of its anchor (the centre of the arch's bounding
+ * box), its depth z, its turn rz about z and tip rx about x (radians), and its scale. Every pose
+ * stays inside the ART box, which the hero lays out for it (Hero.astro).
  *
  * The visual tuning lives in the constants below, grouped by pose.
  */
@@ -44,9 +44,9 @@ export const ART = { width: 900, height: 620 } as const;
 
 /** The loop: each pose is held, then moves into the next one (seconds). Period: the sum. */
 export const TIMELINE = [
-  { pose: 'mark', hold: 3.8, move: 2.4 },
-  { pose: 'target', hold: 3.6, move: 2.4 },
-  { pose: 'wave', hold: 3.2, move: 2.6 },
+  { pose: 'mark', hold: 3.6, move: 2.4 },
+  { pose: 'target', hold: 4.0, move: 2.4 },
+  { pose: 'wave', hold: 3.0, move: 2.6 },
 ] as const satisfies readonly { pose: PoseName; hold: number; move: number }[];
 
 /** Delay between the plates within a move, in print order Y, M, C, K (seconds). */
@@ -75,8 +75,9 @@ interface PlateTuning {
 }
 
 /**
- * Per plate. Turns are chosen so every move turns each plate by at most 180° and each plate ends
- * the loop at the turn it started with (mark 0 → ring → wave → mark 0).
+ * Per plate. Each plate ends the loop at the turn it started with (mark 0 → ring → wave → mark 0).
+ * C, M and K turn by at most 180° per move. Y turns half a turn into the ring plus the ring's own
+ * spin at that moment (about 195–210° in all), and back by a little less than half a turn.
  */
 export const PLATES = {
   c: {
@@ -98,7 +99,7 @@ export const PLATES = {
     rz: -0.009,
     phase: 1.3,
     ring: 0,
-    wave: Math.PI,
+    wave: -Math.PI,
     snap: { x: -22, y: -18, rz: 0.04 },
   },
   y: {
@@ -174,10 +175,24 @@ export const SNAP_AT = 0.62;
  * it ends), time to draw or retract one line, and the delay of the vertical line behind the
  * horizontal one (seconds).
  */
-export const CROSSHAIR = { reach: 1.28, delay: 0.25, draw: 1.0, stagger: 0.18 } as const;
+export const CROSSHAIR = { reach: 1.2, delay: 0.15, draw: 0.8, stagger: 0.18 } as const;
 
-/** Scroll-out: blend to the mark by this docking progress, then collapse over this span. */
-export const DOCK_BLEND = { toMark: 0.2, collapseFrom: 0.12, collapseTo: 0.78 } as const;
+/**
+ * Scroll-out hand-off (progress 0–1, see handoff): blend to the mark by `toMark`, collapse into
+ * register from `collapseFrom` to `collapseTo`, shrink by `shrink` from `shrinkFrom`, and fade
+ * out from `fadeFrom` while the header logo's arches pulse (registrationPulse).
+ */
+export const HANDOFF = {
+  toMark: 0.25,
+  collapseFrom: 0.15,
+  collapseTo: 0.65,
+  shrinkFrom: 0.35,
+  shrink: 0.12,
+  fadeFrom: 0.5,
+} as const;
+
+/** Header logo pulse: the dock progress at which its arches are furthest out of register. */
+export const PULSE_PEAK = 0.55;
 
 // ------------------------------------------------------------------------------------------------
 // Types and layout
@@ -400,7 +415,7 @@ export const blendTilt = (a: Tilt, b: Tilt, w: number): Tilt => ({
   z: lerp(a.z, b.z, w),
 });
 
-/** Flat and exactly in register: where the plates start (hand-over from the SVG) and dock. */
+/** Flat and exactly in register: where the plates start (hand-over from the SVG) and fade. */
 export const registerPose = (plate: PlateLayout): PlatePose => ({
   x: plate.markX,
   y: plate.markY,
@@ -515,7 +530,7 @@ export const tiltAt = (t: number): Tilt => {
   return blendTilt(from, tiltOf(segment.next, lt), w);
 };
 
-/** The mark's group tilt: the docking blend targets it. */
+/** The mark's group tilt: the scroll-out hand-off blends to it. */
 export const markTilt = (): Tilt => MARK.tilt;
 
 export interface Span {
@@ -543,17 +558,50 @@ export const crosshairAt = (t: number): { horizontal: Span; vertical: Span } => 
   return { horizontal: line(0), vertical: line(CROSSHAIR.stagger) };
 };
 
+export interface Handoff {
+  /** Blend from the loop pose to the mark pose (the loop clock also slows to a stop with it). */
+  toMark: number;
+  /** From the mark into flat register. */
+  collapse: number;
+  /** Scale of the plates (1 → 1 − HANDOFF.shrink). */
+  scale: number;
+  /** Ink of the hero plates (1 → 0). */
+  ink: number;
+  /** Progress of the hand-off to the header logo (`--dock`, 0 → 1), as the hero plates fade. */
+  dock: number;
+}
+
 /**
- * Scroll-out before docking (progress 0–1, math.ts dockProgress): the plates first blend to the
- * mark pose (`toMark`; the loop clock also slows to a stop with it), then collapse into register
- * (`collapse`). Scrolling back runs it in reverse.
+ * The hand-off at scroll progress p (math.ts dockProgress): the plates first blend to the mark
+ * from whatever pose they are in, collapse into register, then shrink a little and fade out in the
+ * art column while the header logo's arches pulse out of register and snap back. Scrolling back
+ * runs it in reverse.
  */
-export const dockBlend = (progress: number): { toMark: number; collapse: number } => ({
-  toMark: smoothstep(0, DOCK_BLEND.toMark, progress),
-  collapse: easeInOutCubic(
-    (progress - DOCK_BLEND.collapseFrom) / (DOCK_BLEND.collapseTo - DOCK_BLEND.collapseFrom),
-  ),
-});
+export const handoff = (p: number): Handoff => {
+  const fade = smoothstep(HANDOFF.fadeFrom, 1, p);
+  return {
+    toMark: smoothstep(0, HANDOFF.toMark, p),
+    collapse: easeInOutCubic(
+      (p - HANDOFF.collapseFrom) / (HANDOFF.collapseTo - HANDOFF.collapseFrom),
+    ),
+    scale: 1 - HANDOFF.shrink * smoothstep(HANDOFF.shrinkFrom, 1, p),
+    ink: 1 - fade,
+    dock: fade,
+  };
+};
+
+/**
+ * How far out of register the header logo's arches are during the hand-off (`--dock-reg`; 1 is
+ * the full offset set in Hero.astro), from the dock progress (handoff().dock, 0–1). A pulse:
+ * exactly 0 at the top (the arches sit in register), rising smoothly to 1 at PULSE_PEAK, then
+ * snapping back with --ease-snap (a small overshoot past register) to exactly 0 as the hero
+ * plates finish fading. Scrolling back runs it in reverse.
+ */
+export const registrationPulse = (dock: number): number => {
+  const d = clamp(dock);
+  if (d <= PULSE_PEAK) return Math.sin((Math.PI / 2) * (d / PULSE_PEAK));
+  return 1 - easeSnap((d - PULSE_PEAK) / (1 - PULSE_PEAK));
+};
 
 /**
  * 2D bounds (group space) of the plates in their poses, from the arch outline in plate space

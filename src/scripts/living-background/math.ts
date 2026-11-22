@@ -106,6 +106,37 @@ export const maxInkAlpha = (paper: Rgb, ink: Rgb, text: Rgb, minContrast: number
   return lo;
 };
 
+export interface InkCaps {
+  k: number;
+  c: number;
+  m: number;
+  y: number;
+}
+
+/**
+ * Alpha cap per plate: the design ceiling, lowered until every text colour still keeps
+ * `minContrast` on a pixel covered by one glyph of that ink. Key glyphs may be tinted up to
+ * `maxTint` towards any accent ink, so the key cap must also hold for every tinted key.
+ */
+export const inkCaps = (
+  paper: Rgb,
+  inks: Readonly<Record<keyof InkCaps, Rgb>>,
+  texts: readonly Rgb[],
+  ceilings: Readonly<InkCaps>,
+  minContrast: number,
+  maxTint: number,
+): InkCaps => {
+  const cap = (ink: Rgb, ceiling: number): number =>
+    Math.min(ceiling, ...texts.map((text) => maxInkAlpha(paper, ink, text, minContrast)));
+  const tinted = [inks.c, inks.m, inks.y].map((ink) => mixRgb(inks.k, ink, maxTint));
+  return {
+    k: Math.min(cap(inks.k, ceilings.k), ...tinted.map((ink) => cap(ink, ceilings.k))),
+    c: cap(inks.c, ceilings.c),
+    m: cap(inks.m, ceilings.m),
+    y: cap(inks.y, ceilings.y),
+  };
+};
+
 // ------------------------------------------------------------------------------------------------
 // Section accents (data-bg-accent)
 // ------------------------------------------------------------------------------------------------
@@ -126,15 +157,22 @@ export interface InkMix {
   tint: number;
 }
 
-/** The default: a balanced CMYK mix, mostly key. */
-export const BALANCED: InkMix = { c: 1 / 3, m: 1 / 3, y: 1 / 3, share: 0.1, tint: 0 };
+/**
+ * The default: a balanced CMYK mix. The C/M/Y accents carry most of the presence (their contrast
+ * caps are the highest: yellow, then cyan); key glyphs are a minority. Magenta's cap is low, so
+ * it takes a smaller share.
+ */
+export const BALANCED: InkMix = { c: 0.38, m: 0.22, y: 0.4, share: 0.72, tint: 0 };
 
-/** Each accent leans the accent share towards its ink and tints the key glyphs with it. */
+/**
+ * Each accent leans the accent share towards its ink and tints the key glyphs with it. The key
+ * accent turns the sheet mostly key (a quieter, monochrome field).
+ */
 export const ACCENT_MIX: Readonly<Record<Accent, InkMix>> = {
-  cyan: { c: 0.8, m: 0.1, y: 0.1, share: 0.22, tint: 0.2 },
-  magenta: { c: 0.1, m: 0.8, y: 0.1, share: 0.2, tint: 0.16 },
-  yellow: { c: 0.1, m: 0.1, y: 0.8, share: 0.26, tint: 0.22 },
-  key: { c: 1 / 3, m: 1 / 3, y: 1 / 3, share: 0.03, tint: 0 },
+  cyan: { c: 0.75, m: 0.1, y: 0.15, share: 0.8, tint: 0.2 },
+  magenta: { c: 0.1, m: 0.7, y: 0.2, share: 0.78, tint: 0.16 },
+  yellow: { c: 0.12, m: 0.08, y: 0.8, share: 0.82, tint: 0.22 },
+  key: { c: 0.38, m: 0.22, y: 0.4, share: 0.3, tint: 0 },
 };
 
 /** The strongest tint any accent uses (the key alpha cap is checked against it). */
@@ -271,8 +309,14 @@ export interface Grid {
 export const pitchFor = (width: number, o: GridOptions): number =>
   lerp(o.pitchSmall, o.pitchLarge, clamp((width - o.smallWidth) / (o.largeWidth - o.smallWidth)));
 
-/** The instanced grid that covers the visible sheet (plus margins) for a viewport. */
-export const gridFor = (frame: SheetFrame, width: number, o: GridOptions): Grid => {
+/**
+ * The instanced grid that covers the visible sheet (plus margins) for a viewport. `density`
+ * (0–1, see densityFactor) scales the glyph count: the pitch widens by 1/√density and the cap
+ * shrinks by `density`, so a low-end device draws fewer, proportionally larger-spaced glyphs.
+ */
+export const gridFor = (frame: SheetFrame, width: number, o: GridOptions, density = 1): Grid => {
+  const d = clamp(density, 0.1, 1);
+  const cap = Math.max(1, Math.floor(o.maxInstances * d));
   const layout = (pitch: number): Grid => {
     const halfWidth = Math.max(frame.halfWidthTop, frame.halfWidthBottom) * (1 + o.margin);
     const cols = Math.ceil((2 * halfWidth) / pitch) + 1;
@@ -280,11 +324,37 @@ export const gridFor = (frame: SheetFrame, width: number, o: GridOptions): Grid 
     const rows = Math.ceil(frame.vTop / pitch) + o.extraRows - rowStart;
     return { pitch, cols, rows, rowStart, count: cols * rows };
   };
-  let grid = layout(Math.max(1, pitchFor(width, o)));
-  for (let i = 0; i < 12 && grid.count > o.maxInstances; i++) {
-    grid = layout(grid.pitch * Math.sqrt(grid.count / o.maxInstances) * 1.02);
+  let grid = layout(Math.max(1, pitchFor(width, o) / Math.sqrt(d)));
+  for (let i = 0; i < 12 && grid.count > cap; i++) {
+    grid = layout(grid.pitch * Math.sqrt(grid.count / cap) * 1.02);
   }
   return grid;
+};
+
+/** What the browser tells about the device (undefined where it does not say). */
+export interface DeviceHints {
+  /** navigator.hardwareConcurrency */
+  cores: number | undefined;
+  /** navigator.deviceMemory, GB */
+  memory: number | undefined;
+  /** A coarse primary pointer (touch). */
+  coarse: boolean;
+  /** Viewport width, CSS px. */
+  width: number;
+}
+
+/** Glyph density on low-end devices, as a fraction of the full grid. */
+export const LOW_END_DENSITY = 0.6;
+
+/**
+ * 1 on capable devices; LOW_END_DENSITY on low-end hints: four cores or fewer, 4 GB of memory or
+ * less, or a touch screen narrower than a tablet.
+ */
+export const densityFactor = (h: DeviceHints): number => {
+  const fewCores = h.cores !== undefined && h.cores > 0 && h.cores <= 4;
+  const littleMemory = h.memory !== undefined && h.memory > 0 && h.memory <= 4;
+  const smallTouch = h.coarse && h.width < 768;
+  return fewCores || littleMemory || smallTouch ? LOW_END_DENSITY : 1;
 };
 
 /**
@@ -343,15 +413,80 @@ export const waveAt = (u: number, v: number, time: number): number => {
   return x * x * (3 - 2 * x);
 };
 
-/** Edge fade, 1 in the middle of the viewport and 0 towards the corners (x, y in NDC). */
-export const vignette = (x: number, y: number, inner: number, outer: number): number =>
-  1 - smoothstep(inner, outer, Math.hypot(x, y));
+export interface VignetteOptions {
+  /** The fade towards the corners runs from `inner` to `outer` (NDC radius; 1.41 = a corner). */
+  inner: number;
+  outer: number;
+  /** Ink left at the very centre (where the text sits), rising to full by `calmRadius`. */
+  calm: number;
+  calmRadius: number;
+}
+
+/**
+ * Edge fade (x, y in NDC): a calmer centre (`calm`, never empty), full strength in a ring around
+ * it, and 0 towards the corners. GLSL: the `edge` term in shaders.ts.
+ */
+export const vignette = (x: number, y: number, o: VignetteOptions): number => {
+  const r = Math.hypot(x, y);
+  return (1 - smoothstep(o.inner, o.outer, r)) * lerp(o.calm, 1, smoothstep(0, o.calmRadius, r));
+};
 
 /** Pointer position in NDC (-1…1, y up) for a viewport of `width` × `height`. */
 export const toNdc = (x: number, y: number, width: number, height: number): [number, number] => [
   width > 0 ? clamp((x / width) * 2 - 1, -1, 1) : 0,
   height > 0 ? clamp(1 - (y / height) * 2, -1, 1) : 0,
 ];
+
+// ------------------------------------------------------------------------------------------------
+// Matrices (column-major, as WebGL takes them)
+// ------------------------------------------------------------------------------------------------
+
+/** Perspective projection: vertical field of view in degrees. Writes into and returns `out`. */
+export const perspectiveMatrix = (
+  out: Float32Array,
+  fovDeg: number,
+  aspect: number,
+  near: number,
+  far: number,
+): Float32Array => {
+  const f = 1 / Math.tan((fovDeg * Math.PI) / 360);
+  const nf = 1 / (near - far);
+  out.fill(0);
+  out[0] = f / aspect;
+  out[5] = f;
+  out[10] = (far + near) * nf;
+  out[11] = -1;
+  out[14] = 2 * far * near * nf;
+  return out;
+};
+
+/**
+ * Model-view of the sheet seen from a camera at the origin looking down −z: rotate by `rx` about
+ * x, then by `ry` about y (R = Ry · Rx), then move `z` along the view axis. Writes into `out`.
+ */
+export const sheetMatrix = (out: Float32Array, rx: number, ry: number, z: number): Float32Array => {
+  const ca = Math.cos(rx);
+  const sa = Math.sin(rx);
+  const cb = Math.cos(ry);
+  const sb = Math.sin(ry);
+  out[0] = cb;
+  out[1] = 0;
+  out[2] = -sb;
+  out[3] = 0;
+  out[4] = sb * sa;
+  out[5] = ca;
+  out[6] = cb * sa;
+  out[7] = 0;
+  out[8] = sb * ca;
+  out[9] = -sa;
+  out[10] = cb * ca;
+  out[11] = 0;
+  out[12] = 0;
+  out[13] = 0;
+  out[14] = z;
+  out[15] = 1;
+  return out;
+};
 
 // ------------------------------------------------------------------------------------------------
 // Drawing budget

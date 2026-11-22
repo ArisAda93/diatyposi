@@ -47,7 +47,9 @@ const dataAuthority = 'https://www.dpa.gr/';
 
   <div class="wrap privacy-layout" data-bg-accent="cyan">
     <nav class="privacy-toc" aria-labelledby="pp-toc-title">
-      <h2 id="pp-toc-title" class="label">{capsEl(text.tocLabel)}</h2>
+      <h2 id="pp-toc-title" class="label">
+        {capsEl(text.tocLabel)}
+      </h2>
       <ol class="privacy-toc-list">
         {toc.map((entry) => (
           <li>

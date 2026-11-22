@@ -2,12 +2,14 @@
 /**
  * Shared footer: solid ink (opaque), the brand's close.
  *
- * Top: the press colour bar with a registration mark. Four columns on the 12-column grid: logo
- * with the tagline in Comfortaa; pages; services (iterated from `services`, never by index);
- * contact details with the social links. Then the wordmark set huge across the full width, its
- * C/M/Y plates converging as it scrolls in (motion layer, `data-reveal="registration"`), and the
- * bottom row (© year, privacy). Behind it all, the four arches drawn as plate outlines drift on
- * a parallax layer (`data-parallax`, motion.ts). Decoration is aria-hidden.
+ * Top: the press colour bar with a registration mark. Four columns, one row of the 12-column
+ * grid from 1024px (brand 1–4, pages 5–6, services 7–9, contact 10–12): logo with the tagline in
+ * Comfortaa; pages; services (iterated from `services`, never by index; long names wrap inside
+ * their column); contact details with the social links. Then the wordmark set huge across the
+ * full width, its C/M/Y plates converging as it scrolls in (motion layer,
+ * `data-reveal="registration"`), and the bottom row (© year, privacy). Behind it all, the four
+ * arches drawn as plate outlines drift on a parallax layer (`data-parallax`, motion.ts).
+ * Decoration is aria-hidden.
  */
 import Logo from './Logo.astro';
 import Icon from './Icon.astro';
@@ -62,10 +64,7 @@ const year = new Date().getFullYear();
         <p class="voice footer-tagline">{site.tagline[locale]}</p>
       </div>
 
-      <nav
-        class="col-span-12 sm:col-span-4 lg:col-span-2 lg:col-start-6"
-        aria-labelledby="footer-pages-title"
-      >
+      <nav class="col-span-12 sm:col-span-4 lg:col-span-2" aria-labelledby="footer-pages-title">
         <h2 id="footer-pages-title" class="label footer-heading">
           {capsEl(t('footerPages', locale))}
         </h2>
@@ -129,7 +128,9 @@ const year = new Date().getFullYear();
     </div>
 
     <div class="footer-word-box" aria-hidden="true">
-      <p class="footer-word" data-reveal="registration">{capsEl(site.name)}</p>
+      <p class="footer-word" data-reveal="registration">
+        {capsEl(site.name)}
+      </p>
     </div>
 
     <div class="footer-bottom">

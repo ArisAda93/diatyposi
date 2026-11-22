@@ -2,7 +2,7 @@
 
 Static marketing website for **ΔΙΑΤΥΠΩΣΗ | Διαφήμιση – Εκτυπώσεις**. Greek only for now, structured for an English version later.
 
-Built with [Astro](https://astro.build) (static output), TypeScript (strict) and Tailwind CSS v4. The home hero is a WebGL scene built with [OGL](https://github.com/oframe/ogl), loaded after first paint, with a static SVG fallback. GSAP (with ScrollTrigger) drives the scroll-linked motion: the site-wide motion layer, the process poster and the services pages. Both libraries are loaded on demand. No backend, no database, no analytics, no cookies.
+Built with [Astro](https://astro.build) (static output), TypeScript (strict) and Tailwind CSS v4. The home hero and the site-wide living background are WebGL scenes built with [OGL](https://github.com/oframe/ogl), loaded after first paint, with static fallbacks. GSAP (with ScrollTrigger) drives the scroll-linked motion of the site-wide motion layer and the services pages. Both libraries are loaded on demand. No backend, no database, no analytics, no cookies.
 
 - Design system and page structure: [DESIGN.md](DESIGN.md)
 - Every Greek string written for the site, for approval: [CONTENT_REVIEW.md](CONTENT_REVIEW.md)
@@ -114,16 +114,16 @@ src/
   styles/motion.css     states for the site-wide motion layer
   layouts/BaseLayout    head, SEO, Open Graph, JSON-LD, header, footer, mobile contact bar
   components/           Logo, Icon / PlateIcon (icon set in icons.ts), Header, Footer, …
-  components/home/      home sections: hero, intro, services showcase, process, work, values, statement
-  scripts/              client scripts: motion (site-wide motion layer), hero + hero-scene/ (WebGL plates),
-                        process, services-showcase, services-page, halftone-field (statement), gallery,
-                        quote form, map consent
+  components/home/      home sections: hero, services showcase, idea journey, work, values, statement
+  scripts/              client scripts: motion (site-wide motion layer, parallax), living-background/ (WebGL
+                        sheet), hero + hero-scene/ (WebGL plates), idea-journey, services-showcase,
+                        services-page, halftone-field (statement), gallery, quote form, map consent
   lib/                  pure helpers (links, quote, portfolio, seo, text), unit-tested in tests/
   pages/                one file per page; slugs in Latin: /ypiresies/, /erga/, /etaireia/, /epikoinonia/
 public/                 fonts (self-hosted WOFF2), favicons, share image, manifest
 ```
 
 - **Fonts:** Commissioner (display), Inter (text) and Comfortaa (tagline), self-hosted, Greek and Latin subsets, `font-display: swap`.
-- **Motion:** every effect respects `prefers-reduced-motion` (the page then shows its composed final state) and turns off pointer effects on touch devices. Elements opt in with `data-reveal="depth"`, `data-tilt` or `data-halftone`, and opt out with `data-motion="off"`. Headings (`.h2`, `.display-l`), photos (`.media`), linked cards (`.card-lift`) and buttons (`.btn`) are picked up automatically.
+- **Motion:** every effect respects `prefers-reduced-motion` (the page then shows its composed final state) and turns off pointer effects on touch devices. Elements opt in with `data-reveal="depth"`, `data-tilt`, `data-halftone`, `data-parallax="<speed>"` or `data-bg-accent="<ink>"`, and opt out with `data-motion="off"`. Headings (`.h2`, `.display-l`), photos (`.media`), linked cards (`.card-lift`) and buttons (`.btn`) are picked up automatically.
 - **Privacy:** nothing loads from third parties until the visitor clicks “load map” on the contact page. The quote form sends nothing to a server; it prepares an e-mail, Viber or WhatsApp message that the visitor sends from their own app.
 - **Adding English later:** add `'en'` to `locales` in `src/i18n/ui.ts` and to `i18n.locales` in `astro.config.mjs`, add an `en` entry next to each `el` entry, and add `src/pages/en/` pages that pass `locale="en"`.

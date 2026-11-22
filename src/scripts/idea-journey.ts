@@ -8,7 +8,7 @@
  * never taken over. Below 64rem, under reduced motion or without JS, each step shows its own still
  * illustration in its final state, and this part does nothing.
  *
- * Chooser. Toggle chips (aria-pressed) pick the products; the button's href is the quote form
+ * Chooser. Toggle chips (aria-pressed) pick what to make; the button's href is the quote form
  * with every picked service pre-selected, and its label counts them. A polite live region
  * announces the count. Without JS the chips stay disabled and hidden, and the button links to the
  * plain quote form.
@@ -36,15 +36,24 @@ export const JOURNEY_STEPS = [
 
 export type JourneyStepId = (typeof JOURNEY_STEPS)[number]['id'];
 
-/** Services offered as chips: one per product in the story, in story order. */
-export const JOURNEY_CHOICES = [
-  'grafistikos-sxediasmos',
-  'kartes-fylladia-entypa',
-  'mplouzakia-rouxismos',
-  'epigrafes-aftokollita-vitrines',
-  'diafimistika-dora',
-  'social-media',
-] as const;
+/** A service that appears in the story (each one is offered as a chip). */
+export type JourneyService = (typeof JOURNEY_STEPS)[number]['service'];
+
+const STORY_SERVICES: ReadonlySet<string> = new Set(JOURNEY_STEPS.map((step) => step.service));
+
+const isStoryService = (slug: string): slug is JourneyService => STORY_SERVICES.has(slug);
+
+/**
+ * The chips: the story's services, each once, in the order of `serviceSlugs` (pass the slugs of
+ * `services` from src/data/site.ts, so the chips follow the owner's order of services).
+ */
+export const journeyChoices = (serviceSlugs: readonly string[]): JourneyService[] => {
+  const picked: JourneyService[] = [];
+  for (const slug of serviceSlugs) {
+    if (isStoryService(slug) && !picked.includes(slug)) picked.push(slug);
+  }
+  return picked;
+};
 
 /** Text for none, one or many; `{count}` in `many` is replaced by the number. */
 export interface CountForms {

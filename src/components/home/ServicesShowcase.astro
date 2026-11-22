@@ -128,9 +128,9 @@ const thumbWidths = [160, 320, 480];
           <li>
             <a href={item.href} class="svc-row" data-svc-row={item.index} data-ink={item.ink}>
               <span class="svc-row-num" aria-hidden="true">
-                <span class="svc-row-plate svc-row-plate-c">{item.num}</span>
-                <span class="svc-row-plate svc-row-plate-m">{item.num}</span>
-                <span class="svc-row-plate svc-row-plate-y">{item.num}</span>
+                <span class="svc-row-plate svc-row-plate-c" data-num={item.num}></span>
+                <span class="svc-row-plate svc-row-plate-m" data-num={item.num}></span>
+                <span class="svc-row-plate svc-row-plate-y" data-num={item.num}></span>
                 <span class="svc-row-plate svc-row-plate-k">{item.num}</span>
               </span>
               <h3 class="svc-row-title">
@@ -273,11 +273,16 @@ const thumbWidths = [160, 320, 480];
       letter-spacing: 0.08em;
       font-variant-numeric: tabular-nums;
     }
-    /* The numeral as four plates, in register at rest. */
+    /* The numeral as four plates, in register at rest. Only the key plate is text; the C, M and Y
+       ghosts are empty spans that draw the numeral from `data-num`, so neither assistive
+       technology nor contrast checks see them as (yellow-on-paper) text. */
     .svc-row-plate {
       grid-area: 1 / 1;
       mix-blend-mode: multiply;
       transition: transform var(--dur-base) var(--ease-snap);
+    }
+    .svc-row-plate[data-num]::before {
+      content: attr(data-num);
     }
     .svc-row-plate-c {
       color: var(--color-cyan);
