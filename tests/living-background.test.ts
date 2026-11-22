@@ -17,6 +17,7 @@ import {
   hexToRgb,
   inkCaps,
   inkThresholds,
+  minRgb,
   LOW_END_DENSITY,
   maxInkAlpha,
   mixFor,
@@ -27,7 +28,10 @@ import {
   perspectiveMatrix,
   pickAccent,
   pitchFor,
+  plateColours,
+  printMin,
   printOn,
+  printPair,
   relativeLuminance,
   sheetFrame,
   sheetMatrix,
@@ -37,7 +41,9 @@ import {
   vignette,
   waveAt,
   wrapRow,
+  type GlyphBlend,
   type GridOptions,
+  type Plate,
   type InkMix,
   type VignetteOptions,
 } from '../src/scripts/living-background/math';
@@ -405,6 +411,76 @@ describe('contrast caps (text on the paper stays AA)', () => {
     // Yellow and cyan may print stronger than key: they carry the presence.
     expect(caps.y).toBeGreaterThan(caps.c);
     expect(caps.c).toBeGreaterThan(caps.k);
+  });
+
+  describe('where glyphs overlap', () => {
+    const inks: Record<Plate, readonly [number, number, number]> = {
+      k: KEY,
+      c: CYAN,
+      m: MAGENTA,
+      y: YELLOW,
+    };
+    const plates: Plate[] = ['k', 'c', 'm', 'y'];
+    /** Every ink a plate can print with: key also tinted, finely sampled. */
+    const shades = (plate: Plate): (readonly [number, number, number])[] =>
+      plate === 'k'
+        ? [0, 0.25, 0.5, 0.75, 1].flatMap((f) =>
+            [CYAN, MAGENTA, YELLOW].map((ink) => mixRgb(KEY, ink, MAX_TINT * f)),
+          )
+        : [inks[plate]];
+
+    it('combines per channel under MIN, never darker than the darker of the two', () => {
+      expect(minRgb([0.2, 0.9, 0.5], [0.6, 0.3, 0.5])).toEqual([0.2, 0.3, 0.5]);
+      // The same ink over itself looks like one glyph.
+      expect(printMin(PAPER, CYAN, 0.1, CYAN, 0.1)).toEqual(printOn(PAPER, CYAN, 0.1));
+      // Cyan with yellow: cyan's red, yellow's blue (reads green), each no darker than alone.
+      const green = printMin(PAPER, CYAN, 0.1, YELLOW, 0.4);
+      expect(green[0]).toBe(printOn(PAPER, CYAN, 0.1)[0]);
+      expect(green[2]).toBe(printOn(PAPER, YELLOW, 0.4)[2]);
+      // Never brighter than the paper.
+      green.forEach((channel, i) => expect(channel).toBeLessThanOrEqual(PAPER[i] ?? 0));
+    });
+
+    it('multiplies in the fallback, darker than either glyph', () => {
+      const both = printPair(PAPER, CYAN, 0.1, MAGENTA, 0.1, 'multiply');
+      expect(relativeLuminance(both)).toBeLessThan(
+        relativeLuminance(printMin(PAPER, CYAN, 0.1, MAGENTA, 0.1)),
+      );
+    });
+
+    (['min', 'multiply'] as GlyphBlend[]).forEach((blend) => {
+      it(`keeps every text readable on every pair of glyphs at their caps (${blend})`, () => {
+        const caps = inkCaps(PAPER, inks, TEXTS, ALPHA_MAX, MIN_CONTRAST, MAX_TINT, blend);
+        plates.forEach((p) => {
+          plates.forEach((q) => {
+            shades(p).forEach((a) => {
+              shades(q).forEach((b) => {
+                const pair = printPair(PAPER, a, caps[p], b, caps[q], blend);
+                TEXTS.forEach((text) => {
+                  expect(contrastRatio(text, pair)).toBeGreaterThanOrEqual(MIN_CONTRAST);
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+
+    it('keeps more ink under MIN than under the multiply fallback', () => {
+      const min = inkCaps(PAPER, inks, TEXTS, ALPHA_MAX, MIN_CONTRAST, MAX_TINT, 'min');
+      const multiply = inkCaps(PAPER, inks, TEXTS, ALPHA_MAX, MIN_CONTRAST, MAX_TINT, 'multiply');
+      plates.forEach((plate) => {
+        expect(min[plate]).toBeGreaterThanOrEqual(multiply[plate]);
+        expect(multiply[plate]).toBeGreaterThan(0);
+      });
+    });
+
+    it('lists the key tints among the colours the caps are checked against', () => {
+      const colours = plateColours(inks, MAX_TINT);
+      expect(colours.k).toContainEqual(KEY);
+      expect(colours.k).toContainEqual(mixRgb(KEY, CYAN, MAX_TINT));
+      expect(colours.c).toEqual([CYAN]);
+    });
   });
 
   it('is 0 when the bare paper already fails', () => {

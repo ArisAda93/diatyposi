@@ -160,6 +160,9 @@ export const initLivingBackground = (): void => {
       built.setAccent(accent);
       // Sizing and the first draw in a task of their own.
       await yieldToMain();
+      // The preference may have flipped while the scene was built: start in the current state.
+      // From here on (no await until `scene` is set) the listener below routes every change.
+      built.setReducedMotion(reduce.matches);
       // start() reports false (and has already cleaned up) when the context died meanwhile.
       if (!built.start()) return;
     } catch {
@@ -169,8 +172,11 @@ export const initLivingBackground = (): void => {
       return;
     }
     scene = built;
-    reduce.addEventListener('change', () => scene?.setReducedMotion(reduce.matches));
   };
+
+  // Registered before the build, so no change of the preference is ever missed: before the scene
+  // exists it is read again right before start(); afterwards it is routed to the scene.
+  reduce.addEventListener('change', () => scene?.setReducedMotion(reduce.matches));
 
   // Track the accent from the start, so the scene opens on the right ink.
   watchAccents((next) => {

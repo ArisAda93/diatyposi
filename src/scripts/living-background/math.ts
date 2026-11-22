@@ -77,14 +77,48 @@ export const contrastRatio = (a: Rgb, b: Rgb): number => {
 };
 
 /**
- * Paper after one glyph of `ink` at `alpha` is printed on it. The GPU multiplies encoded values
- * (the glyph is mix(white, ink, alpha), blended with DST_COLOR × ZERO), so this does the same.
+ * Paper after one glyph of `ink` at `alpha` is printed on it: mix(white, ink, alpha) times the
+ * paper, in encoded values as the GPU computes it. This is what each glyph writes.
  */
 export const printOn = (paper: Rgb, ink: Rgb, alpha: number): Rgb => [
   paper[0] * (1 - alpha + alpha * ink[0]),
   paper[1] * (1 - alpha + alpha * ink[1]),
   paper[2] * (1 - alpha + alpha * ink[2]),
 ];
+
+/** Per-channel minimum (the GPU's MIN blend equation). */
+export const minRgb = (a: Rgb, b: Rgb): Rgb => [
+  Math.min(a[0], b[0]),
+  Math.min(a[1], b[1]),
+  Math.min(a[2], b[2]),
+];
+
+/**
+ * Paper where two glyphs overlap under the MIN blend: each writes printOn(paper, ink, alpha) and
+ * the darker value per channel stays. Same-ink overlaps look exactly like one glyph; different
+ * inks still combine per channel (cyan with yellow reads green), and never darker than that.
+ */
+export const printMin = (paper: Rgb, a: Rgb, alphaA: number, b: Rgb, alphaB: number): Rgb =>
+  minRgb(printOn(paper, a, alphaA), printOn(paper, b, alphaB));
+
+/**
+ * How overlapping glyphs combine: 'min' (WebGL 2, or WebGL 1 with EXT_blend_minmax) or
+ * 'multiply' (the fallback: the second glyph darkens the first).
+ */
+export type GlyphBlend = 'min' | 'multiply';
+
+/** Paper where glyph `a` and glyph `b` overlap, for a blend. */
+export const printPair = (
+  paper: Rgb,
+  a: Rgb,
+  alphaA: number,
+  b: Rgb,
+  alphaB: number,
+  blend: GlyphBlend,
+): Rgb =>
+  blend === 'min'
+    ? printMin(paper, a, alphaA, b, alphaB)
+    : printOn(printOn(paper, a, alphaA), b, alphaB);
 
 /**
  * Largest ink alpha (0–1) at which `text` on the printed paper still keeps `minContrast`. Printing
@@ -106,35 +140,88 @@ export const maxInkAlpha = (paper: Rgb, ink: Rgb, text: Rgb, minContrast: number
   return lo;
 };
 
-export interface InkCaps {
-  k: number;
-  c: number;
-  m: number;
-  y: number;
-}
+export const PLATES = ['k', 'c', 'm', 'y'] as const;
+export type Plate = (typeof PLATES)[number];
+export type InkCaps = Record<Plate, number>;
 
 /**
- * Alpha cap per plate: the design ceiling, lowered until every text colour still keeps
- * `minContrast` on a pixel covered by one glyph of that ink. Key glyphs may be tinted up to
- * `maxTint` towards any accent ink, so the key cap must also hold for every tinted key.
+ * The colours a plate's glyphs can take: key also tinted towards each accent ink (half and full
+ * MAX tint; the luminance is monotonic in the tint, the midpoint is a safety sample).
+ */
+export const plateColours = (
+  inks: Readonly<Record<Plate, Rgb>>,
+  maxTint: number,
+): Record<Plate, Rgb[]> => ({
+  k: [
+    inks.k,
+    ...[inks.c, inks.m, inks.y].flatMap((ink) => [
+      mixRgb(inks.k, ink, maxTint / 2),
+      mixRgb(inks.k, ink, maxTint),
+    ]),
+  ],
+  c: [inks.c],
+  m: [inks.m],
+  y: [inks.y],
+});
+
+/**
+ * Alpha cap per plate, so that every text colour keeps `minContrast` wherever glyphs sit: on one
+ * glyph, and where any two glyphs overlap (any two plates, the same plate included, every key
+ * tint), combined by `blend`.
+ *
+ * 1. Each plate starts at its design ceiling, lowered until one glyph of it passes.
+ * 2. Every pair of plates in turn: if the pair fails, both caps scale down by the largest common
+ *    factor (bisection) that makes it pass. Caps only ever fall, so a pair that passed stays
+ *    passing and one pass over the pairs is enough.
+ *
+ * Texts are assumed darker than the paper (all of the site's text on paper is).
  */
 export const inkCaps = (
   paper: Rgb,
-  inks: Readonly<Record<keyof InkCaps, Rgb>>,
+  inks: Readonly<Record<Plate, Rgb>>,
   texts: readonly Rgb[],
   ceilings: Readonly<InkCaps>,
   minContrast: number,
   maxTint: number,
+  blend: GlyphBlend = 'min',
 ): InkCaps => {
-  const cap = (ink: Rgb, ceiling: number): number =>
-    Math.min(ceiling, ...texts.map((text) => maxInkAlpha(paper, ink, text, minContrast)));
-  const tinted = [inks.c, inks.m, inks.y].map((ink) => mixRgb(inks.k, ink, maxTint));
-  return {
-    k: Math.min(cap(inks.k, ceilings.k), ...tinted.map((ink) => cap(ink, ceilings.k))),
-    c: cap(inks.c, ceilings.c),
-    m: cap(inks.m, ceilings.m),
-    y: cap(inks.y, ceilings.y),
-  };
+  // Darker text on a darkened paper: the lightest text has the least contrast and binds.
+  const binding = texts.reduce<Rgb | null>(
+    (lightest, text) =>
+      !lightest || relativeLuminance(text) > relativeLuminance(lightest) ? text : lightest,
+    null,
+  );
+  const caps: InkCaps = { ...ceilings };
+  if (!binding) return caps;
+  const readable = (colour: Rgb): boolean => contrastRatio(binding, colour) >= minContrast;
+  const colours = plateColours(inks, maxTint);
+
+  PLATES.forEach((plate) => {
+    caps[plate] = Math.min(
+      ceilings[plate],
+      ...colours[plate].map((ink) => maxInkAlpha(paper, ink, binding, minContrast)),
+    );
+  });
+
+  const pairPasses = (p: Plate, q: Plate, alphaP: number, alphaQ: number): boolean =>
+    colours[p].every((a) =>
+      colours[q].every((b) => readable(printPair(paper, a, alphaP, b, alphaQ, blend))),
+    );
+  PLATES.forEach((p, i) => {
+    PLATES.slice(i).forEach((q) => {
+      if (pairPasses(p, q, caps[p], caps[q])) return;
+      let lo = 0;
+      let hi = 1;
+      for (let step = 0; step < 24; step++) {
+        const mid = (lo + hi) / 2;
+        if (pairPasses(p, q, caps[p] * mid, caps[q] * mid)) lo = mid;
+        else hi = mid;
+      }
+      caps[p] *= lo;
+      if (q !== p) caps[q] *= lo;
+    });
+  });
+  return caps;
 };
 
 // ------------------------------------------------------------------------------------------------

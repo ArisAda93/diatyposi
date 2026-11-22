@@ -1,11 +1,13 @@
 /**
- * Living background scene (OGL / WebGL), drawn on every page behind all content.
+ * Living background scene (plain WebGL), drawn on every page behind all content.
  *
  * A press sheet recedes in perspective, tilted away from the viewer and covered in arch glyphs
  * (the logo's ARCH outline, flat) on a halftone screen. Slow travelling waves grow, lift and ink
  * the glyphs like halftone dots breathing: bands of printed arches roll across the sheet, the
  * crests at full ink, and fog fades the far rows. Most glyphs are C/M/Y (the inks that can carry
- * presence within the contrast caps), a minority key; lifted crests overprint where they meet.
+ * presence within the contrast caps), a minority key. Where lifted crests overlap, the inks
+ * combine per channel (MIN blend: cyan over yellow reads green, the same ink over itself looks
+ * like one glyph), so overlaps never darken the paper past what the caps allow.
  *
  * - Scroll: the sheet travels with the page at DOLLY of its speed, damped (SCROLL_LAG), which is
  *   the camera dollying along the sheet. Near rows move faster than far ones: real depth parallax.
@@ -14,8 +16,9 @@
  * - Sections with `data-bg-accent` (wired in index.ts) blend the accent share and the key tint
  *   towards their ink while they hold the viewport centre (math.ts ACCENT_MIX).
  * - Contrast: each ink's alpha is capped (math.ts inkCaps) so that text on the paper
- *   (TEXT_ON_PAPER) keeps MIN_CONTRAST on a pixel covered by one glyph, whatever the tuning
- *   below says.
+ *   (TEXT_ON_PAPER) keeps MIN_CONTRAST on one glyph and where any two glyphs overlap (any inks,
+ *   every key tint), whatever the tuning below says. Without MIN blending (WebGL 1 without
+ *   EXT_blend_minmax) the glyphs multiply instead, and the caps are computed for that.
  * - One draw loop, at full rate while something follows the visitor and at AMBIENT_FPS otherwise;
  *   paused while the tab is hidden. Reduced motion: one static frame, redrawn on resize only.
  * - Context loss or any GPU error: the canvas is removed and the paper shows (onLost).
@@ -49,6 +52,7 @@ import {
   tintColor,
   toNdc,
   type Accent,
+  type GlyphBlend,
   type Grid,
   type GridOptions,
   type InkCaps,
@@ -93,23 +97,23 @@ const GRID: GridOptions = {
 const GLYPH_ARC_STEPS = 3;
 /**
  * Glyph width as a fraction of the pitch: floor, share of the wave, pointer swell. The sum stays
- * under 1, so neighbouring glyphs never overlap on the sheet (only lifted crests overprint). At
- * 1440 px a glyph averages about 13 px at the centre and 20 px in the nearest rows.
+ * under 1, so neighbouring glyphs never overlap on the sheet (only lifted crests overlap). At
+ * 1440 px a glyph averages about 14 px at the centre and 22 px in the nearest rows.
  */
-const SIZE = { base: 0.2, wave: 0.26, swell: 0.22 };
+const SIZE = { base: 0.23, wave: 0.26, swell: 0.22 };
 /** Lift off the sheet towards the viewer, in pitches: share of the wave, pointer swell. */
 const LIFT = { wave: 0.85, swell: 1.3 };
 /**
  * Ink as a fraction of each ink's alpha cap: floor, share of the wave, pointer swell. Floor plus
- * wave is 1: the wave crests print at the cap, so the travelling waves read as bands of ink.
+ * wave is 1: the wave crests print at the cap, so the travelling waves read as bands of ink. The
+ * floor is high so the sheet keeps its presence under the overlap-safe caps.
  */
-const INK = { base: 0.35, wave: 0.65, swell: 0.4 };
+const INK = { base: 0.5, wave: 0.5, swell: 0.4 };
 /** Pointer swell focus (larger is a tighter swell) and how fast it fades in and out, per second. */
 const SWELL = { focus: 6, follow: 3, track: 8 };
 /**
- * Design ceiling of the ink alpha per plate. The contrast caps (math.ts inkCaps) lower key, cyan
- * and magenta to about 0.074, 0.148 and 0.086; yellow barely darkens the paper, so its ceiling
- * here is what limits it.
+ * Design ceiling of the ink alpha per plate. The contrast caps (math.ts inkCaps, MIN blend) lower
+ * them to about k 0.049, c 0.095, m 0.058 and y 0.405 (yellow barely darkens the paper).
  */
 const ALPHA_MAX = { k: 0.12, c: 0.2, m: 0.15, y: 0.42 };
 /** Text colours set on the paper (red labels, muted text, key text) and the contrast they keep. */
@@ -225,6 +229,7 @@ const UNIFORM_NAMES = [
   'uResolution',
   'uVignette',
   'uFog',
+  'uBase',
 ] as const;
 
 type UniformName = (typeof UNIFORM_NAMES)[number];
@@ -276,8 +281,8 @@ const readPaper = (): Rgb =>
   parseCssColor(getComputedStyle(document.documentElement).backgroundColor) ??
   hexToRgb(PAPER_FALLBACK);
 
-/** Alpha cap per plate: the design ceiling, lowered until every text colour keeps its contrast. */
-const alphaCaps = (paper: Rgb): InkCaps =>
+/** Alpha cap per plate: lowered until every text colour keeps its contrast, overlaps included. */
+const alphaCaps = (paper: Rgb, blend: GlyphBlend): InkCaps =>
   inkCaps(
     paper,
     { k: hexToRgb(INKS.k), c: hexToRgb(INKS.c), m: hexToRgb(INKS.m), y: hexToRgb(INKS.y) },
@@ -285,7 +290,16 @@ const alphaCaps = (paper: Rgb): InkCaps =>
     ALPHA_MAX,
     MIN_CONTRAST,
     MAX_TINT,
+    blend,
   );
+
+/** The MIN blend equation, if this context has it (core in WebGL 2, EXT_blend_minmax in 1). */
+const minEquation = (gl: WebGLRenderingContext | WebGL2RenderingContext): number | null => {
+  if (typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext) {
+    return gl.MIN;
+  }
+  return gl.getExtension('EXT_blend_minmax')?.MIN_EXT ?? null;
+};
 
 /** Glyph density for this device (math.ts densityFactor). */
 const deviceDensity = (width: number): number => {
@@ -329,9 +343,10 @@ export const createLivingBackground = async (
     linking.catch(() => undefined);
     await step();
 
-    // 2. Colours and contrast caps.
+    // 2. Colours, blend and contrast caps.
     const paper = readPaper();
-    const caps = alphaCaps(paper);
+    const minBlend = minEquation(gl);
+    const caps = alphaCaps(paper, minBlend === null ? 'multiply' : 'min');
     await step();
 
     // 3. The glyph: one arch, one unit wide, centred.
@@ -376,7 +391,17 @@ export const createLivingBackground = async (
     gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.CULL_FACE);
     gl.enable(gl.BLEND);
-    gl.blendFunc(gl.DST_COLOR, gl.ZERO);
+    if (minBlend === null) {
+      // Fallback: each glyph writes mix(white, ink, a) and multiplies the paper under it.
+      gl.blendEquation(gl.FUNC_ADD);
+      gl.blendFunc(gl.DST_COLOR, gl.ZERO);
+      gl.uniform3f(loc.uBase, 1, 1, 1);
+    } else {
+      // Each glyph writes the paper printed with its ink; the darker value per channel stays.
+      gl.blendEquation(minBlend);
+      gl.blendFunc(gl.ONE, gl.ONE);
+      gl.uniform3f(loc.uBase, paper[0], paper[1], paper[2]);
+    }
     gl.clearColor(paper[0], paper[1], paper[2], 1);
     gl.uniform1f(loc.uFocus, SWELL.focus);
     gl.uniform3f(loc.uSize, SIZE.base, SIZE.wave, SIZE.swell);

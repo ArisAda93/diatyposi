@@ -2,8 +2,11 @@
  * GLSL ES 1.00 shaders for the living background (WebGL 1 and 2).
  *
  * One instanced draw: every instance is one small arch glyph (the logo's ARCH outline, unit wide)
- * lying on the tilted sheet. The canvas is cleared to the paper colour and the glyphs blend with
- * gl.DST_COLOR × gl.ZERO, so the inks multiply like overprinting (C + M → blue and so on).
+ * lying on the tilted sheet. The canvas is cleared to the paper colour. Each glyph writes the
+ * paper printed with its ink (uBase = the paper) and the MIN blend keeps the darker value per
+ * channel, so different inks still combine like overprinting (C with Y → green) but no overlap
+ * darkens past what the contrast caps allow. Fallback without MIN: uBase is white and the glyphs
+ * multiply the paper (gl.DST_COLOR × gl.ZERO).
  *
  * The formulas mirror math.ts (cellHash → hash, waveAt → wave, wrapRow, vignette), where they
  * are tested: keep both in step.
@@ -109,14 +112,15 @@ void main() {
 `;
 
 /**
- * Ink never exceeds the glyph's cap (vAlpha ≤ cap; the caps keep text on the paper at AA). It
- * fades towards the viewport corners (vignette, with a calmer but never empty centre) and into
- * the distance (fog), so the sheet has no hard edge or horizon.
+ * Ink never exceeds the glyph's cap (vAlpha ≤ cap; the caps keep text on the paper at AA, on one
+ * glyph and where two overlap). It fades towards the viewport corners (vignette, with a calmer
+ * but never empty centre) and into the distance (fog), so the sheet has no hard edge or horizon.
  */
 export const fieldFragment = /* glsl */ `${PRECISION}
 uniform vec2 uResolution;
 uniform vec4 uVignette;
 uniform vec3 uFog;
+uniform vec3 uBase;
 varying vec3 vColor;
 varying float vAlpha;
 varying float vDepth;
@@ -127,6 +131,6 @@ void main() {
     mix(uVignette.z, 1.0, smoothstep(0.0, uVignette.w, r));
   float fog = mix(1.0, uFog.z, smoothstep(uFog.x, uFog.y, vDepth));
   float a = clamp(vAlpha * edge * fog, 0.0, 1.0);
-  gl_FragColor = vec4(mix(vec3(1.0), vColor, a), 1.0);
+  gl_FragColor = vec4(uBase * mix(vec3(1.0), vColor, a), 1.0);
 }
 `;
