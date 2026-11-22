@@ -7,8 +7,10 @@
  * colour-bar segment and ends with a registration mark, like the control strip at the edge of a
  * press sheet; then the index (“01”) and the red spaced-caps label; then the h2 (`.h2`, so the
  * motion layer's registration reveal applies) with an optional lead. An optional “see all” link
- * (and anything in the `head-extra` slot) sits on the right of the head from 48rem, below it on
- * phones. Without `title` and without a `title` slot, the label itself is the section's h2.
+ * (and anything in the `head-extra` slot) sits on the right of the head from 64rem; below that
+ * each of them stacks under the head with the same spacing, and one that is hidden there
+ * (`display: none`) leaves no gap. Without `title` and without a `title` slot, the label itself
+ * is the section's h2.
  *
  * Variants:
  * - `plain`: paints nothing, so the living background shows (`data-bg-accent` tints it).
@@ -226,7 +228,6 @@ const caps = capsEl(label);
 
     .sec-head-row {
       display: grid;
-      gap: 1.25rem;
       margin-top: 1.25rem;
     }
     .sec-eyebrow {
@@ -264,11 +265,14 @@ const caps = capsEl(label);
       margin-top: clamp(1rem, 0.75rem + 1vw, 1.5rem);
     }
 
+    /* Below 64rem the aside adds no box of its own: its items stack under the head, each
+       spaced by its own margin, so an item hidden at this width leaves no gap behind. */
     .sec-head-aside {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 1rem 1.5rem;
+      display: contents;
+    }
+    .sec-head-aside > :global(*) {
+      justify-self: start;
+      margin-top: 1.25rem;
     }
     .sec-link {
       display: inline-flex;
@@ -289,14 +293,22 @@ const caps = capsEl(label);
       }
     }
 
-    @media (min-width: 48rem) {
+    /* From 64rem the aside is the head's right column. */
+    @media (min-width: 64rem) {
       .sec-head-row.has-aside {
         grid-template-columns: minmax(0, 1fr) auto;
         align-items: end;
         column-gap: 3rem;
       }
       .sec-head-aside {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
         justify-content: flex-end;
+        gap: 1rem 1.5rem;
+      }
+      .sec-head-aside > :global(*) {
+        margin-top: 0;
       }
     }
 

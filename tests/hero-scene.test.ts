@@ -822,6 +822,7 @@ describe('hand-over signal to the floating plates', () => {
     live: true,
     progress: 0.4,
     ink: 1,
+    endScroll: 315,
     rect: { left: 700, top: 120, width: 640, height: 441 },
     mark: { x: 1020, y: 340, scale: 0.71 },
     ...overrides,
@@ -835,6 +836,12 @@ describe('hand-over signal to the floating plates', () => {
     expect(handoffChanged(base, detail({ progress: 0.402 }))).toBe(true);
     expect(handoffChanged(base, detail({ ink: 0.99 }))).toBe(true);
     expect(handoffChanged(base, detail({ live: false }))).toBe(true);
+    // The end of the hand-off moves with the layout (resize), not with the scroll.
+    expect(handoffChanged(base, detail({ endScroll: 315.1 }))).toBe(false);
+    expect(handoffChanged(base, detail({ endScroll: 290 }))).toBe(true);
+    expect(handoffChanged(base, detail({ endScroll: null }))).toBe(true);
+    expect(handoffChanged(detail({ endScroll: null }), detail({ endScroll: null }))).toBe(false);
+    expect(handoffChanged(detail({ endScroll: null }), base)).toBe(true);
     expect(handoffChanged(base, detail({ rect: { ...base.rect, top: 120.1 } }))).toBe(false);
     expect(handoffChanged(base, detail({ rect: { ...base.rect, top: 118 } }))).toBe(true);
     expect(handoffChanged(base, detail({ rect: { ...base.rect, width: 600 } }))).toBe(true);
@@ -859,11 +866,14 @@ describe('hand-over signal to the floating plates', () => {
     expect(publishHeroHandoff(gone, target)).toBe(true);
     expect(publishHeroHandoff({ ...gone, live: false }, target)).toBe(true);
 
-    expect(received.map((d) => [d.live, d.progress, d.ink])).toEqual([
-      [true, 0.1, 1],
-      [true, 1, 0],
-      [false, 1, 0],
+    expect(received.map((d) => [d.live, d.progress, d.ink, d.endScroll])).toEqual([
+      [true, 0.1, 1, 315],
+      [true, 1, 0, 315],
+      [false, 1, 0, 315],
     ]);
     expect(latestHeroHandoff()?.live).toBe(false);
+    // A resize past the hand-off: the new end is sent even though nothing else changed.
+    expect(publishHeroHandoff({ ...gone, live: false, endScroll: 280 }, target)).toBe(true);
+    expect(latestHeroHandoff()?.endScroll).toBe(280);
   });
 });

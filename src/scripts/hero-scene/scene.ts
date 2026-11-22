@@ -608,6 +608,62 @@ export const createHeroScene = async (
     }
   };
 
+  // ---------------------------------------------------------------------------------------------
+  // Hand-over to the floating plates (handoff-signal.ts)
+  // ---------------------------------------------------------------------------------------------
+
+  /** Footprint of the plates once the hand-off is complete: flat and in register (group units). */
+  const settledBounds = poseBounds(layout.plates.map(registerPose), plateOutline);
+  const settledShrink = handoff(1).scale;
+
+  /**
+   * Publishes the hand-off at `scrolled` (px the page has moved past the hero's top) with the
+   * plates' pivot at viewport y `pivotY`. Sent only when something changed (handoff-signal.ts).
+   */
+  const publishHandoff = (
+    metrics: Metrics,
+    progress: number,
+    ink: number,
+    scrolled: number,
+    pivotY: number,
+    scale: number,
+  ): void => {
+    publishHeroHandoff({
+      live: true,
+      progress,
+      ink,
+      // Document scrollY at which the hand-off completes: fixed by layout, not by observation.
+      endScroll: metrics.heroTop + metrics.distance,
+      // Viewport coordinates: the hero's top is at −scrolled.
+      rect: {
+        left: metrics.heroLeft + metrics.art.left,
+        top: metrics.art.top - scrolled,
+        width: metrics.art.width,
+        height: metrics.art.height,
+      },
+      mark: { x: metrics.heroLeft + metrics.rest.x, y: pivotY, scale },
+    });
+  };
+
+  /**
+   * The hand-off once complete (progress ≥ 1): the art box and the plates where they were at the
+   * moment the plates were gone (scrolled = metrics.distance), whatever the current scroll, so a
+   * reload or resize while scrolled down still gives the same anchor. The plates are then flat
+   * and in register (settledBounds), as tick() draws them at that scroll.
+   */
+  const publishSettled = (metrics: Metrics): void => {
+    const at = metrics.distance;
+    const scale = metrics.rest.scale * settledShrink;
+    const pivotY = guardY(
+      metrics.rest.y - at,
+      settledBounds.maxY * scale * EXTENT_SLACK,
+      -settledBounds.minY * scale * EXTENT_SLACK,
+      metrics.bandBottom,
+      metrics.copyTop === null ? null : metrics.copyTop - at,
+    );
+    publishHandoff(metrics, 1, 0, at, pivotY, scale);
+  };
+
   const tick = (now: number): void => {
     raf = 0;
     if (!m || !shouldRun()) {
@@ -739,20 +795,9 @@ export const createHeroScene = async (
       }
     }
     setHeaderDock(out.dock);
-    // Hand-over to the floating plates (handoff-signal.ts): sent only when something changed.
-    // Viewport coordinates: the hero's top is at −scrolled; the plates' pivot is at y.
-    publishHeroHandoff({
-      live: true,
-      progress,
-      ink: out.ink,
-      rect: {
-        left: m.heroLeft + m.art.left,
-        top: m.art.top - scrolled,
-        width: m.art.width,
-        height: m.art.height,
-      },
-      mark: { x: m.heroLeft + m.rest.x, y, scale },
-    });
+    // Hand-over to the floating plates: live during the hand-off, then fixed where it completed.
+    if (progress >= 1) publishSettled(m);
+    else publishHandoff(m, progress, out.ink, scrolled, y, scale);
 
     if (progress >= 1 && introDone && handedOver) {
       // Handed off: the header logo has taken over; nothing to draw until the user scrolls back.
@@ -788,6 +833,9 @@ export const createHeroScene = async (
       onLost();
       return;
     }
+    // Past the hand-off the loop may not run (docked or off-screen): send the new layout's end
+    // state now (endScroll, rect, mark). Nothing is sent if it did not change.
+    if (started && dockProgress(window.scrollY - m.heroTop, m.distance) >= 1) publishSettled(m);
     request();
   };
 

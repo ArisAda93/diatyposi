@@ -18,7 +18,7 @@
  *
  * Theme (theme.ts contract): `html[data-theme]` is read at start and again right before the
  * scene starts, and every `dt:themechange` on `document` is routed to it (scene.ts setTheme:
- * new paper, inks, caps and blend, with a short cross-fade).
+ * new paper, inks, caps and blend; the canvas is hidden, swapped and faded back in).
  */
 import type { ThemeChangeDetail } from '~/scripts/theme';
 import { parseTheme, pickAccent, type Accent, type Theme } from './math';

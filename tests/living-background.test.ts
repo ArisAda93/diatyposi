@@ -36,6 +36,7 @@ import {
   pickAccent,
   pitchFor,
   plateColours,
+  printAll,
   printLight,
   printMin,
   printOn,
@@ -522,12 +523,14 @@ describe('contrast caps (text on the paper stays AA)', () => {
       });
     });
 
-    it('keeps more ink under MIN than under the multiply fallback', () => {
+    it('keeps some ink under MIN and under the multiply fallback, within the ceilings', () => {
       const min = inkCaps(PAPER, inks, TEXTS, ALPHA_MAX, MIN_CONTRAST, MAX_TINT, 'min');
       const multiply = inkCaps(PAPER, inks, TEXTS, ALPHA_MAX, MIN_CONTRAST, MAX_TINT, 'multiply');
       plates.forEach((plate) => {
-        expect(min[plate]).toBeGreaterThanOrEqual(multiply[plate]);
+        expect(min[plate]).toBeGreaterThan(0);
         expect(multiply[plate]).toBeGreaterThan(0);
+        expect(min[plate]).toBeLessThanOrEqual(ALPHA_MAX[plate]);
+        expect(multiply[plate]).toBeLessThanOrEqual(ALPHA_MAX[plate]);
       });
     });
 
@@ -740,7 +743,9 @@ const DARK_CAPS_CEILING = { k: 0.08, c: 0.15, m: 0.14, y: 0.12 };
 const DARK_PAPER = hexToRgb('#141311');
 const DARK_KEY = hexToRgb('#F2EFE8');
 const DARK_TEXTS = [hexToRgb('#F26A5B'), hexToRgb('#ADA89F'), DARK_KEY];
-const DARK_INKS: Record<Plate, Rgb> = { k: DARK_KEY, c: CYAN, m: MAGENTA, y: YELLOW };
+/** Dark mode prints yellow paler (scene.ts DARK_YELLOW). */
+const DARK_YELLOW_INK = hexToRgb('#FFF59A');
+const DARK_INKS: Record<Plate, Rgb> = { k: DARK_KEY, c: CYAN, m: MAGENTA, y: DARK_YELLOW_INK };
 
 describe('MIN and MAX', () => {
   it('keeps the lighter value per channel under MAX, the darker under MIN', () => {
@@ -803,7 +808,7 @@ describe('dark-mode contrast caps (light text on the dark paper stays AA)', () =
   const shades = (plate: Plate): Rgb[] =>
     plate === 'k'
       ? [0, 0.25, 0.5, 0.75, 1].flatMap((f) =>
-          [CYAN, MAGENTA, YELLOW].map((ink) => mixRgb(DARK_KEY, ink, MAX_TINT * f)),
+          [CYAN, MAGENTA, DARK_YELLOW_INK].map((ink) => mixRgb(DARK_KEY, ink, MAX_TINT * f)),
         )
       : [DARK_INKS[plate]];
 
@@ -864,6 +869,23 @@ describe('dark-mode contrast caps (light text on the dark paper stays AA)', () =
       'max',
     );
     expect(caps).toEqual(alone);
+  });
+
+  it('prints yellow paler in dark mode, and caps it for that colour', () => {
+    expect(relativeLuminance(DARK_YELLOW_INK)).toBeGreaterThan(relativeLuminance(YELLOW));
+    const caps = inkCaps(
+      DARK_PAPER,
+      DARK_INKS,
+      DARK_TEXTS,
+      DARK_CAPS_CEILING,
+      MIN_CONTRAST,
+      MAX_TINT,
+      'max',
+    );
+    DARK_TEXTS.forEach((text) => {
+      const printed = printLight(DARK_PAPER, DARK_YELLOW_INK, caps.y);
+      expect(contrastRatio(text, printed)).toBeGreaterThanOrEqual(MIN_CONTRAST);
+    });
   });
 
   it('keeps the light-paper caps as they were (the lightest text still binds there)', () => {
@@ -1198,8 +1220,9 @@ describe('plates in the world', () => {
         const clip = apply(p, x, y, z);
         const ndcX = (clip[0] ?? 0) / (clip[3] ?? 1);
         const ndcY = (clip[1] ?? 0) / (clip[3] ?? 1);
-        expect((ndcX * 0.5 + 0.5) * w).toBeCloseTo(sx, 6);
-        expect((0.5 - ndcY * 0.5) * h).toBeCloseTo(sy, 6);
+        // Float32 matrices: about 1e-5 px of error.
+        expect((ndcX * 0.5 + 0.5) * w).toBeCloseTo(sx, 3);
+        expect((0.5 - ndcY * 0.5) * h).toBeCloseTo(sy, 3);
       });
     });
   });
@@ -1381,5 +1404,116 @@ describe('plates and the pointer', () => {
     const [x] = springStep(0, 0, 1, 36, 7.5, 5);
     expect(Number.isFinite(x)).toBe(true);
     expect(Math.abs(x)).toBeLessThan(2);
+  });
+});
+
+describe('three and four inks on one pixel (registering groups, plates over a glyph)', () => {
+  const plates: Plate[] = ['k', 'c', 'm', 'y'];
+  /** Key in every tint the caps are checked with (math.ts TINT_STEPS), and pure. */
+  const keyShades = (inks: Record<Plate, Rgb>): Rgb[] => [
+    inks.k,
+    ...[0.25, 0.5, 0.75, 1].flatMap((f) =>
+      [inks.c, inks.m, inks.y].map((ink) => mixRgb(inks.k, ink, MAX_TINT * f)),
+    ),
+  ];
+  /** Every set of three or four different plates. */
+  const groups: Plate[][] = [
+    ['k', 'c', 'm', 'y'],
+    ['c', 'm', 'y'],
+    ['k', 'c', 'm'],
+    ['k', 'c', 'y'],
+    ['k', 'm', 'y'],
+  ];
+  const themes = [
+    {
+      name: 'light',
+      paper: PAPER,
+      inks: { k: KEY, c: CYAN, m: MAGENTA, y: YELLOW } as Record<Plate, Rgb>,
+      texts: TEXTS,
+      ceilings: ALPHA_MAX,
+      blends: ['min', 'multiply'] as GlyphBlend[],
+    },
+    {
+      name: 'dark',
+      paper: DARK_PAPER,
+      inks: DARK_INKS,
+      texts: DARK_TEXTS,
+      ceilings: DARK_CAPS_CEILING,
+      blends: ['max', 'screen'] as GlyphBlend[],
+    },
+  ];
+
+  themes.forEach((theme) => {
+    theme.blends.forEach((blend) => {
+      it(`keeps every text readable where three or four inks meet (${theme.name}, ${blend})`, () => {
+        const caps = inkCaps(
+          theme.paper,
+          theme.inks,
+          theme.texts,
+          theme.ceilings,
+          MIN_CONTRAST,
+          MAX_TINT,
+          blend,
+        );
+        plates.forEach((p) => expect(caps[p]).toBeGreaterThan(0));
+        keyShades(theme.inks).forEach((key) => {
+          groups.forEach((group) => {
+            const printed = printAll(
+              theme.paper,
+              group.map((p) => ({ ink: p === 'k' ? key : theme.inks[p], alpha: caps[p] })),
+              blend,
+            );
+            theme.texts.forEach((text) => {
+              expect(contrastRatio(text, printed)).toBeGreaterThanOrEqual(MIN_CONTRAST);
+            });
+          });
+        });
+      });
+    });
+
+    it(`keeps the label red readable on C + M + Y at the caps (${theme.name})`, () => {
+      const blend = theme.blends[0] ?? 'min';
+      const caps = inkCaps(
+        theme.paper,
+        theme.inks,
+        theme.texts,
+        theme.ceilings,
+        MIN_CONTRAST,
+        MAX_TINT,
+        blend,
+      );
+      const red = theme.texts[0] ?? RED;
+      const printed = printAll(
+        theme.paper,
+        [
+          { ink: theme.inks.c, alpha: caps.c },
+          { ink: theme.inks.m, alpha: caps.m },
+          { ink: theme.inks.y, alpha: caps.y },
+        ],
+        blend,
+      );
+      expect(contrastRatio(red, printed)).toBeGreaterThanOrEqual(MIN_CONTRAST);
+    });
+  });
+
+  it('combines every print one way: never back towards the paper as prints are added', () => {
+    const prints = [
+      { ink: CYAN, alpha: 0.1 },
+      { ink: MAGENTA, alpha: 0.08 },
+      { ink: YELLOW, alpha: 0.3 },
+    ];
+    expect(printAll(PAPER, [], 'min')).toEqual(PAPER);
+    const two = printAll(PAPER, prints.slice(0, 2), 'min');
+    const three = printAll(PAPER, prints, 'min');
+    three.forEach((c, i) => expect(c).toBeLessThanOrEqual(two[i] ?? 0));
+    expect(printAll(PAPER, prints.slice(0, 2), 'min')).toEqual(
+      printMin(PAPER, CYAN, 0.1, MAGENTA, 0.08),
+    );
+    const darkTwo = printAll(DARK_PAPER, prints.slice(0, 2), 'max');
+    const darkThree = printAll(DARK_PAPER, prints, 'max');
+    darkThree.forEach((c, i) => expect(c).toBeGreaterThanOrEqual(darkTwo[i] ?? 1));
+    expect(printAll(DARK_PAPER, prints.slice(0, 2), 'screen')).toEqual(
+      printPair(DARK_PAPER, CYAN, 0.1, MAGENTA, 0.08, 'screen'),
+    );
   });
 });

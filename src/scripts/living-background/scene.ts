@@ -28,8 +28,8 @@
  * measured (text-rects.ts): inside its rectangles the ink falls to those caps over a short
  * feather; everywhere else it rises to the design ceilings below, so the background carries more
  * presence where it costs no legibility. Reduced motion, or a GPU with too few uniforms: the caps
- * everywhere. The theme switch is live (index.ts): new paper, inks, caps and blend, with a short
- * cross-fade of the canvas.
+ * everywhere. The theme switch is live (index.ts): new paper, inks, caps and blend; the canvas is
+ * hidden at once (transitions are off during the switch), swapped, and fades back in.
  *
  * - One draw loop, at full rate while something follows the visitor and at AMBIENT_FPS otherwise;
  *   paused while the tab is hidden. Reduced motion: one static frame, redrawn on resize only.
@@ -197,11 +197,12 @@ const ACCENT_RATE = 1.8;
 /**
  * Ink alpha per plate (k, c, m, y), per theme:
  * - `caps`: the ceiling the contrast caps start from (math.ts inkCaps lowers them until every
- *   text colour keeps MIN_CONTRAST on one print and any pair; on light paper with MIN to about
- *   k 0.049, c 0.095, m 0.058, y 0.405). Inside text rectangles every glyph and plate prints at
- *   most these caps.
+ *   text colour keeps MIN_CONTRAST on one print, on any pair, and where all four inks overlap;
+ *   on light paper with MIN to roughly a quarter below the pair limits of k 0.049, c 0.095,
+ *   m 0.058, y 0.405). Inside text rectangles every glyph and plate prints at most these caps.
  * - `glyph` / `plate`: the design ceilings away from text (no text there to protect).
- * Light ink on the dark paper reads stronger, so the dark ceilings are lower.
+ * Light ink on the dark paper reads stronger, so the dark ceilings are lower (except yellow,
+ * which prints paler there: DARK_YELLOW).
  */
 const INK_CEILINGS: Record<Theme, { caps: InkCaps; glyph: InkCaps; plate: InkCaps }> = {
   light: {
@@ -211,10 +212,16 @@ const INK_CEILINGS: Record<Theme, { caps: InkCaps; glyph: InkCaps; plate: InkCap
   },
   dark: {
     caps: { k: 0.08, c: 0.15, m: 0.14, y: 0.12 },
-    glyph: { k: 0.1, c: 0.2, m: 0.18, y: 0.16 },
-    plate: { k: 0.24, c: 0.42, m: 0.42, y: 0.3 },
+    glyph: { k: 0.1, c: 0.2, m: 0.18, y: 0.22 },
+    plate: { k: 0.24, c: 0.42, m: 0.42, y: 0.45 },
   },
 };
+/**
+ * Dark theme: yellow prints towards a paler, brighter yellow (glyphs and plates), and yellow
+ * plates keep at least `yellowFloor` of their ink however they turn, so yellow reads as light ink
+ * on the dark paper rather than olive. The caps are computed for this yellow.
+ */
+const DARK_YELLOW = { ink: '#FFF59A', yellowFloor: 0.65 };
 /** WCAG AA (4.5) plus a margin for the paper grain drawn above the canvas. */
 const MIN_CONTRAST = 4.6;
 /** Inks, as in global.css and logo-paths.ts (fallbacks: the tokens are read at start). */
@@ -229,7 +236,12 @@ const THEME_FALLBACK: Record<Theme, { paper: string; key: string; red: string; m
 };
 /** Paper darker than this (relative luminance) is printed as the dark theme. */
 const DARK_PAPER = 0.2;
-/** Theme switch: the canvas fades out, swaps inks and blend, and fades back in (ms). */
+/**
+ * Theme switch: the canvas is hidden, swaps inks and blend after `out` ms, and fades back in
+ * (LivingBackground.astro, 180 ms; the class that shortens it is removed after `back` ms). The
+ * hiding is a cut, not a fade: theme.ts sets `html.theme-switching` for the switch, which turns
+ * transitions off (global.css), so the canvas disappears at once while the new paper shows.
+ */
 const THEME_FADE = { out: 180, back: 260 };
 
 // --- Text-aware ink -----------------------------------------------------------------------------
@@ -383,7 +395,7 @@ export interface LivingBackground {
   setAccent(accent: Accent | null): void;
   /** Reduced motion on: one static frame, no loop. Off: the loop runs again. */
   setReducedMotion(reduce: boolean): void;
-  /** The site theme: new paper, inks, caps and blend (a short cross-fade while running). */
+  /** The site theme: new paper, inks, caps and blend (hidden, swapped, faded back in). */
   setTheme(theme: Theme): void;
   /** Removes the canvas and frees the context. Safe to call twice. */
   destroy(): void;
@@ -504,6 +516,7 @@ const PLATE_UNIFORMS = [
   'uCeil',
   'uLight',
   'uShade',
+  'uYellowFloor',
   'uHalfHeight',
   'uBase',
   'uDark',
@@ -586,6 +599,8 @@ interface Palette {
   /** Away from text. */
   glyph: InkCaps;
   plate: InkCaps;
+  /** Least shade of yellow plates (shaders.ts uYellowFloor). */
+  yellowFloor: number;
 }
 
 /**
@@ -607,7 +622,7 @@ const readPalette = (requested: Theme, minMax: boolean): Palette => {
     k: token('--color-key', fallback.key),
     c: token('--color-cyan', INKS.c),
     m: token('--color-magenta', INKS.m),
-    y: token('--color-yellow', INKS.y),
+    y: theme === 'dark' ? hexToRgb(DARK_YELLOW.ink) : token('--color-yellow', INKS.y),
   };
   const texts = [
     token('--color-red', fallback.red),
@@ -624,6 +639,7 @@ const readPalette = (requested: Theme, minMax: boolean): Palette => {
     caps: inkCaps(paper, inks, texts, ceilings.caps, MIN_CONTRAST, MAX_TINT, blend),
     glyph: ceilings.glyph,
     plate: ceilings.plate,
+    yellowFloor: theme === 'dark' ? DARK_YELLOW.yellowFloor : 0,
   };
 };
 
@@ -1003,6 +1019,7 @@ const assemble = (
     set(field.loc, p.glyph);
     gl.useProgram(plates.program);
     set(plates.loc, p.plate);
+    gl.uniform1f(plates.loc.uYellowFloor, p.yellowFloor);
   };
   applyPalette(palette);
 
@@ -1165,11 +1182,14 @@ const assemble = (
         y: detail.mark.y - detail.rect.top + artTop,
         scale: detail.mark.scale,
       };
-      if (detail.progress < HANDOFF.done) {
-        return { mark, since: 0, t: 0, alpha: clamp(1 - detail.ink) };
-      }
-      // The hero's plates are gone: scatter from the scroll at which they went.
-      const since = Math.max(0, scrollY - (heroArt.top - detail.rect.top));
+      // The scroll at which the hero's plates are gone: from the hero's layout when it says
+      // (stable across reloads and resizes), else from the art box when the last detail was sent.
+      const end =
+        detail.endScroll !== null && Number.isFinite(detail.endScroll) ? detail.endScroll : null;
+      const done = detail.progress >= HANDOFF.done || (end !== null && scrollY >= end);
+      if (!done) return { mark, since: 0, t: 0, alpha: clamp(1 - detail.ink) };
+      // Scatter by the scroll since then, a function of the scroll position only.
+      const since = Math.max(0, scrollY - (end ?? heroArt.top - detail.rect.top));
       return { mark, since, t: clamp(since / (HANDOFF.scatter * m.height)), alpha: 1 };
     }
     // No live hero scene: its static mark stays in the art box; print in beside it as they leave.
@@ -1733,7 +1753,8 @@ const assemble = (
       applyTheme(theme);
       return;
     }
-    // Fade the canvas out (the page's new paper shows), swap, and fade it back in.
+    // Hide the canvas (a cut: transitions are off while html.theme-switching is set, and the
+    // page's new paper shows), swap, and fade it back in.
     canvas.classList.add('is-theme-fade', 'is-switching');
     themeTimer = window.setTimeout(() => {
       applyTheme(theme);

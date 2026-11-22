@@ -33,8 +33,6 @@ declare global {
 export const THEME_STORAGE_KEY = 'dt-theme';
 /** Event dispatched on `document` after every theme change. */
 export const THEME_EVENT = 'dt:themechange';
-/** Length of the circular reveal (global.css `theme-reveal`). */
-export const THEME_REVEAL_MS = 500;
 
 /**
  * The flipping palette of both themes (WCAG pairs in tests/theme.test.ts; the test also checks
@@ -170,12 +168,23 @@ const applyTheme = (theme: Theme): void => {
 
 /** Counts reveals, so a skipped one never clears the state of the one that replaced it. */
 let revealId = 0;
+/** Counts switches, so an aborted reveal never applies a choice that a later one replaced. */
+let switchId = 0;
 
-/** Switches to `theme`, revealing it in a circle from `origin` where possible. */
+/**
+ * Switches to `theme`, revealing it in a circle from `origin` where possible: motion allowed,
+ * the View Transitions API present and the page visible. Otherwise the switch is instant.
+ */
 const switchTheme = (theme: Theme, origin: HTMLElement | null): void => {
   const root = document.documentElement;
+  const seq = ++switchId;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (reduce || !origin || typeof document.startViewTransition !== 'function') {
+  if (
+    reduce ||
+    !origin ||
+    document.visibilityState !== 'visible' ||
+    typeof document.startViewTransition !== 'function'
+  ) {
     applyTheme(theme);
     return;
   }
@@ -198,15 +207,35 @@ const switchTheme = (theme: Theme, origin: HTMLElement | null): void => {
     root.style.removeProperty('--theme-vt-r');
   };
 
-  try {
-    const transition = document.startViewTransition(() => applyTheme(theme));
-    // `ready` rejects when the transition is skipped (hidden tab, another transition); the
-    // update has still run then, so there is nothing to recover.
-    transition.ready.catch(() => undefined);
-    transition.finished.then(cleanUp, cleanUp);
-  } catch {
+  let applied = false;
+  const update = (): void => {
+    applied = true;
+    applyTheme(theme);
+  };
+  /**
+   * The browser may abort a transition before its update runs (invalid state, another
+   * transition, a hidden page): then apply the theme directly, unless a later switch has
+   * already replaced this one. A skipped reveal never leaves the old theme.
+   */
+  const ensureApplied = (): void => {
+    if (applied || seq !== switchId) return;
+    applied = true;
+    applyTheme(theme);
+  };
+  const settle = (): void => {
+    ensureApplied();
     cleanUp();
-    if (currentTheme() !== theme) applyTheme(theme);
+  };
+
+  try {
+    const transition = document.startViewTransition(update);
+    // Every promise is handled: an aborted or skipped transition rejects `updateCallbackDone`
+    // and `ready` (and may reject `finished`); none of that is an error for the visitor.
+    transition.updateCallbackDone.catch(ensureApplied);
+    transition.ready.catch(() => undefined);
+    transition.finished.then(settle, settle);
+  } catch {
+    settle();
   }
 };
 

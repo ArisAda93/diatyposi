@@ -9,8 +9,8 @@
  * - The arches (decorative): drawn as four C/M/Y/K hairline outlines whose feet stand on the
  *   rule, right-aligned to where the hairline ends. They are sized from the title's type
  *   (7 × the display-l size, capped by the content width), so they scale with the h1.
- * - The red spaced label sits on the rule to the left of the arches from 48rem (on phones, under
- *   it), then the h1, the optional intro and the default slot (chips, notes).
+ * - Under the rule, at every width, hang the red spaced label, the h1, the optional intro and the
+ *   default slot (chips, notes): the arches above the rule, the type below it.
  *
  * Printing (CSS scroll-driven, where supported, never under reduced motion): at the top of the
  * page only the outlines show; as the page scrolls, a halftone screen of each ink prints into its
@@ -180,41 +180,15 @@ const hasExtra = Astro.slots.has('default');
 
     .ph-label {
       justify-self: start;
-      margin-top: 1.5rem;
+      margin-top: clamp(1.5rem, 1.25rem + 1vw, 2rem);
     }
     .ph-title {
       max-width: 18ch;
-      margin-top: 1rem;
+      margin-top: clamp(1rem, 0.75rem + 0.75vw, 1.5rem);
     }
     .ph-intro {
       max-width: 58ch;
       margin-top: clamp(1.25rem, 1rem + 1vw, 1.75rem);
-    }
-
-    /* From 48rem the label sits on the rule, left of the arches: one shared baseline. */
-    @media (min-width: 48rem) {
-      .ph-mast {
-        grid-row: 1;
-      }
-      .ph-label {
-        grid-row: 1;
-        grid-column: 1 / span 6;
-        align-self: end;
-        margin: 0 0 1.25rem;
-      }
-      .ph-rule {
-        grid-row: 2;
-      }
-      .ph-title {
-        grid-row: 3;
-        margin-top: clamp(1.5rem, 1rem + 1.5vw, 2.25rem);
-      }
-      .ph-intro {
-        grid-row: 4;
-      }
-      .ph-extra {
-        grid-row: 5;
-      }
     }
 
     /*

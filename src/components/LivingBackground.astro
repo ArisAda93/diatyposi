@@ -8,8 +8,9 @@
  *   and the floating 3D logo plates (src/scripts/living-background/), faded in over the paper. It
  *   is cleared to the paper colour (dark paper in the dark theme), so it never shifts anything
  *   and the page looks the same until it arrives.
- * - Theme switch: the canvas fades out (`is-switching`), swaps inks and paper, and fades back in;
- *   `is-theme-fade` keeps both fades short.
+ * - Theme switch: the canvas is hidden (`is-switching`), swaps inks and paper, and fades back in
+ *   (`is-theme-fade` keeps that fade short). The hiding is a cut, not a fade: theme.ts sets
+ *   `html.theme-switching` during the switch, which turns transitions off (global.css).
  *
  * The layer is 100lvh tall, so mobile toolbars showing or hiding never resize the canvas. The
  * paper itself is <html>'s background and <body> stays transparent (global.css), so this layer

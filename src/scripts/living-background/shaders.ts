@@ -217,6 +217,8 @@ void main() {
  * ink of the plate (1 facing the viewer, uShade.x edge-on, and a little lighter towards the top,
  * uShade.y), the side walls lighter (uShade.z–w by how they face the light uLight), so the walls
  * show only at the silhouette, as a lit bevel. scene.ts keeps uShade.w ≤ uShade.x × uShade.y.
+ * Yellow plates never fall below uYellowFloor (raised in the dark theme; shade stays ≤ 1, so the
+ * caps on text still hold).
  */
 export const plateVertex = /* glsl */ `
 attribute vec3 position;
@@ -235,6 +237,7 @@ uniform vec4 uCap;
 uniform vec4 uCeil;
 uniform vec3 uLight;
 uniform vec4 uShade;
+uniform float uYellowFloor;
 uniform float uHalfHeight;
 varying vec3 vColor;
 varying float vOpen;
@@ -261,6 +264,9 @@ void main() {
     color = uYellow;
     cap = uCap.w;
     open = uCeil.w;
+    // Dark theme: yellow keeps more of its ink on the turned faces and walls, so it reads as
+    // light ink rather than a dim olive.
+    shade = max(shade, uYellowFloor);
   } else if (ink > 1.5) {
     color = uMagenta;
     cap = uCap.z;

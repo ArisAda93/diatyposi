@@ -123,12 +123,14 @@ export const printLight = (paper: Rgb, ink: Rgb, alpha: number): Rgb => mixRgb(p
 
 /**
  * Dark-mode fallback without MAX: each glyph writes alpha × ink and screens the paper under it
- * (gl.ONE_MINUS_DST_COLOR × gl.ONE): 1 − (1 − paper)(1 − alpha·ink). Only ever lightens.
+ * (gl.ONE_MINUS_DST_COLOR × gl.ONE): paper + alpha·ink·(1 − paper), which is
+ * 1 − (1 − paper)(1 − alpha·ink). Written this way it is exact at alpha 0 and never below the
+ * paper: it only ever lightens.
  */
 export const printScreen = (paper: Rgb, ink: Rgb, alpha: number): Rgb => [
-  1 - (1 - paper[0]) * (1 - alpha * ink[0]),
-  1 - (1 - paper[1]) * (1 - alpha * ink[1]),
-  1 - (1 - paper[2]) * (1 - alpha * ink[2]),
+  paper[0] + alpha * ink[0] * (1 - paper[0]),
+  paper[1] + alpha * ink[1] * (1 - paper[1]),
+  paper[2] + alpha * ink[2] * (1 - paper[2]),
 ];
 
 /**
@@ -173,6 +175,31 @@ export const printPair = (
   }
 };
 
+/** One print: an ink and its alpha. */
+export interface Print {
+  ink: Rgb;
+  alpha: number;
+}
+
+/**
+ * Paper where all of `prints` overlap, for a blend: MIN keeps the darkest value per channel, MAX
+ * the lightest; the fallbacks print one over the other. With no prints, the paper. Every blend
+ * only moves one way as prints are added (MIN and multiply darken, MAX and screen lighten), so
+ * the result for a set of prints is at least as far from the paper as for any subset of it.
+ */
+export const printAll = (paper: Rgb, prints: readonly Print[], blend: GlyphBlend): Rgb => {
+  if (blend === 'min' || blend === 'max') {
+    const combine = blend === 'min' ? minRgb : maxRgb;
+    return (
+      prints.reduce<Rgb | null>((out, p) => {
+        const printed = printWith(paper, p.ink, p.alpha, blend);
+        return out ? combine(out, printed) : printed;
+      }, null) ?? paper
+    );
+  }
+  return prints.reduce<Rgb>((out, p) => printWith(out, p.ink, p.alpha, blend), paper);
+};
+
 /**
  * Largest ink alpha (0–1) at which `text` on the printed paper still keeps `minContrast`. Printing
  * moves the paper away from where it was, towards the text (darker text on light paper, light
@@ -210,9 +237,13 @@ export type Theme = 'light' | 'dark';
 /** `html[data-theme]` (or the event's `detail.theme`) as a theme: light unless it says dark. */
 export const parseTheme = (value: unknown): Theme => (value === 'dark' ? 'dark' : 'light');
 
+/** Tint steps (shares of the largest tint) at which the key colours are checked. */
+export const TINT_STEPS = [0.25, 0.5, 0.75, 1] as const;
+
 /**
- * The colours a plate's glyphs can take: key also tinted towards each accent ink (half and full
- * MAX tint; the luminance is monotonic in the tint, the midpoint is a safety sample).
+ * The colours a plate's prints can take: key also tinted towards each accent ink, at every
+ * TINT_STEPS share of `maxTint` (each channel is linear in the tint; the quarter steps sample the
+ * curve where several channels combine).
  */
 export const plateColours = (
   inks: Readonly<Record<Plate, Rgb>>,
@@ -220,10 +251,9 @@ export const plateColours = (
 ): Record<Plate, Rgb[]> => ({
   k: [
     inks.k,
-    ...[inks.c, inks.m, inks.y].flatMap((ink) => [
-      mixRgb(inks.k, ink, maxTint / 2),
-      mixRgb(inks.k, ink, maxTint),
-    ]),
+    ...[inks.c, inks.m, inks.y].flatMap((ink) =>
+      TINT_STEPS.map((step) => mixRgb(inks.k, ink, maxTint * step)),
+    ),
   ],
   c: [inks.c],
   m: [inks.m],
@@ -231,14 +261,20 @@ export const plateColours = (
 });
 
 /**
- * Alpha cap per plate, so that every text colour keeps `minContrast` wherever glyphs sit: on one
- * glyph, and where any two glyphs overlap (any two plates, the same plate included, every key
- * tint), combined by `blend`.
+ * Alpha cap per plate, so that every text colour keeps `minContrast` wherever glyphs and plates
+ * sit: on one print, where any two overlap (any two plates, the same plate included, every key
+ * tint), and where three or four different inks overlap (a registering group, two plates over a
+ * glyph), combined by `blend`.
  *
- * 1. Each plate starts at its design ceiling, lowered until one glyph of it passes.
+ * 1. Each plate starts at its design ceiling, lowered until one print of it passes.
  * 2. Every pair of plates in turn: if the pair fails, both caps scale down by the largest common
  *    factor (bisection) that makes it pass. Caps only ever fall, so a pair that passed stays
  *    passing and one pass over the pairs is enough.
+ * 3. All four plates together (every key tint, every text colour): if they fail, all four caps
+ *    scale down by the largest common factor that makes them pass. The blends only move one way
+ *    as prints are added (printAll), so this also covers every set of three. (Under MIN and MAX
+ *    a second print of the same ink changes nothing, so any stack of prints is covered; the
+ *    multiply and screen fallbacks are covered for up to four different inks and any pair.)
  *
  * Texts sit on one side of the paper: darker on light paper ('min', 'multiply'), lighter on dark
  * paper ('max', 'screen'). Printing moves the paper towards them, so the text with the least
@@ -290,6 +326,33 @@ export const inkCaps = (
       if (q !== p) caps[q] *= lo;
     });
   });
+
+  const allPass = (factor: number): boolean =>
+    colours.k.every((key) => {
+      const printed = printAll(
+        paper,
+        [
+          { ink: key, alpha: caps.k * factor },
+          { ink: inks.c, alpha: caps.c * factor },
+          { ink: inks.m, alpha: caps.m * factor },
+          { ink: inks.y, alpha: caps.y * factor },
+        ],
+        blend,
+      );
+      return texts.every((text) => contrastRatio(text, printed) >= minContrast);
+    });
+  if (!allPass(1)) {
+    let lo = 0;
+    let hi = 1;
+    for (let step = 0; step < 24; step++) {
+      const mid = (lo + hi) / 2;
+      if (allPass(mid)) lo = mid;
+      else hi = mid;
+    }
+    PLATES.forEach((plate) => {
+      caps[plate] *= lo;
+    });
+  }
   return caps;
 };
 

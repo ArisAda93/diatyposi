@@ -15,11 +15,19 @@
  * are theme tokens; the entries sit on a translucent paper chip, so they read over light, ink
  * and yellow sections alike.
  *
- * Place it once per page, anywhere inside <main> or after it.
+ * Place it once per page, anywhere inside <main> or after it. While faded out it only drops
+ * pointer events: its links stay in the tab order and the landmark stays exposed, and a focused
+ * entry shows the rail (`data-focus`).
  */
+import { defaultLocale, t, type Locale } from '~/i18n/ui';
+
+interface Props {
+  locale?: Locale;
+}
+const { locale = defaultLocale } = Astro.props;
 ---
 
-<nav class="section-rail" aria-label="Ενότητες σελίδας" data-section-rail hidden>
+<nav class="section-rail" aria-label={t('sectionNavLabel', locale)} data-section-rail hidden>
   <ol class="rail-list" data-rail-list></ol>
 </nav>
 
@@ -151,11 +159,10 @@
       z-index: 25;
       display: none;
       translate: 0 -50%;
+      /* Faded, not hidden: the links stay focusable and the landmark stays exposed. */
       opacity: 0;
-      visibility: hidden;
-      transition:
-        opacity var(--dur-base) var(--ease-out),
-        visibility 0s linear var(--dur-base);
+      pointer-events: none;
+      transition: opacity var(--dur-base) var(--ease-out);
     }
     @media (min-width: 80rem) {
       .section-rail {
@@ -164,10 +171,7 @@
     }
     .section-rail:is([data-active], [data-focus]) {
       opacity: 1;
-      visibility: visible;
-      transition:
-        opacity var(--dur-base) var(--ease-out),
-        visibility 0s;
+      pointer-events: auto;
     }
 
     .rail-list {

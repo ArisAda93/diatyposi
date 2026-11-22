@@ -43,6 +43,8 @@ export const ui = {
     footerPrivacy: 'Πολιτική απορρήτου',
     copyright: 'Με επιφύλαξη παντός δικαιώματος.',
     floatingLabel: 'Γρήγορη επικοινωνία',
+    /** Section rail (SectionRail.astro, ≥ 1280px): the landmark's accessible name. */
+    sectionNavLabel: 'Ενότητες σελίδας',
     /** Theme toggle: its accessible name (a toggle button, pressed = dark theme on). */
     themeToggle: 'Σκούρο θέμα',
     /** Theme toggle state words, shown in its tooltip and in the menu row. */

@@ -34,6 +34,7 @@ Every Greek string on the site that is **not** the owner’s own wording, for th
 | `footerPrivacy`      | Πολιτική απορρήτου                                                                                                                                                     |
 | `copyright`          | Με επιφύλαξη παντός δικαιώματος.                                                                                                                                       |
 | `floatingLabel`      | Γρήγορη επικοινωνία                                                                                                                                                    |
+| `sectionNavLabel`    | Ενότητες σελίδας                                                                                                                                                       |
 | `themeToggle`        | Σκούρο θέμα                                                                                                                                                            |
 | `themeOn`            | Ενεργό                                                                                                                                                                 |
 | `themeOff`           | Ανενεργό                                                                                                                                                               |

@@ -512,6 +512,21 @@ const ghosts = ['c', 'm', 'y'] as const;
         display: none;
       }
     }
+
+    /*
+     * Print: always the light page (global.css), so never the live canvas (its inline blend and
+     * clear colour follow the screen theme). The static SVG mark prints in its place, also while
+     * the canvas was fading in over it (inline opacity).
+     */
+    @media print {
+      .hero-stage :global(.hero-canvas) {
+        display: none;
+      }
+      .hero[data-scene] .hero-mark {
+        visibility: visible;
+        opacity: 1 !important;
+      }
+    }
   }
 
   @keyframes hero-cue {
