@@ -3,9 +3,11 @@ import { services } from '../src/data/site';
 import { closestIndex, leadSentence, stepDirection } from '../src/scripts/services-showcase';
 import {
   centredScroll,
+  edgesAttr,
   indexState,
   plateInk,
   railGradient,
+  scrollEdges,
   stepProgress,
 } from '../src/scripts/services-page';
 
@@ -139,6 +141,40 @@ describe('centredScroll (current chip in the middle of the chip row)', () => {
   });
   it('does not scroll when everything fits', () => {
     expect(centredScroll(100, 80, 600, 500)).toBe(0);
+  });
+});
+
+describe('scrollEdges (which sides of a chip row hide chips)', () => {
+  it('hides chips only past the end at rest', () => {
+    expect(scrollEdges(0, 390, 1200)).toEqual({ start: false, end: true });
+  });
+  it('hides chips on both sides in the middle of the range', () => {
+    expect(scrollEdges(400, 390, 1200)).toEqual({ start: true, end: true });
+  });
+  it('hides chips only before the start at the end of the range', () => {
+    expect(scrollEdges(810, 390, 1200)).toEqual({ start: true, end: false });
+  });
+  it('treats sub-pixel positions near either end as resting there', () => {
+    expect(scrollEdges(0.6, 390, 1200)).toEqual({ start: false, end: true });
+    expect(scrollEdges(809.4, 390, 1200)).toEqual({ start: true, end: false });
+  });
+  it('treats overscroll past either end (iOS rubber-banding) as resting at that end', () => {
+    expect(scrollEdges(-30, 390, 1200)).toEqual({ start: false, end: true });
+    expect(scrollEdges(860, 390, 1200)).toEqual({ start: true, end: false });
+  });
+  it('hides nothing when every chip fits', () => {
+    expect(scrollEdges(0, 900, 640)).toEqual({ start: false, end: false });
+  });
+});
+
+describe('edgesAttr (data-edges for the fade)', () => {
+  it('names the sides that hide chips, start first', () => {
+    expect(edgesAttr({ start: true, end: true })).toBe('start end');
+    expect(edgesAttr({ start: true, end: false })).toBe('start');
+    expect(edgesAttr({ start: false, end: true })).toBe('end');
+  });
+  it('is empty when nothing is hidden', () => {
+    expect(edgesAttr({ start: false, end: false })).toBe('');
   });
 });
 

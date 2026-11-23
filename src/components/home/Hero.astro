@@ -7,7 +7,10 @@
  * - The copy is one block: the red label, the owner's headline (painted at first paint, the LCP
  *   element), a registration hairline that ties it to the owner's intro (set as its lead), the two
  *   actions and a quiet link to the company page. Desktop: a left column, vertically centred.
- *   Below 64rem: under the art.
+ *   Below 64rem: under the art. Landscape phones: beside the art, as on desktop. Portrait phones
+ *   (below 40rem) are composed to fit the first screen above the call bar: the art shrinks on
+ *   short screens, the services button and the company link share a row, and the sheet foot is
+ *   left out (the call bar already prints the colour bar along that edge).
  * - The art box (decorative, aria-hidden) holds the logo arches as SVG: the static composition,
  *   shown at first paint, without JS, with reduced motion and without WebGL. Its aspect ratio is
  *   the box every pose of the live scene fits in (hero-scene/choreography.ts ART, 900 × 620
@@ -83,19 +86,21 @@ const ghosts = ['c', 'm', 'y'] as const;
           <span class="hero-rule-line"></span>
         </div>
         <p class="hero-lead">{ownerCopy.el.intro}</p>
-        <div class="hero-actions">
-          <a href={routes.quote} class="btn btn-primary">
-            <span>{t('requestQuote')}</span>
-            <Icon name="arrow-right" size={20} />
-          </a>
-          <a href={routes.services} class="btn btn-secondary">
-            {t('ourServices')}
+        <div class="hero-cta">
+          <div class="hero-actions">
+            <a href={routes.quote} class="btn btn-primary">
+              <span>{t('requestQuote')}</span>
+              <Icon name="arrow-right" size={20} />
+            </a>
+            <a href={routes.services} class="btn btn-secondary">
+              {t('ourServices')}
+            </a>
+          </div>
+          <a href={routes.about} class="hero-about">
+            <span class="link">{heroText.el.aboutLink}</span>
+            <Icon name="arrow-right" size={18} />
           </a>
         </div>
-        <a href={routes.about} class="hero-about">
-          <span class="link">{heroText.el.aboutLink}</span>
-          <Icon name="arrow-right" size={18} />
-        </a>
       </div>
     </div>
 
@@ -187,8 +192,10 @@ const ghosts = ['c', 'm', 'y'] as const;
       min-height: 100vh;
       min-height: 100svh;
       padding-top: calc(var(--header-h) + clamp(0.25rem, 1svh, 0.75rem));
-      /* Clear of the mobile call/Viber bar. */
-      padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+      /* Clear of the mobile call/Viber bar (`--float-bar-h`, safe area included), with some air. */
+      padding-bottom: calc(
+        var(--float-bar-h, calc(4rem + env(safe-area-inset-bottom, 0px))) + 0.75rem
+      );
     }
 
     /* Mobile and tablet: art on top, copy right under it. */
@@ -203,15 +210,21 @@ const ghosts = ['c', 'm', 'y'] as const;
     /*
      * Art box: 900 × 620 raster units (choreography.ts ART), the 840-wide mark centred in it.
      * Every pose of the scene stays inside it. Phones: at the right, at most a quarter of the
-     * screen below the header tall, so the label, headline, intro and first action fit above the
-     * call bar, and short landscape screens never cut a pose.
+     * screen below the header tall, and smaller on shorter screens (0.6 px per px of screen
+     * height, never under 5rem), so the label, headline, intro and every action fit above the
+     * call bar: about 193 px tall at 844 px, 135 px at 739 px (a large phone with the browser
+     * bars shown), 90 px at 664 px. svh, so the browser bars sliding never resize it.
      */
     .hero-art {
       display: flex;
       align-items: center;
       justify-content: center;
       justify-self: end;
-      width: min(100%, (100svh - var(--header-h)) * 0.25 * 900 / 620);
+      width: min(100%, clamp(5rem, 60vh - 19.25rem, (100vh - var(--header-h)) * 0.25) * 900 / 620);
+      width: min(
+        100%,
+        clamp(5rem, 60svh - 19.25rem, (100svh - var(--header-h)) * 0.25) * 900 / 620
+      );
       aspect-ratio: 900 / 620;
     }
     .hero-mark {
@@ -288,6 +301,13 @@ const ghosts = ['c', 'm', 'y'] as const;
         font-size: clamp(2.25rem, 10.25vw, 2.5rem);
       }
     }
+    /* Small phones (under 360 px): sized to the column (8.6 em in 100vw − 2rem leaves room), so
+       the headline keeps its two lines down to 320 px (36 px would break it into three). */
+    @media (max-width: 359.98px) {
+      .hero .hero-title {
+        font-size: 10vw;
+      }
+    }
 
     /* C/M/Y ghost copies of the headline, only shown during the intro. */
     .hero-ghosts {
@@ -345,11 +365,14 @@ const ghosts = ['c', 'm', 'y'] as const;
       text-wrap: pretty;
     }
 
+    /* The actions and the company link (from 40rem: the buttons in a row, the link under them). */
+    .hero-cta {
+      margin-top: clamp(1.5rem, 3.5svh, 2.25rem);
+    }
     .hero-actions {
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
-      margin-top: clamp(1.5rem, 3.5svh, 2.25rem);
     }
 
     .hero-about {
@@ -365,6 +388,47 @@ const ghosts = ['c', 'm', 'y'] as const;
     }
     .hero-about :global(svg) {
       transition: transform var(--dur-base) var(--ease-out);
+    }
+
+    /*
+     * Portrait phones: the first screen holds the art, the label, the headline, the intro and the
+     * actions, clear of the call bar. The primary action runs across the column; the services
+     * button and the company link share the next row (the button takes the room the link leaves;
+     * where both do not fit, the link drops under it). The intro steps down to 17 px on short
+     * screens (2.4svh), and the sheet foot is left out: the call bar prints the colour bar along
+     * that edge already, and a touch screen needs no scroll cue.
+     */
+    @media (max-width: 39.99rem) {
+      .hero-lead {
+        font-size: min(var(--text-lead), max(1.0625rem, 2.4svh));
+      }
+      .hero-cta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+      }
+      .hero-actions {
+        display: contents;
+      }
+      .hero-actions .btn-primary {
+        flex: 1 0 100%;
+      }
+      .hero-actions .btn-secondary {
+        flex: 1 1 auto;
+        padding-inline: 1rem;
+      }
+      .hero-about {
+        flex: none;
+        margin-top: 0;
+        font-size: 1rem;
+      }
+    }
+    @media (max-width: 359.98px) {
+      .hero-lead {
+        font-size: 1.0625rem;
+        line-height: 1.5;
+      }
     }
 
     .hero-foot {
@@ -386,7 +450,7 @@ const ghosts = ['c', 'm', 'y'] as const;
     }
     .hero-cue-label {
       font-family: var(--font-display);
-      font-size: 0.6875rem;
+      font-size: 0.75rem;
       font-weight: 750;
       line-height: 1;
       letter-spacing: 0.24em;
@@ -410,6 +474,12 @@ const ghosts = ['c', 'm', 'y'] as const;
     }
     .hero[data-offscreen] .hero-cue-drop {
       animation-play-state: paused;
+    }
+    /* Portrait phones: no sheet foot (see the phone composition above). */
+    @media (max-width: 39.99rem) {
+      .hero-foot {
+        display: none;
+      }
     }
 
     /* Intro start state: pre-paint class from BaseLayout. */
@@ -496,8 +566,44 @@ const ghosts = ['c', 'm', 'y'] as const;
       }
     }
 
+    /*
+     * Landscape phones (wide and short, below 64rem): the copy beside the art, as on desktop, so
+     * the art and the headline share the first screen instead of the art filling it. Both start
+     * under the header. The art is as tall as the screen below the header allows, inside its
+     * column (it does not bleed into the gutter, which holds the notch in landscape). The
+     * headline is sized to its column: the longer line is about 8.6 em, and 0.058 × the inner
+     * width is 8% under the column's 6.5/12 of it, which absorbs the notch insets.
+     */
+    @media (min-width: 40rem) and (max-width: 63.99rem) and (max-height: 32rem) {
+      .hero-grid {
+        grid-template-columns: minmax(0, 6.5fr) minmax(0, 5.5fr);
+        align-items: start;
+        column-gap: calc(var(--grid-gap) * 2);
+      }
+      .hero-copy {
+        grid-row: 1;
+        grid-column: 1;
+        max-width: none;
+      }
+      .hero-art {
+        grid-row: 1;
+        grid-column: 2;
+        width: min(100%, (100vh - var(--header-h) - 2rem) * 900 / 620);
+        width: min(100%, (100svh - var(--header-h) - 2rem) * 900 / 620);
+      }
+      .hero .hero-title {
+        font-size: clamp(1.75rem, (100vw - 2 * var(--gutter) - 2 * var(--grid-gap)) * 0.058, 3rem);
+      }
+    }
+
+    /* Hover only where the pointer hovers: a tap must not leave the arrow nudged. */
     @media (prefers-reduced-motion: no-preference) {
-      .hero-about:is(:hover, :focus-visible) :global(svg) {
+      .hero-about:focus-visible :global(svg) {
+        transform: translateX(3px);
+      }
+    }
+    @media (prefers-reduced-motion: no-preference) and (hover: hover) {
+      .hero-about:hover :global(svg) {
         transform: translateX(3px);
       }
     }

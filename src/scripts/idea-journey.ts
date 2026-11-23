@@ -24,8 +24,10 @@
  * there too. Writes are transforms, opacity and a few custom properties, batched in one rAF loop
  * that idles when the stage is settled or off screen.
  *
- * Below 64rem, under reduced motion or without JS, each step shows its own still illustration in
- * its final state, and the stage part does nothing.
+ * Below 64rem, under reduced motion or without JS, each step shows its own still illustration
+ * (src/scripts/journey-stills.ts prints its photo over its sketch on scroll where motion is
+ * allowed), and the stage part does nothing: no scroll listener, no frames, and the print layer
+ * is never loaded.
  *
  * Chooser. Toggle chips (aria-pressed) pick what to make; the button's href is the quote form
  * with every picked service pre-selected, and its label counts them. A polite live region
@@ -439,8 +441,11 @@ export const spineGradient = (fractions: readonly number[]): string => {
 // DOM
 // ------------------------------------------------------------------------------------------------
 
-/** Same condition as the live-stage CSS in IdeaJourney.astro. */
-const LIVE_QUERY = '(min-width: 64rem) and (prefers-reduced-motion: no-preference)';
+/**
+ * Same condition as the live-stage CSS in IdeaJourney.astro. Below it (phones, tablets, reduced
+ * motion) the stage part does nothing and the stills take over (src/scripts/journey-stills.ts).
+ */
+export const LIVE_QUERY = '(min-width: 64rem) and (prefers-reduced-motion: no-preference)';
 const FINE_QUERY = '(hover: hover) and (pointer: fine)';
 /** Before the stage is first reached: blank paper, so the sketch draws in front of the visitor. */
 const BLANK_STAGE = 'blank';

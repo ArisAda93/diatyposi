@@ -117,7 +117,14 @@
   --gutter: clamp(1rem, 4vw, 3rem);
   --grid-gap: clamp(1rem, 2vw, 2rem);
   --section-y: clamp(4.5rem, 2.5rem + 8vw, 10rem);
+  /* Height of the site header bar (Header.astro). Fixed or sticky UI and anchors clear it. */
   --header-h: 4.5rem;
+  /*
+   * Height the mobile call/Viber bar (FloatingContact.astro, below 48rem) takes at the bottom of
+   * the screen, safe area included; 0px where the bar is not shown. <body> is padded by it, and
+   * anything fixed or full-screen at the bottom clears it.
+   */
+  --float-bar-h: 0px;
 
   --dur-fast: 140ms;
   --dur-base: 240ms;
@@ -136,6 +143,18 @@
   --grain-light: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.13 0 0 0 0 0.12 0 0 0 0 0.11 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.09'/%3E%3C/svg%3E");
   --grain-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.95' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.95 0 0 0 0 0.93 0 0 0 0 0.9 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.05'/%3E%3C/svg%3E");
   --grain: var(--grain-light);
+}
+
+/* The call/Viber bar: 0.5rem + a 3rem button + 0.5rem, plus the home-indicator safe area. */
+@media (max-width: 47.99rem) {
+  :root {
+    --float-bar-h: calc(4rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+@media print {
+  :root {
+    --float-bar-h: 0px;
+  }
 }
 
 /* ------------------------------------------------------------------------------------------ */
@@ -199,8 +218,16 @@ html {
     text-size-adjust: 100%;
     /* The page scrollbar in the paper's own tones (follows the theme). */
     scrollbar-color: color-mix(in srgb, var(--color-key) 35%, var(--color-paper)) var(--color-paper);
-    /* A tap flashes the yellow highlighter instead of the platform's grey box. */
+    /*
+     * A tap on a plain link flashes the yellow highlighter instead of the platform's grey box.
+     * Controls with a press state of their own (buttons, icon and menu buttons, toggles, the call
+     * bar, menu rows) turn it off, so a tap shows one feedback, not a box over it.
+     */
     -webkit-tap-highlight-color: color-mix(in srgb, var(--color-yellow) 35%, transparent);
+  }
+  /* No double-tap-to-zoom wait on controls (pinch zoom and panning stay). */
+  :where(a, button, input, select, textarea, label, summary, [role='button']) {
+    touch-action: manipulation;
   }
   /* Inner scrollers (menu, lightbox, chip rows) keep the platform's themed scrollbars. */
   body {
@@ -216,12 +243,14 @@ html {
   /* Keep focused elements clear of the mobile call/Viber bar (FloatingContact, below 48rem). */
   @media (max-width: 47.99rem) {
     html {
-      scroll-padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+      scroll-padding-bottom: calc(var(--float-bar-h) + 0.5rem);
     }
   }
 
   body {
     min-height: 100dvh;
+    /* Room for the mobile call/Viber bar, so the end of the page never hides under it. */
+    padding-bottom: var(--float-bar-h);
     overflow-x: clip;
     font-family: var(--font-sans);
     font-size: var(--text-body);
@@ -383,6 +412,13 @@ html {
     font-weight: 750;
     letter-spacing: -0.015em;
   }
+  /* Display type set on any element (not only h1–h4) wraps into balanced lines too. */
+  .display-xl,
+  .display-l,
+  .h2,
+  .h3 {
+    text-wrap: balance;
+  }
   .lead {
     font-size: var(--text-lead);
     line-height: var(--text-lead--line-height);
@@ -440,6 +476,13 @@ html {
       box-shadow var(--dur-base) var(--ease-out),
       background-color var(--dur-fast) linear,
       color var(--dur-fast) linear;
+  }
+  /* Controls that show their own press state take no tap highlight box (see html above). */
+  .btn,
+  .icon-btn,
+  .menu-btn,
+  button[aria-pressed] {
+    -webkit-tap-highlight-color: transparent;
   }
   .btn svg {
     width: 1.25rem;
@@ -611,14 +654,26 @@ html {
     transition: background-size var(--dur-base) var(--ease-out);
     padding-bottom: 2px;
   }
-  .link:is(:hover, :focus-visible),
-  :is(a, button):is(:hover, :focus-visible) > .link {
+  .link:focus-visible,
+  :is(a, button):focus-visible > .link {
     background-position:
       0 100%,
       0 100%;
     background-size:
       100% 2px,
       100% 1px;
+  }
+  /* Hover only where the pointer can hover: a tap must not leave the rule drawn. */
+  @media (hover: hover) {
+    .link:hover,
+    :is(a, button):hover > .link {
+      background-position:
+        0 100%,
+        0 100%;
+      background-size:
+        100% 2px,
+        100% 1px;
+    }
   }
   .link-draw {
     text-decoration: none;
@@ -629,10 +684,16 @@ html {
     transition: background-size var(--dur-base) var(--ease-out);
     padding-bottom: 2px;
   }
-  .link-draw:is(:hover, :focus-visible),
+  .link-draw:focus-visible,
   .link-draw[aria-current='page'] {
     background-position: 0 100%;
     background-size: 100% 2px;
+  }
+  @media (hover: hover) {
+    .link-draw:hover {
+      background-position: 0 100%;
+      background-size: 100% 2px;
+    }
   }
 
   /* Crop marks around a box, like the trim marks on a press sheet. */
@@ -687,10 +748,12 @@ html {
     object-fit: cover;
     transition: transform var(--dur-slow) var(--ease-out);
   }
-  a:hover .media img,
-  button:hover .media img,
-  .media:hover img {
-    transform: scale(1.03);
+  @media (hover: hover) {
+    a:hover .media img,
+    button:hover .media img,
+    .media:hover img {
+      transform: scale(1.03);
+    }
   }
 
   /* Halftone wash that sweeps across an image on hover (print reveal). */
@@ -709,10 +772,12 @@ html {
       opacity var(--dur-slow) var(--ease-out);
     pointer-events: none;
   }
-  a:hover .media-halftone::after,
-  button:hover .media-halftone::after {
-    opacity: 0.18;
-    clip-path: inset(0 0 0 0);
+  @media (hover: hover) {
+    a:hover .media-halftone::after,
+    button:hover .media-halftone::after {
+      opacity: 0.18;
+      clip-path: inset(0 0 0 0);
+    }
   }
 
   /* Linked card: lifts 2px. */
@@ -721,8 +786,10 @@ html {
       transform var(--dur-base) var(--ease-out),
       box-shadow var(--dur-base) var(--ease-out);
   }
-  .card-lift:hover {
-    transform: translateY(-2px);
+  @media (hover: hover) {
+    .card-lift:hover {
+      transform: translateY(-2px);
+    }
   }
 
   /* Plate-separated icon: four stacked copies; on hover of the parent they split, then register. */
@@ -756,21 +823,31 @@ html {
   .on-ink .plate-icon > .p-k {
     mix-blend-mode: normal;
   }
-  .plate-hover:hover .plate-icon > .p-c,
   .plate-hover:focus-visible .plate-icon > .p-c {
     animation: plate-c 620ms var(--ease-snap) both;
   }
-  .plate-hover:hover .plate-icon > .p-m,
   .plate-hover:focus-visible .plate-icon > .p-m {
     animation: plate-m 620ms var(--ease-snap) both;
   }
-  .plate-hover:hover .plate-icon > .p-y,
   .plate-hover:focus-visible .plate-icon > .p-y {
     animation: plate-y 620ms var(--ease-snap) both;
   }
-  .plate-hover:hover .plate-icon > .p-k,
   .plate-hover:focus-visible .plate-icon > .p-k {
     animation: plate-k 620ms var(--ease-snap) both;
+  }
+  @media (hover: hover) {
+    .plate-hover:hover .plate-icon > .p-c {
+      animation: plate-c 620ms var(--ease-snap) both;
+    }
+    .plate-hover:hover .plate-icon > .p-m {
+      animation: plate-m 620ms var(--ease-snap) both;
+    }
+    .plate-hover:hover .plate-icon > .p-y {
+      animation: plate-y 620ms var(--ease-snap) both;
+    }
+    .plate-hover:hover .plate-icon > .p-k {
+      animation: plate-k 620ms var(--ease-snap) both;
+    }
   }
 }
 

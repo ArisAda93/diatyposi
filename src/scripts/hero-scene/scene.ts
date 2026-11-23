@@ -67,6 +67,7 @@ import {
   clamp,
   damp,
   dockProgress,
+  drawingDpr,
   easeInOutCubic,
   easeOutBack,
   easeOutCubic,
@@ -442,9 +443,14 @@ export const createHeroScene = async (
         ? copyRect.top - heroRect.top - HANDOFF_GAP.copy
         : null;
 
-    // Drawing buffer: DPR capped at 2 (1.5 on small screens) and at MAX_PIXELS overall.
-    let dpr = Math.min(window.devicePixelRatio || 1, width < 768 ? 1.5 : 2);
-    if (width * height * dpr * dpr > MAX_PIXELS) dpr = Math.sqrt(MAX_PIXELS / (width * height));
+    // Drawing buffer: DPR capped at 2 (1.5 on phones, landscape included) and at MAX_PIXELS.
+    const dpr = drawingDpr(
+      window.devicePixelRatio,
+      width,
+      height,
+      Math.min(window.innerWidth, window.innerHeight),
+      MAX_PIXELS,
+    );
     // Resizing the drawing buffer clears it, so only do it when something actually changed.
     if (renderer.dpr !== dpr || renderer.width !== width || renderer.height !== height) {
       renderer.dpr = dpr;

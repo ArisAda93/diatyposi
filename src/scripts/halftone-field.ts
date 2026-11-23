@@ -5,10 +5,11 @@
  * are screen-blended on the dark section.
  *
  * - The dots print in (grow from 0, sweeping left to right) as the section scrolls into view.
- * - Fine pointers: dots swell gently around the pointer. Touch: a tap sends a slow ripple, and one
- *   ripple runs on its own when the print-in finishes.
+ * - Fine pointers: dots swell gently around the pointer. Touch: a tap sends a slow ripple (a touch
+ *   that turns into a scroll does not), and one ripple runs on its own when the print-in finishes.
  * - Dots under the heading are kept small so the text stays readable.
- * - The rAF loop runs only while the section is on screen and something moves.
+ * - The rAF loop runs only while the section is on screen and something moves. The canvas is
+ *   drawn at most at 2 device pixels per CSS px (1.5 on phones) and 4 megapixels.
  * - Reduced motion (live): the finished field is drawn once, nothing moves.
  *
  * The heavy set-up waits until the section is close to the viewport. Until then, and without JS,
@@ -114,6 +115,9 @@ const RIPPLE_MS = 2600;
 const RIPPLE_WIDTH = 60;
 const RIPPLE_GAIN = 0.7;
 const MAX_CANVAS_PIXELS = 4_000_000;
+/** Device-pixel caps: phones (sections narrower than PHONE_WIDTH) and everything else. */
+const DPR_CAP = { phone: 1.5, other: 2 } as const;
+const PHONE_WIDTH = 768;
 
 interface Dot {
   x: number;
@@ -182,6 +186,8 @@ export const initHalftoneField = (section: HTMLElement): void => {
   let ptx = 0;
   let pty = 0;
   let ripples: Ripple[] = [];
+  /** A touch (or coarse press) that may become a tap, in section coordinates. */
+  let press: { id: number; x: number; y: number } | null = null;
 
   const layout = (): void => {
     const rect = section.getBoundingClientRect();
@@ -206,7 +212,8 @@ export const initHalftoneField = (section: HTMLElement): void => {
       lines.some((l) => x > l.left && x < l.right && y > l.top && y < l.bottom);
 
     const fit = Math.sqrt(MAX_CANVAS_PIXELS / Math.max(width * height, 1));
-    dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2, fit));
+    const cap = width < PHONE_WIDTH ? DPR_CAP.phone : DPR_CAP.other;
+    dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, cap, fit));
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
 
@@ -465,16 +472,33 @@ export const initHalftoneField = (section: HTMLElement): void => {
       },
       { passive: true },
     );
+    // Touch: the ripple starts when the finger lifts from a tap. A touch that becomes a scroll
+    // is cancelled by the browser (pointercancel), so scrolling past sends no ripples.
     section.addEventListener(
       'pointerdown',
       (event) => {
         if (still || (event.pointerType !== 'touch' && fine.matches)) return;
         const rect = section.getBoundingClientRect();
-        ripples = [
-          ...ripples.slice(-2),
-          { x: event.clientX - rect.left, y: event.clientY - rect.top, t: 0 },
-        ];
+        press = { id: event.pointerId, x: event.clientX - rect.left, y: event.clientY - rect.top };
+      },
+      { passive: true },
+    );
+    section.addEventListener(
+      'pointerup',
+      (event) => {
+        if (!press || event.pointerId !== press.id) return;
+        const { x, y } = press;
+        press = null;
+        if (still) return;
+        ripples = [...ripples.slice(-2), { x, y, t: 0 }];
         wake();
+      },
+      { passive: true },
+    );
+    section.addEventListener(
+      'pointercancel',
+      () => {
+        press = null;
       },
       { passive: true },
     );

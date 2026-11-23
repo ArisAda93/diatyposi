@@ -235,19 +235,32 @@ const dataAuthority = 'https://www.dpa.gr/';
     .privacy-toc-link > span:last-child {
       transition: transform var(--dur-base) var(--ease-out);
     }
-    .privacy-toc-link:hover > span:last-child,
     .privacy-toc-link:focus-visible > span:last-child {
       text-decoration: underline;
       text-decoration-thickness: 2px;
       text-underline-offset: 0.2em;
     }
     @media (prefers-reduced-motion: no-preference) {
-      .privacy-toc-link:hover > span:last-child,
       .privacy-toc-link:focus-visible > span:last-child {
         transform: translateX(0.25rem);
       }
     }
+    /* Hover only where the pointer can hover (a touch tablet wide enough for the list). */
+    @media (hover: hover) {
+      .privacy-toc-link:hover > span:last-child {
+        text-decoration: underline;
+        text-decoration-thickness: 2px;
+        text-underline-offset: 0.2em;
+      }
+    }
+    @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+      .privacy-toc-link:hover > span:last-child {
+        transform: translateX(0.25rem);
+      }
+    }
 
+    /* Long words, addresses and links break rather than widen a phone's column; paragraphs
+       avoid a lone last word and headings balance their lines. */
     .privacy {
       display: flex;
       flex-direction: column;
@@ -255,6 +268,13 @@ const dataAuthority = 'https://www.dpa.gr/';
       max-width: 68ch;
       font-size: 1.0625rem;
       line-height: 1.7;
+      overflow-wrap: break-word;
+    }
+    .privacy p {
+      text-wrap: pretty;
+    }
+    .privacy-h > span:last-child {
+      text-wrap: balance;
     }
     .privacy section {
       display: flex;
@@ -263,6 +283,11 @@ const dataAuthority = 'https://www.dpa.gr/';
       margin-top: 1.75rem;
       padding-top: 1.75rem;
       border-top: 1px solid var(--color-line);
+    }
+    @media (max-width: 39.99rem) {
+      .privacy section {
+        margin-top: 1.25rem;
+      }
     }
     .privacy-h {
       display: flex;

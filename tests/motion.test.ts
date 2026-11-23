@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEPTH_TILT,
+  HALFTONE_MS,
+  HALFTONE_QUICK_MS,
   PARALLAX_GAIN,
   PARALLAX_LIMIT,
   PARALLAX_MAX,
@@ -11,6 +13,7 @@ import {
   effectiveParallax,
   fitScale,
   magneticPull,
+  motionProfile,
   parallaxOffset,
   parallaxSpeed,
   perspectiveGrow,
@@ -301,6 +304,81 @@ describe('parallax', () => {
     });
     expect(parallaxOffset(10_000, 450, 0.4, max)).toBe(-max);
     expect(parallaxOffset(-10_000, 450, 0.4, max)).toBe(max);
+  });
+});
+
+describe('motion profile (phones and touch screens)', () => {
+  const desktop = motionProfile(false, true);
+  const phone = motionProfile(true, false);
+  const tablet = motionProfile(false, false);
+
+  it('keeps the desktop tuning unchanged', () => {
+    expect(desktop).toEqual({
+      quickPrint: false,
+      halftoneMargin: '0px 0px -8% 0px',
+      halftoneMs: HALFTONE_MS,
+      parallaxScale: 1,
+      depthTo: 0.65,
+      registrationTo: 0.6,
+    });
+  });
+
+  it('prints photos quickly on phones and touch screens, starting before they enter', () => {
+    [phone, tablet, motionProfile(true, true)].forEach((profile) => {
+      expect(profile.quickPrint).toBe(true);
+      expect(profile.halftoneMs).toBe(HALFTONE_QUICK_MS);
+      // A positive bottom margin: the print starts before the element reaches the viewport.
+      const bottom = profile.halftoneMargin.split(' ')[2] ?? '';
+      expect(bottom.startsWith('-')).toBe(false);
+      expect(Number.parseFloat(bottom)).toBeGreaterThan(0);
+    });
+    // The quick print (motion.css: 80 ms delay + 460 ms) ends well before its safety timeout,
+    // and the timeout is far shorter than the desktop one.
+    expect(HALFTONE_QUICK_MS).toBeGreaterThan(80 + 460);
+    expect(HALFTONE_QUICK_MS).toBeLessThan(HALFTONE_MS);
+    expect(HALFTONE_MS).toBeGreaterThan(250 + 1100);
+  });
+
+  it('settles the scrubs sooner and halves parallax on phones only', () => {
+    expect(phone.parallaxScale).toBe(0.5);
+    expect(phone.depthTo).toBeGreaterThan(desktop.depthTo);
+    expect(phone.depthTo).toBeLessThan(1);
+    expect(phone.registrationTo).toBeGreaterThan(desktop.registrationTo);
+    expect(phone.registrationTo).toBeLessThan(0.95);
+    // A touch tablet keeps the desktop scroll tuning; only the print-in is quicker.
+    expect(tablet.parallaxScale).toBe(1);
+    expect(tablet.depthTo).toBe(desktop.depthTo);
+    expect(tablet.registrationTo).toBe(desktop.registrationTo);
+  });
+
+  it('still gives every staggered depth scrub a forward range on phones', () => {
+    // setupScrubs staggers siblings by 0.03 per index (index capped at 4).
+    [0, 1, 2, 3, 4].forEach((index) => {
+      const [start, end] = scrubRange(
+        2000,
+        800,
+        1 - index * 0.03,
+        phone.depthTo - index * 0.03,
+        10_000,
+      );
+      expect(end).toBeGreaterThan(start);
+    });
+  });
+
+  it('never moves a phone parallax layer further than half the desktop maximum', () => {
+    const vh = 844;
+    const max = vh * PARALLAX_MAX * phone.parallaxScale;
+    [-0.4, -0.12, 0.1, 0.24, 0.4].forEach((speed) => {
+      [-5000, 0, 422, 900, 5000].forEach((centre) => {
+        const offset = parallaxOffset(
+          centre,
+          vh / 2,
+          effectiveParallax(speed) * phone.parallaxScale,
+          max,
+        );
+        expect(Math.abs(offset)).toBeLessThanOrEqual((vh * PARALLAX_MAX) / 2 + 1e-9);
+      });
+    });
   });
 });
 

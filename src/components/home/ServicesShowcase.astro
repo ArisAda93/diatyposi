@@ -54,7 +54,8 @@ const first = items[0];
 // height (see .svc-plate). Only shown from 64rem; below that the plate is not rendered.
 const plateSizes = '(min-width: 64rem) min(33vw, 480px), 100vw';
 // Row thumbnails, below 64rem only (display: none above, so the lazy images never load there).
-const thumbSizes = '(min-width: 48rem) 10rem, 7.5rem';
+// Phones: 7.5rem to 9.5rem wide (34vw), see .svc-row.
+const thumbSizes = '(min-width: 48rem) 10rem, 9.5rem';
 const thumbWidths = [160, 320, 480];
 ---
 
@@ -202,11 +203,13 @@ const thumbWidths = [160, 320, 480];
       border-bottom: 1px solid var(--color-line);
     }
 
-    /* Phones: number and arrow, the title across, then thumbnail and lead sentence. */
+    /* Phones: number and arrow, the title across, then thumbnail and lead sentence. The whole row
+       is the link (the arrow is its 44 px mark); a press fills the arrow, so the platform's tap
+       box is not drawn over the tall row as well. */
     .svc-row {
       position: relative;
       display: grid;
-      grid-template-columns: 7.5rem minmax(0, 1fr) auto;
+      grid-template-columns: clamp(7.5rem, 34vw, 9.5rem) minmax(0, 1fr) auto;
       grid-template-areas:
         'num num arrow'
         'title title title'
@@ -217,6 +220,7 @@ const thumbWidths = [160, 320, 480];
       border-top: 1px solid var(--color-line);
       color: var(--color-key);
       text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
     }
     .svc-row:focus-visible {
       outline-offset: 2px;
@@ -235,10 +239,15 @@ const thumbWidths = [160, 320, 480];
       transition: transform var(--dur-slow) var(--ease-out);
       pointer-events: none;
     }
-    .svc-row:hover::before,
     .svc-row:focus-visible::before,
     .svc-row.is-active::before {
       transform: scaleX(1);
+    }
+    /* Hover only where the pointer hovers: a tap must not leave a row lit (sticky hover). */
+    @media (hover: hover) {
+      .svc-row:hover::before {
+        transform: scaleX(1);
+      }
     }
 
     .svc-row-num {
@@ -324,18 +333,22 @@ const thumbWidths = [160, 320, 480];
       object-fit: cover;
       transition: transform var(--dur-slow) var(--ease-out);
     }
+    /* Stand-in label. Phones: a strip along the thumbnail's foot, at a legible 12 px (on the
+       narrowest thumbnails it breaks into two balanced lines). */
     .svc-row-chip {
       position: absolute;
-      left: 0.25rem;
-      bottom: 0.25rem;
-      padding: 0.15rem 0.3rem;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      padding: 0.1875rem 0.25rem;
       background-color: var(--color-yellow);
       color: var(--ink-fixed);
       font-family: var(--font-display);
-      max-width: calc(100% - 0.5rem);
-      font-size: 0.625rem;
+      font-size: 0.75rem;
       font-weight: 720;
-      line-height: 1.2;
+      line-height: 1.15;
+      text-align: center;
+      text-wrap: balance;
     }
 
     .svc-row-desc {
@@ -345,6 +358,16 @@ const thumbWidths = [160, 320, 480];
       color: var(--color-muted);
       font-size: 0.9375rem;
       line-height: 1.5;
+    }
+    /* Small phones (under 360 px): a closer gap and a step smaller lead, so the lead beside the
+       thumbnail keeps a readable measure (about 22 characters at 320 px). */
+    @media (max-width: 359.98px) {
+      .svc-row {
+        column-gap: 0.75rem;
+      }
+      .svc-row-desc {
+        font-size: 0.875rem;
+      }
     }
 
     .svc-row-arrow {
@@ -362,31 +385,54 @@ const thumbWidths = [160, 320, 480];
         box-shadow var(--dur-base) var(--ease-out);
     }
 
-    /* Hover, and the active row (hovered, focused or in the middle of the viewport with JS). */
-    .svc-row:hover .svc-row-ink,
+    /* The active row (focused, or in the middle of the viewport with JS), and hover where the
+       pointer hovers. A press fills the arrow on touch too. */
     .svc-row.is-active .svc-row-ink {
       background-size: 100% 2px;
     }
-    .svc-row:hover .svc-row-arrow,
-    .svc-row.is-active .svc-row-arrow {
+    .svc-row.is-active .svc-row-arrow,
+    .svc-row:active .svc-row-arrow {
       background-color: var(--color-key);
       color: var(--color-paper);
     }
-    @media (prefers-reduced-motion: no-preference) {
-      .svc-row:hover .svc-row-plate-c,
+    @media (hover: hover) {
+      .svc-row:hover .svc-row-ink {
+        background-size: 100% 2px;
+      }
+      .svc-row:hover .svc-row-arrow {
+        background-color: var(--color-key);
+        color: var(--color-paper);
+      }
+    }
+    /*
+     * The numeral's C, M and Y plates step out of register on the active row, on desktop only:
+     * at the rows' small phone and tablet size the offset reads as a rendering fault, so there
+     * the numeral stays crisp and the ink rule, the underline and the arrow mark the row.
+     */
+    @media (prefers-reduced-motion: no-preference) and (min-width: 64rem) {
       .svc-row.is-active .svc-row-plate-c {
         transform: translate(-3px, -2px);
       }
-      .svc-row:hover .svc-row-plate-m,
       .svc-row.is-active .svc-row-plate-m {
         transform: translate(3px, -1px);
       }
-      .svc-row:hover .svc-row-plate-y,
       .svc-row.is-active .svc-row-plate-y {
         transform: translate(-1px, 3px);
       }
+    }
+    @media (prefers-reduced-motion: no-preference) and (min-width: 64rem) and (hover: hover) {
+      .svc-row:hover .svc-row-plate-c {
+        transform: translate(-3px, -2px);
+      }
+      .svc-row:hover .svc-row-plate-m {
+        transform: translate(3px, -1px);
+      }
+      .svc-row:hover .svc-row-plate-y {
+        transform: translate(-1px, 3px);
+      }
+    }
+    @media (prefers-reduced-motion: no-preference) {
       /* The arrow lifts off its own plate shadow, as the buttons do. */
-      .svc-row:hover .svc-row-arrow,
       .svc-row.is-active .svc-row-arrow {
         transform: translate(-2px, -2px);
         box-shadow:
@@ -394,8 +440,17 @@ const thumbWidths = [160, 320, 480];
           4px 4px 0 var(--color-magenta),
           6px 6px 0 var(--color-yellow);
       }
-      .svc-row:hover .svc-row-thumb,
       .svc-row.is-active .svc-row-thumb {
+        transform: translate(-2px, -2px);
+        box-shadow:
+          2px 2px 0 var(--color-cyan),
+          4px 4px 0 var(--color-magenta),
+          6px 6px 0 var(--color-yellow);
+      }
+    }
+    @media (prefers-reduced-motion: no-preference) and (hover: hover) {
+      .svc-row:hover .svc-row-arrow,
+      .svc-row:hover .svc-row-thumb {
         transform: translate(-2px, -2px);
         box-shadow:
           2px 2px 0 var(--color-cyan),
@@ -405,6 +460,8 @@ const thumbWidths = [160, 320, 480];
       .svc-row:hover .svc-row-thumb :global(img) {
         transform: scale(1.04);
       }
+    }
+    @media (prefers-reduced-motion: no-preference) {
       /* Press: everything snaps back into register, like a button. */
       .svc-row:active .svc-row-plate,
       .svc-row:active .svc-row-arrow,
@@ -440,8 +497,15 @@ const thumbWidths = [160, 320, 480];
       .svc-row-arrow {
         align-self: center;
       }
+      /* The wider thumbnail holds the label as a corner chip. */
       .svc-row-chip {
-        font-size: 0.6875rem;
+        right: auto;
+        bottom: 0.25rem;
+        left: 0.25rem;
+        max-width: calc(100% - 0.5rem);
+        padding: 0.15rem 0.3rem;
+        line-height: 1.2;
+        text-align: start;
       }
     }
 

@@ -5,8 +5,10 @@
  * requested when the lightbox shows this item.
  *
  * Hover and keyboard focus: the image zooms in its frame, the job-ticket caption lifts on a
- * C/M/Y plate shadow and an "open larger" corner mark appears. When a filter brings the tile back
- * into view, the gallery script sets `data-entering` and the tile prints in (a short wipe).
+ * C/M/Y plate shadow and an "open larger" corner mark appears. On touch screens the mark shows at
+ * rest (the whole tile is the hit area) and a tap presses the tile in. When a filter brings the
+ * tile back into view, the gallery script sets `data-entering` and the tile prints in (a short
+ * wipe, quicker on touch screens).
  */
 import Icon from '../Icon.astro';
 import Photo from '../Photo.astro';
@@ -139,12 +141,21 @@ const copy = item.text.el;
       line-height: var(--text-small--line-height);
       color: var(--color-muted);
     }
-    .work-tile:hover .work-caption,
+    /* Lifted on its plates on keyboard focus, and on hover only where a pointer can hover: on
+       touch screens a tapped tile would keep it after the lightbox closes. */
     .work-tile:focus-visible .work-caption {
       box-shadow:
         3px -3px 0 var(--color-cyan),
         6px -6px 0 var(--color-magenta),
         9px -9px 0 var(--color-yellow);
+    }
+    @media (hover: hover) {
+      .work-tile:hover .work-caption {
+        box-shadow:
+          3px -3px 0 var(--color-cyan),
+          6px -6px 0 var(--color-magenta),
+          9px -9px 0 var(--color-yellow);
+      }
     }
     .work-tile:focus-visible {
       outline-offset: 4px;
@@ -168,10 +179,15 @@ const copy = item.text.el;
         opacity var(--dur-base) var(--ease-out),
         transform var(--dur-base) var(--ease-snap);
     }
-    .work-tile:hover .work-open,
     .work-tile:focus-visible .work-open {
       opacity: 1;
       transform: none;
+    }
+    @media (hover: hover) {
+      .work-tile:hover .work-open {
+        opacity: 1;
+        transform: none;
+      }
     }
     /* Touch screens have no hover: show the mark at rest so the tile reads as openable. */
     @media (hover: none) {
@@ -183,6 +199,30 @@ const copy = item.text.el;
     .work-tile:active .work-caption {
       box-shadow: 0 0 0 transparent;
     }
+    /* Touch: a tap presses the tile in a little (the `scale` property, so it composes with any
+       transform the motion layer sets). */
+    @media (hover: none) and (prefers-reduced-motion: no-preference) {
+      .work-tile {
+        transition: scale var(--dur-fast) var(--ease-out);
+      }
+      .work-tile:active {
+        scale: 0.985;
+      }
+    }
+
+    /* Small phones: a slimmer job ticket, so it covers less of the photo. */
+    @media (max-width: 359.98px) {
+      .work-caption {
+        max-width: calc(100% - 2.5rem);
+        padding: 0.5rem 0.75rem 0.55rem;
+      }
+      .work-title {
+        font-size: 0.9375rem;
+      }
+      .work-category {
+        font-size: 0.8125rem;
+      }
+    }
 
     /* Printed back in after a filter change (data-entering, set and cleared by gallery.ts). */
     @media (prefers-reduced-motion: no-preference) {
@@ -190,6 +230,14 @@ const copy = item.text.el;
         /* Backwards only: the start state covers the stagger delay, the clip ends with it. */
         animation: tile-print 460ms var(--ease-out) backwards;
         animation-delay: calc(var(--enter-i, 0) * 45ms);
+      }
+    }
+    /* Touch screens see one tile at a time in a single column: a quicker print, a shorter
+       stagger, so the photo under the finger is never still printing. */
+    @media (hover: none) and (prefers-reduced-motion: no-preference) {
+      .work-item[data-entering] .work-tile {
+        animation-duration: 320ms;
+        animation-delay: calc(var(--enter-i, 0) * 30ms);
       }
     }
 

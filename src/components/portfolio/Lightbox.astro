@@ -5,6 +5,13 @@
  *
  * Motion: the sheet opens from a slight inset; each new picture prints in (the script toggles
  * `.is-swap` on the stage); buttons sink on press. All of it rests under reduced motion.
+ *
+ * Touch (src/scripts/gallery.ts): the picture follows a finger on the stage, sideways to turn
+ * and down to close; while a drag down is under way (`data-drag="y"`) the chrome and the dark
+ * ground fade with `--lb-fade`. The stage leaves two-finger pinch-zoom to the browser
+ * (`touch-action: pinch-zoom`) and, while the page is zoomed (`data-zoomed`), one-finger panning
+ * too. Every edge clears the safe areas; short landscape screens put the counter, close button,
+ * caption and arrows in a column beside the picture so the picture keeps the full height.
  */
 import Icon from '../Icon.astro';
 import { workText } from '~/i18n/pages/work';
@@ -73,10 +80,14 @@ const text = workText.el;
     .lightbox::backdrop {
       background-color: var(--color-ink);
     }
+    /* The page behind does not scroll. The sheet is opaque and covers the whole screen, so the
+       scrollbar's space coming and going is never seen. */
     :global(html:has(.lightbox[open])) {
       overflow: hidden;
     }
     .lightbox-inner {
+      --lb-pad-top: calc(0.75rem + env(safe-area-inset-top, 0px));
+      --lb-pad-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
       display: flex;
       flex-direction: column;
       gap: 1rem;
@@ -84,9 +95,12 @@ const text = workText.el;
       width: 100%;
       max-width: calc(var(--wrap) + 2 * var(--gutter));
       margin-inline: auto;
-      padding: 0.75rem var(--gutter) calc(1.25rem + env(safe-area-inset-bottom));
+      padding: var(--lb-pad-top) max(var(--gutter), env(safe-area-inset-right, 0px))
+        var(--lb-pad-bottom) max(var(--gutter), env(safe-area-inset-left, 0px));
     }
     .lightbox-bar {
+      position: relative;
+      z-index: 1;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -130,14 +144,16 @@ const text = workText.el;
       .lb-btn:active {
         transform: scale(0.94);
       }
+      .lightbox-stage.is-swap :global(img) {
+        animation: lb-swap 420ms var(--ease-out);
+      }
+    }
+    @media (hover: hover) and (prefers-reduced-motion: no-preference) {
       .lb-arrow[data-lb-prev]:hover :global(svg) {
         animation: lb-nudge-prev 520ms var(--ease-snap);
       }
       .lb-arrow[data-lb-next]:hover :global(svg) {
         animation: lb-nudge-next 520ms var(--ease-snap);
-      }
-      .lightbox-stage.is-swap :global(img) {
-        animation: lb-swap 420ms var(--ease-out);
       }
     }
     .lb-arrow {
@@ -154,6 +170,8 @@ const text = workText.el;
       margin: 0;
       min-height: 0;
     }
+    /* The stage takes one-finger drags itself (gallery.ts) and leaves pinch-zoom to the browser;
+       once the page is zoomed, one finger pans it again. */
     .lightbox-stage {
       position: relative;
       display: flex;
@@ -161,19 +179,30 @@ const text = workText.el;
       align-items: center;
       justify-content: center;
       min-height: 12rem;
+      touch-action: pinch-zoom;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .lightbox[data-zoomed] .lightbox-stage {
+      touch-action: auto;
     }
     /* The print: sized to the picture, so the stand-in chip sits on the picture's corner (as on
-       the gallery tiles) rather than at the edge of the stage. */
+       the gallery tiles) rather than at the edge of the stage. It is what a finger drags. */
     .lightbox-print {
       position: relative;
       max-width: 100%;
       min-width: 0;
     }
+    .lightbox-stage.is-dragging .lightbox-print {
+      will-change: transform;
+    }
+    /* Height left for the picture: the screen less the paddings (safe areas included) and 10rem
+       for the bar, the caption and the gaps. */
     .lightbox-stage :global(img) {
       width: auto;
       max-width: 100%;
       height: auto;
-      max-height: calc(100dvh - 12rem);
+      max-height: calc(100dvh - var(--lb-pad-top) - var(--lb-pad-bottom) - 10rem);
       object-fit: contain;
       background-color: var(--color-ink-2);
     }
@@ -207,11 +236,87 @@ const text = workText.el;
       gap: 0.5rem;
     }
 
+    /* Drag down to close: the chrome goes first, then the dark ground thins to show the page
+       (the ground behind the sheet follows where the browser lets ::backdrop read the value). */
+    .lightbox[data-drag='y'] {
+      background-color: color-mix(
+        in srgb,
+        var(--color-ink) calc(100% - var(--lb-fade, 0) * 85%),
+        transparent
+      );
+    }
+    .lightbox[data-drag='y']::backdrop {
+      opacity: calc(1 - var(--lb-fade, 0) * 0.85);
+    }
+    .lightbox[data-drag='y'] :is(.lightbox-bar, .lightbox-caption) {
+      opacity: calc(1 - var(--lb-fade, 0) * 2.5);
+    }
+
+    /* Short landscape screens (phones on their side): the picture takes the full height on the
+       left; the counter and close button sit at the top of a side column, the caption and the
+       arrows at its foot. The figure spans both columns with the same tracks, so its caption
+       lands in the side column under the bar. */
+    @media (orientation: landscape) and (max-height: 32rem) {
+      .lightbox-inner {
+        --lb-side: clamp(11rem, 26vw, 14rem);
+        --lb-pad-top: calc(0.5rem + env(safe-area-inset-top, 0px));
+        --lb-pad-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) var(--lb-side);
+        grid-template-rows: auto minmax(0, 1fr);
+        column-gap: 1.25rem;
+        row-gap: 0;
+        height: 100%;
+      }
+      .lightbox-bar {
+        grid-column: 2;
+        grid-row: 1;
+        gap: 0.5rem;
+      }
+      .lightbox-figure {
+        display: grid;
+        grid-column: 1 / -1;
+        grid-row: 1 / -1;
+        grid-template-columns: minmax(0, 1fr) var(--lb-side);
+        column-gap: 1.25rem;
+      }
+      .lightbox-stage {
+        grid-column: 1;
+        min-height: 0;
+      }
+      .lightbox-stage :global(img) {
+        max-height: calc(100dvh - var(--lb-pad-top) - var(--lb-pad-bottom));
+      }
+      .lightbox-caption {
+        grid-column: 2;
+        flex-direction: column;
+        align-items: stretch;
+        align-self: end;
+        gap: 1rem;
+      }
+      .lightbox-caption .h3 {
+        font-size: 1.125rem;
+      }
+    }
+
     @media (prefers-reduced-motion: no-preference) {
       .lightbox[open] {
         animation: lightbox-in var(--dur-slow) var(--ease-out);
       }
+      .lightbox :is(.lightbox-bar, .lightbox-caption) {
+        transition: opacity var(--dur-base) var(--ease-out);
+      }
+      .lightbox[data-drag] :is(.lightbox-bar, .lightbox-caption) {
+        transition: none;
+      }
     }
+  }
+
+  /* Interpolable, so the fade can animate back (spring) or out (close) with the picture. */
+  @property --lb-fade {
+    syntax: '<number>';
+    inherits: true;
+    initial-value: 0;
   }
 
   @keyframes lb-swap {

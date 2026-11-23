@@ -57,11 +57,20 @@
   /*              never projects wider than the element's own box (no horizontal overflow)     */
   /*   --mo-rx/ry pointer tilt, --mo-lift hover lift (replaces the .card-lift 2px hover lift)   */
   /*   --mo-fit   tilt scale that keeps the near edge inside the viewport (usually 1)           */
+  /*   --mo-travel how far the depth entry starts below its place (shorter on phones)           */
   /* The perspective and the 10deg match PERSPECTIVE and DEPTH_TILT in motion.ts.              */
   /* ---------------------------------------------------------------------------------------- */
+  html.mo-on {
+    --mo-travel: 48px;
+  }
+  /* Phones (motion.ts adds mo-compact): a shorter rise suits the small screen. */
+  html.mo-on.mo-compact {
+    --mo-travel: 28px;
+  }
   html.mo-on :is(.mo-d-live, .mo-tilt-live) {
     transform-origin: 50% 50%;
-    transform: perspective(1000px) translateY(calc(var(--mo-d, 0) * 48px - var(--mo-lift, 0) * 2px))
+    transform: perspective(1000px)
+      translateY(calc(var(--mo-d, 0) * var(--mo-travel) - var(--mo-lift, 0) * 2px))
       rotateX(calc(var(--mo-d, 0) * var(--mo-amp, 1) * 10deg + var(--mo-rx, 0deg)))
       rotateY(var(--mo-ry, 0deg))
       scale(calc((1 - var(--mo-d, 0) * (1 - var(--mo-s0, 0.96))) * var(--mo-fit, 1)));
@@ -213,6 +222,22 @@
     transition:
       --mo-ht 900ms var(--ease-in-out),
       --mo-sweep 1100ms var(--ease-in-out) 250ms;
+  }
+  /*
+   * Phones and touch screens (motion.ts adds mo-quick and starts the print a little before the
+   * element enters): a finer screen and a quick print, done in 540 ms, so a photo never reads as
+   * stuck behind big dots while the visitor scrolls. Keep HALFTONE_QUICK_MS in motion.ts above it.
+   */
+  html.mo-on.mo-quick .mo-ht {
+    --mo-ht-pitch: 8px;
+  }
+  html.mo-on.mo-quick .mo-ht-fine {
+    --mo-ht-pitch: 5px;
+  }
+  html.mo-on.mo-quick .mo-ht-in {
+    transition:
+      --mo-ht 420ms var(--ease-out),
+      --mo-sweep 460ms var(--ease-out) 80ms;
   }
 
   /* ---------------------------------------------------------------------------------------- */

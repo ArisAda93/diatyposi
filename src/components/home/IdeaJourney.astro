@@ -276,8 +276,18 @@ const promiseInks = ['c', 'm', 'y'] as const;
       padding-block: 2rem 2.25rem;
       border-bottom: 1px solid var(--color-line);
     }
+    /* The page column's width (at most 26rem), and on short screens (phones in landscape) no
+       taller than the room under the header, so a still is always seen whole. The first width is
+       the fallback where `svh` is unknown. */
     .ij-still {
-      width: min(100%, 22rem);
+      width: min(100%, 26rem);
+      width: min(100%, 26rem, max(14rem, 100svh - var(--header-h, 4.5rem) - 4rem));
+    }
+    @media (max-width: 47.98rem) {
+      .ij-step {
+        gap: 1rem;
+        padding-block: 1.75rem 2rem;
+      }
     }
     .ij-step-num {
       margin-bottom: 0.625rem;
@@ -293,11 +303,16 @@ const promiseInks = ['c', 'm', 'y'] as const;
       margin-bottom: 0.625rem;
       transition: color var(--dur-base) var(--ease-out);
     }
-    /* The title links to its own step; its underline draws under every line on hover. */
+    /* The title links to its own step; its underline draws under every line on hover (devices
+       that hover), keyboard focus and a tap. Block padding on the inline link makes each line's
+       hit area at least 44 px tall (about 24 px of text) without moving any text; the underline
+       stays under the text (content box). */
     .ij-step-goto {
+      padding-block: 0.75rem;
       color: inherit;
       text-decoration: none;
       background-image: linear-gradient(currentColor, currentColor);
+      background-origin: content-box;
       background-repeat: no-repeat;
       background-position: 0 100%;
       background-size: 0 2px;
@@ -305,8 +320,13 @@ const promiseInks = ['c', 'm', 'y'] as const;
       -webkit-box-decoration-break: clone;
       transition: background-size var(--dur-base) var(--ease-out);
     }
-    .ij-step-goto:is(:hover, :focus-visible) {
+    .ij-step-goto:is(:focus-visible, :active) {
       background-size: 100% 2px;
+    }
+    @media (hover: hover) {
+      .ij-step-goto:hover {
+        background-size: 100% 2px;
+      }
     }
     .ij-step-text {
       max-width: 42ch;
@@ -327,8 +347,15 @@ const promiseInks = ['c', 'm', 'y'] as const;
       flex: none;
       transition: transform var(--dur-base) var(--ease-out);
     }
+    /* The arrow nudges on hover (devices that hover only, so it never sticks after a tap), keyboard
+       focus and a tap. */
     @media (prefers-reduced-motion: no-preference) {
-      .ij-step-link:is(:hover, :focus-visible) :global(svg) {
+      .ij-step-link:is(:focus-visible, :active) :global(svg) {
+        transform: translate(2px, -2px);
+      }
+    }
+    @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+      .ij-step-link:hover :global(svg) {
         transform: translate(2px, -2px);
       }
     }
@@ -342,6 +369,7 @@ const promiseInks = ['c', 'm', 'y'] as const;
       .ij-still {
         width: 100%;
         max-width: 26rem;
+        max-width: min(26rem, max(14rem, 100svh - var(--header-h, 4.5rem) - 4rem));
       }
     }
 

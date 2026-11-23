@@ -8,6 +8,10 @@
  * The arches sit on a parallax layer (`data-parallax`, motion.ts) and drift inside the sheet while
  * the page scrolls; hovering the sheet pulls the plates into register. The inks overprint with
  * `--blend-ink` (multiply on paper, screen on the dark sheet); the K plate is the theme's key.
+ *
+ * Phones (under 48rem): the empty sheet is a landscape 4 / 3 proof rather than a tall 4 / 5 one
+ * (which stood a whole screen high around little art), with the arches centred between the
+ * registration mark and the foot and a gentler drift, so they never sink onto the colour bar.
  */
 import Photo from '../Photo.astro';
 import Logo from '../Logo.astro';
@@ -123,8 +127,10 @@ const plates = [...ARCH_PLATES].reverse().map((p) => {
       opacity: 0.85;
     }
     /* Hovering the sheet pulls the plates into register. */
-    .about-sheet:hover .about-plate {
-      transform: translate(0, 0);
+    @media (hover: hover) {
+      .about-sheet:hover .about-plate {
+        transform: translate(0, 0);
+      }
     }
 
     .about-reg {
@@ -144,12 +150,36 @@ const plates = [...ARCH_PLATES].reverse().map((p) => {
       gap: 1rem;
       color: var(--color-key);
     }
+    /* The colour bar gives way (its patches narrow together) before it would push the proof
+       mark off a narrow sheet. */
     .about-colorbar {
-      flex: none;
+      flex: 0 1 auto;
+      min-width: 0;
+    }
+    .about-foot :global(.about-colorbar.colorbar > span) {
+      flex-shrink: 1;
+      min-width: 0;
     }
     .about-proof {
       width: clamp(4.5rem, 22%, 7.5rem);
       height: auto;
+    }
+
+    @media (max-width: 47.99rem) {
+      .about-sheet {
+        aspect-ratio: 4 / 3;
+      }
+      .about-arches {
+        top: 30%;
+      }
+      .about-proof {
+        width: clamp(3.5rem, 24%, 5.5rem);
+      }
+    }
+    @media (max-width: 47.99rem) and (prefers-reduced-motion: no-preference) {
+      :global(html.mo-on) .about-arches {
+        translate: 0 calc(var(--px-y, 0px) * 0.4);
+      }
     }
 
     @media (min-width: 48rem) {

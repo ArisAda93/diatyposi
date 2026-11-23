@@ -84,13 +84,18 @@ const copy = homeText.el.contactBand;
     .cb-phone {
       font-variant-numeric: tabular-nums;
     }
-    /* The arrow leads the way on hover and focus. */
+    /* The arrow leads the way on hover (where the pointer hovers: a tap must not leave it
+       nudged) and focus. */
     .cb-primary :global(.cb-arrow) {
       transition: transform var(--dur-base) var(--ease-out);
     }
     @media (prefers-reduced-motion: no-preference) {
-      .cb-primary:hover :global(.cb-arrow),
       .cb-primary:focus-visible :global(.cb-arrow) {
+        transform: translateX(4px);
+      }
+    }
+    @media (prefers-reduced-motion: no-preference) and (hover: hover) {
+      .cb-primary:hover :global(.cb-arrow) {
         transform: translateX(4px);
       }
     }
@@ -130,8 +135,13 @@ const copy = homeText.el.contactBand;
       background-color: #ed0000;
       transform: translate(20px, 20px);
     }
-    .cb-inner:has(.cb-primary:hover, .cb-primary:focus-visible) .cb-plate {
+    .cb-inner:has(.cb-primary:focus-visible) .cb-plate {
       transform: translate(0, 0);
+    }
+    @media (hover: hover) {
+      .cb-inner:has(.cb-primary:hover) .cb-plate {
+        transform: translate(0, 0);
+      }
     }
     .cb-sheet {
       position: relative;

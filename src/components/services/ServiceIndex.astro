@@ -8,7 +8,8 @@
  * (aria-current). All three are set by src/scripts/services-page.ts; without JS the rail is a
  * plain list of anchor links. Below 64rem: one row of chips that scrolls sideways inside its own
  * box, in a bar that sticks under the header (src/pages/ypiresies.astro); the chip of the chapter
- * in view is filled and scrolled into the middle of the row.
+ * in view is filled and scrolled into the middle of the row, and the row fades on the sides that
+ * hide chips (`data-edges`, set by the script; without JS the end fades).
  */
 import Icon from '../Icon.astro';
 import { quoteHref, services } from '~/data/site';
@@ -72,25 +73,70 @@ const fill = `background-image:${railGradient(services.length)}`;
     }
 
     /* Below 1024px: one row of chips that scrolls sideways, edge to edge of the screen: at rest
-       the first chip lines up with the page gutter, and the chips run off the screen's edge
-       rather than being cut at the gutter. The right edge fades to show there is more; the end
-       padding lets the last chip scroll clear of the fade. The padding also keeps focus outlines
-       inside the scroll box. */
+       the first chip lines up with the page gutter (or the landscape notch inset, as .wrap does),
+       and the chips run off the screen's edge rather than being cut at the gutter. A side that
+       hides chips fades out (`data-edges` from the script; without JS the end always fades and
+       the end padding lets the last chip scroll clear of it). Chips snap to the middle, where the
+       script also brings the chip in view; the symmetric scroll padding keeps a focused or
+       snapped chip out of both fades. The padding also keeps focus outlines inside the box. */
+    .svc-index {
+      --svc-bleed-start: max(var(--gutter), env(safe-area-inset-left, 0px));
+      --svc-bleed-end: max(var(--gutter), env(safe-area-inset-right, 0px));
+    }
     .svc-index-list {
+      --svc-fade: 2rem;
+      --svc-fade-start: 0px;
+      --svc-fade-end: var(--svc-fade);
       display: flex;
       gap: 0.5rem;
       overflow-x: auto;
       overscroll-behavior-x: contain;
       scroll-snap-type: x proximity;
-      scroll-padding-inline: var(--gutter) 2rem;
-      padding: 0.5rem 2rem 0.75rem var(--gutter);
-      margin-inline: calc(var(--gutter) * -1);
+      scroll-padding-inline: var(--svc-fade);
+      padding: 0.5rem max(var(--svc-fade), var(--svc-bleed-end)) 0.75rem var(--svc-bleed-start);
+      margin-inline: calc(var(--svc-bleed-start) * -1) calc(var(--svc-bleed-end) * -1);
       scrollbar-width: thin;
-      mask-image: linear-gradient(to left, transparent 0, #000 2rem);
+      -webkit-mask-image: linear-gradient(
+        to right,
+        transparent 0,
+        #000 var(--svc-fade-start),
+        #000 calc(100% - var(--svc-fade-end)),
+        transparent 100%
+      );
+      mask-image: linear-gradient(
+        to right,
+        transparent 0,
+        #000 var(--svc-fade-start),
+        #000 calc(100% - var(--svc-fade-end)),
+        transparent 100%
+      );
+    }
+    @media (max-width: 63.99rem) {
+      /* With the script: fades follow the hidden chips, and the end padding matches the start. */
+      .svc-index-list[data-edges] {
+        --svc-fade-end: 0px;
+        padding-inline-end: var(--svc-bleed-end);
+      }
+      .svc-index-list[data-edges~='start'] {
+        --svc-fade-start: var(--svc-fade);
+      }
+      .svc-index-list[data-edges~='end'] {
+        --svc-fade-end: var(--svc-fade);
+      }
+    }
+    /* Touch screens: no scrollbar under the chips; the fades are the overflow hint. A mouse keeps
+       its thin scrollbar to drag. */
+    @media (max-width: 63.99rem) and (pointer: coarse) {
+      .svc-index-list {
+        scrollbar-width: none;
+      }
+      .svc-index-list::-webkit-scrollbar {
+        display: none;
+      }
     }
     .svc-index-list > li {
       flex: none;
-      scroll-snap-align: start;
+      scroll-snap-align: center;
     }
     .svc-index-link {
       position: relative;
@@ -200,6 +246,7 @@ const fill = `background-image:${railGradient(services.length)}`;
         overflow: visible;
         padding: 0;
         margin: 0;
+        -webkit-mask-image: none;
         mask-image: none;
       }
       .svc-index-link {

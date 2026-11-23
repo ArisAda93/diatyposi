@@ -3,10 +3,12 @@ import {
   buildQuoteMessage,
   buildSendLinks,
   chatText,
+  firstInvalidField,
   formatDateEl,
   isoDate,
   isValidEmail,
   isValidPhone,
+  nextQuoteField,
   parsePreselect,
   validateQuote,
   type QuoteData,
@@ -148,6 +150,58 @@ describe('dates', () => {
   });
   it('formats dates the Greek way', () => {
     expect(formatDateEl('2026-12-05')).toBe('05/12/2026');
+  });
+});
+
+describe('firstInvalidField', () => {
+  it('is null when nothing is wrong', () => {
+    expect(firstInvalidField({})).toBeNull();
+    expect(firstInvalidField(validateQuote(valid, TODAY))).toBeNull();
+  });
+
+  it('picks the earliest field in form order, whatever order the errors come in', () => {
+    expect(firstInvalidField({ message: errors.messageShort, phone: errors.phoneRequired })).toBe(
+      'phone',
+    );
+    expect(firstInvalidField({ date: errors.datePast, services: errors.servicesRequired })).toBe(
+      'services',
+    );
+  });
+
+  it('follows validateQuote on a fully empty form', () => {
+    const empty: QuoteData = {
+      name: '',
+      phone: '',
+      email: '',
+      services: [],
+      quantity: '',
+      date: '',
+      message: '',
+    };
+    expect(firstInvalidField(validateQuote(empty, TODAY))).toBe('name');
+    expect(firstInvalidField(validateQuote({ ...empty, name: 'Μαρία' }, TODAY))).toBe('phone');
+  });
+
+  it('treats an empty error string as no error', () => {
+    expect(firstInvalidField({ name: '', message: errors.messageRequired })).toBe('message');
+  });
+});
+
+describe('nextQuoteField', () => {
+  it('walks the form in order, from the text fields to the services and on', () => {
+    expect(nextQuoteField('name')).toBe('phone');
+    expect(nextQuoteField('phone')).toBe('email');
+    expect(nextQuoteField('email')).toBe('services');
+    expect(nextQuoteField('services')).toBe('quantity');
+  });
+
+  it('skips the date', () => {
+    expect(nextQuoteField('quantity')).toBe('message');
+    expect(nextQuoteField('date')).toBe('message');
+  });
+
+  it('ends after the message', () => {
+    expect(nextQuoteField('message')).toBeNull();
   });
 });
 

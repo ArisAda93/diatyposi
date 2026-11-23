@@ -29,6 +29,29 @@ export type QuoteField = keyof QuoteData;
 /** Field → Greek error message. Empty when the data is valid. */
 export type QuoteErrors = Partial<Record<QuoteField, string>>;
 
+/** The fields in form (and reading) order. */
+export const QUOTE_FIELDS: readonly QuoteField[] = [
+  'name',
+  'phone',
+  'email',
+  'services',
+  'quantity',
+  'date',
+  'message',
+];
+
+/** The first field in form order that has an error, or null when there is none. */
+export const firstInvalidField = (errors: QuoteErrors): QuoteField | null =>
+  QUOTE_FIELDS.find((field) => Boolean(errors[field])) ?? null;
+
+/**
+ * Where the on-screen keyboard's “next” key goes from a field: the next field in form order,
+ * skipping the date (focusing it opens no keyboard and, on some phones, no picker either).
+ * Null after the last field.
+ */
+export const nextQuoteField = (field: QuoteField): QuoteField | null =>
+  QUOTE_FIELDS.slice(QUOTE_FIELDS.indexOf(field) + 1).find((next) => next !== 'date') ?? null;
+
 export interface QuoteMessage {
   subject: string;
   body: string;

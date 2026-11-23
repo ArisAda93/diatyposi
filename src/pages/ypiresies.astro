@@ -55,26 +55,48 @@ const text = servicesText.el;
     }
 
     /* Below 64rem the layout is plain blocks, so the index bar can stick for the whole list. It is
-       navigation chrome, not a section: a translucent paper bar edge to edge, under the header. */
+       navigation chrome, not a section: a paper bar edge to edge, under the header. It bleeds
+       out by the same inset .wrap pads with (the gutter, or the notch in landscape), so it always
+       meets the screen's edges. Nearly opaque: the background's ink lines must not smear into a
+       soft blurred band behind the chips; only a breath of what scrolls under it shows. */
     .svcp-aside {
+      --svcp-bleed-start: max(var(--gutter), env(safe-area-inset-left, 0px));
+      --svcp-bleed-end: max(var(--gutter), env(safe-area-inset-right, 0px));
       position: sticky;
       top: var(--header-h);
       z-index: 30;
-      margin-inline: calc(var(--gutter) * -1);
-      padding-inline: var(--gutter);
+      margin-inline: calc(var(--svcp-bleed-start) * -1) calc(var(--svcp-bleed-end) * -1);
+      padding-inline: var(--svcp-bleed-start) var(--svcp-bleed-end);
       border-bottom: 1px solid var(--color-line);
-      background-color: color-mix(in srgb, var(--color-paper) 90%, transparent);
-      -webkit-backdrop-filter: blur(10px);
-      backdrop-filter: blur(10px);
+      background-color: var(--color-paper);
+    }
+    @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+      .svcp-aside {
+        background-color: color-mix(in srgb, var(--color-paper) 95%, transparent);
+        -webkit-backdrop-filter: blur(12px);
+        backdrop-filter: blur(12px);
+      }
     }
 
     /* While the bar sticks, anything scrolled into view (an anchor jump or keyboard focus) must
        land below the header and the bar, not under them. The bar is the chip row's 0.5rem +
        0.75rem padding around a 2.75rem chip (4rem) plus its 1px hairline; 1.5rem of air as the
-       page-wide rule in global.css keeps below the header alone. */
+       page-wide rule in global.css keeps below the header alone. A chapter reached from a chip
+       lands with its folio and title at that line (its scroll-margin in ServiceSection.astro). */
     @media (max-width: 63.99rem) {
       :global(html:has(.svcp-aside)) {
         scroll-padding-top: calc(var(--header-h) + 4rem + 1px + 1.5rem);
+      }
+    }
+    /* Landscape phones: the header and a sticky bar together would take a third of the height,
+       so the bar stays in the flow there and targets clear the header alone. */
+    @media (max-width: 63.99rem) and (max-height: 30rem) {
+      .svcp-aside {
+        position: relative;
+        top: auto;
+      }
+      :global(html:has(.svcp-aside)) {
+        scroll-padding-top: calc(var(--header-h) + 1.5rem);
       }
     }
 

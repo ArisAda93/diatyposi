@@ -119,8 +119,9 @@ const blocks = ownerCopy.el.values.map((value, i) => ({
     }
     .value-title {
       position: relative;
+      text-wrap: balance;
     }
-    @media (prefers-reduced-motion: no-preference) {
+    @media (prefers-reduced-motion: no-preference) and (hover: hover) {
       .value:hover .value-plate {
         animation: value-plate-reg 700ms var(--ease-snap);
       }
@@ -132,6 +133,21 @@ const blocks = ownerCopy.el.values.map((value, i) => ({
       position: relative;
       margin-top: 0.75rem;
       max-width: 34ch;
+      text-wrap: pretty;
+    }
+
+    /* Phones: one card per row, sized by its content instead of a fixed poster height (the
+       plate letter and the text would otherwise float apart in a mostly empty card). */
+    @media (max-width: 39.99rem) {
+      .value {
+        min-height: 0;
+        gap: 2rem;
+      }
+    }
+    @media (max-width: 359.98px) {
+      .value-plate {
+        font-size: 3rem;
+      }
     }
 
     @media (min-width: 40rem) {

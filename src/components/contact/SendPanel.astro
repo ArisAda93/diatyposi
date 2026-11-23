@@ -134,6 +134,13 @@ const text = contactText.el.send;
       resize: vertical;
       font-size: 0.9375rem;
       line-height: 1.6;
+      overflow-wrap: anywhere;
+    }
+    /* Touch screens: 16px, so focusing the text (the copy fallback selects it) never zooms iOS. */
+    @media (pointer: coarse) {
+      .send-preview .preview-text {
+        font-size: 1rem;
+      }
     }
     @media (prefers-reduced-motion: no-preference) {
       .send-panel:not([hidden]) {
@@ -159,8 +166,12 @@ const text = contactText.el.send;
       transition: transform var(--dur-base) var(--ease-out);
     }
     @media (prefers-reduced-motion: no-preference) {
-      .back-link:hover :global(svg),
       .back-link:focus-visible :global(svg) {
+        transform: translateX(-4px);
+      }
+    }
+    @media (prefers-reduced-motion: no-preference) and (hover: hover) {
+      .back-link:hover :global(svg) {
         transform: translateX(-4px);
       }
     }

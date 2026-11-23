@@ -3,6 +3,10 @@
  * Contact page, left column: phone, mobile, email and address from `site`, quick Viber and
  * WhatsApp links, opening hours and social links. Rows answer the pointer (the term darkens, a
  * key rule runs in at the row's start); the social links sink on press.
+ *
+ * The phone, mobile and email rows are tap targets end to end: the link's hit area stretches
+ * over its whole row (`.cd-action::after`), and a small plate at the row's end shows what a tap
+ * does (call, write). A press prints that plate in key.
  */
 import Icon from '~/components/Icon.astro';
 import OpeningHours from './OpeningHours.astro';
@@ -22,28 +26,37 @@ const text = contactText.el.details;
     </h2>
     <address class="cd-list">
       <dl>
-        <div class="cd-row">
+        <div class="cd-row cd-row-link">
           <dt class="cd-term">{t('phoneLabel')}</dt>
           <dd>
-            <a href={telHref(site.contact.phone)} class="cd-big link-draw">
+            <a href={telHref(site.contact.phone)} class="cd-big cd-action link-draw">
               {site.contact.phoneDisplay}
             </a>
+            <span class="cd-go" aria-hidden="true">
+              <Icon name="phone" size={20} />
+            </span>
           </dd>
         </div>
-        <div class="cd-row">
+        <div class="cd-row cd-row-link">
           <dt class="cd-term">{t('mobileLabel')}</dt>
           <dd>
-            <a href={telHref(site.contact.mobile)} class="cd-big link-draw">
+            <a href={telHref(site.contact.mobile)} class="cd-big cd-action link-draw">
               {site.contact.mobileDisplay}
             </a>
+            <span class="cd-go" aria-hidden="true">
+              <Icon name="phone" size={20} />
+            </span>
           </dd>
         </div>
-        <div class="cd-row">
+        <div class="cd-row cd-row-link">
           <dt class="cd-term">{t('emailLabel')}</dt>
           <dd>
-            <a href={mailtoHref(site.contact.email)} class="cd-mail link-draw">
+            <a href={mailtoHref(site.contact.email)} class="cd-mail cd-action link-draw">
               {site.contact.email}
             </a>
+            <span class="cd-go" aria-hidden="true">
+              <Icon name="mail" size={20} />
+            </span>
           </dd>
         </div>
         <div class="cd-row">
@@ -131,13 +144,61 @@ const text = contactText.el.details;
       transform-origin: left center;
       transition: transform var(--dur-base) var(--ease-out);
     }
-    .cd-row:hover::before,
-    .cd-row:focus-within::before {
+    .cd-row:focus-within::before,
+    .cd-row-link:active::before {
       transform: scaleX(1);
     }
-    .cd-row:hover .cd-term,
-    .cd-row:focus-within .cd-term {
+    .cd-row:focus-within .cd-term,
+    .cd-row-link:active .cd-term {
       color: var(--color-key);
+    }
+    @media (hover: hover) {
+      .cd-row:hover::before {
+        transform: scaleX(1);
+      }
+      .cd-row:hover .cd-term {
+        color: var(--color-key);
+      }
+    }
+    /* Linked rows: room at the end for the plate; the link covers the whole row. */
+    .cd-row-link {
+      padding-right: 3.5rem;
+    }
+    .cd-action::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+    }
+    .cd-go {
+      position: absolute;
+      top: 50%;
+      right: 0;
+      display: grid;
+      place-items: center;
+      width: 2.5rem;
+      height: 2.5rem;
+      border: 1px solid var(--color-line);
+      color: var(--color-key);
+      translate: 0 -50%;
+      pointer-events: none;
+      transition:
+        background-color var(--dur-fast) linear,
+        border-color var(--dur-fast) linear,
+        color var(--dur-fast) linear;
+    }
+    .cd-row-link:is(:focus-within, :active) .cd-go {
+      border-color: var(--color-key);
+    }
+    .cd-row-link:active .cd-go {
+      background-color: var(--color-key);
+      color: var(--color-paper);
+    }
+    @media (hover: hover) {
+      .cd-row-link:hover .cd-go {
+        background-color: var(--color-key);
+        border-color: var(--color-key);
+        color: var(--color-paper);
+      }
     }
     .cd-row:first-child {
       border-top: 2px solid var(--color-key);
@@ -186,6 +247,25 @@ const text = contactText.el.details;
       flex-wrap: wrap;
       gap: 0.75rem;
     }
+    /* Phones: the two quick-message buttons stack at full width (side by side they would wrap
+       unevenly), and the social links share the row while both fit, else stack. */
+    @media (max-width: 39.99rem) {
+      .cd-quick {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .cd-quick .btn {
+        justify-content: flex-start;
+        white-space: normal;
+      }
+      .cd-social {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+      }
+      .cd-social .cd-social-link {
+        display: flex;
+      }
+    }
     .cd-social-link {
       display: inline-flex;
       align-items: center;
@@ -200,9 +280,15 @@ const text = contactText.el.details;
         background-color var(--dur-fast) linear,
         color var(--dur-fast) linear;
     }
-    .cd-social-link:hover {
+    .cd-social-link:active {
       background-color: var(--color-key);
       color: var(--color-paper);
+    }
+    @media (hover: hover) {
+      .cd-social-link:hover {
+        background-color: var(--color-key);
+        color: var(--color-paper);
+      }
     }
     @media (prefers-reduced-motion: no-preference) {
       .cd-social-link {

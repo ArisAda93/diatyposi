@@ -201,7 +201,7 @@ const { locale = defaultLocale } = Astro.props;
       text-decoration: none;
       transition: color var(--dur-fast) linear;
     }
-    .section-rail :global(.rail-link:is(:hover, :focus-visible, [aria-current])) {
+    .section-rail :global(.rail-link:is(:focus-visible, [aria-current])) {
       color: var(--color-key);
     }
     .section-rail :global(.rail-link:focus-visible) {
@@ -239,7 +239,7 @@ const { locale = defaultLocale } = Astro.props;
       transform-origin: right center;
       transition: transform var(--dur-base) var(--ease-snap);
     }
-    .section-rail :global(.rail-link:is(:hover, :focus-visible) .rail-tick) {
+    .section-rail :global(.rail-link:focus-visible .rail-tick) {
       transform: none;
     }
     .section-rail :global(.rail-link[aria-current] .rail-tick) {
@@ -272,8 +272,20 @@ const { locale = defaultLocale } = Astro.props;
       clip-path: inset(0 0 0 100%);
       transition: clip-path var(--dur-base) var(--ease-out);
     }
-    .section-rail :global(.rail-link:is(:hover, :focus-visible) .rail-label) {
+    .section-rail :global(.rail-link:focus-visible .rail-label) {
       clip-path: inset(0);
+    }
+    /* Hover only where the pointer can hover: on a touch screen a tap leaves nothing out. */
+    @media (hover: hover) {
+      .section-rail :global(.rail-link:hover) {
+        color: var(--color-key);
+      }
+      .section-rail :global(.rail-link:hover .rail-tick) {
+        transform: none;
+      }
+      .section-rail :global(.rail-link:hover .rail-label) {
+        clip-path: inset(0);
+      }
     }
     /* The number travels with the label in the compact rail (ticks only). */
     .section-rail :global(.rail-label-index) {

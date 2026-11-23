@@ -6,6 +6,10 @@
  * motion the plates stay out of register and nothing moves. The sheet sits on a parallax layer.
  * The plates overprint with `--blend-ink`: multiply on paper; on the dark page they screen, so the
  * misprint reads as light inks on dark paper (the K plate is the theme's key).
+ *
+ * Phones: a smaller proof and tighter spacing, so the numerals, the line and the button home
+ * share the first screen above the call bar; the button spans the column. Touch devices snap the
+ * plates on press, not on a hover that would stick.
  */
 import BaseLayout from '~/layouts/BaseLayout.astro';
 import Icon from '~/components/Icon.astro';
@@ -38,10 +42,10 @@ const plates = ['c', 'm', 'y', 'k'] as const;
 
     <div class="np-text">
       <p class="label">{capsEl(text.label)}</p>
-      <h1 id="np-title" class="display-l mt-6 max-w-[14ch]">
+      <h1 id="np-title" class="display-l mt-4 max-w-[14ch] sm:mt-6">
         {text.title}
       </h1>
-      <p class="lead muted mt-6 max-w-[40ch]">{text.body}</p>
+      <p class="lead muted mt-4 max-w-[40ch] sm:mt-6">{text.body}</p>
       <div class="np-actions">
         <a href={routes.home} class="btn btn-primary np-home">
           <Icon name="chevron-left" />
@@ -114,9 +118,8 @@ const plates = ['c', 'm', 'y', 'k'] as const;
       .np-plate {
         transition: transform 650ms var(--ease-snap);
       }
-      .np-art:hover .np-plate,
-      .np:has(.np-home:hover) .np-plate,
-      .np:has(.np-home:focus-visible) .np-plate {
+      .np:has(.np-home:focus-visible) .np-plate,
+      .np:has(.np-home:active) .np-plate {
         transform: translate(0, 0);
       }
       /* Arrival uses the individual `translate`, so it adds to the misprint offsets above and
@@ -150,12 +153,22 @@ const plates = ['c', 'm', 'y', 'k'] as const;
       transition: transform var(--dur-base) var(--ease-out);
     }
     @media (prefers-reduced-motion: no-preference) {
-      .np-home:hover :global(svg),
       .np-home:focus-visible :global(svg) {
         transform: translateX(-4px);
       }
-      .np-secondary:hover :global(svg),
       .np-secondary:focus-visible :global(svg) {
+        transform: translateX(4px);
+      }
+    }
+    @media (prefers-reduced-motion: no-preference) and (hover: hover) {
+      .np-art:hover .np-plate,
+      .np:has(.np-home:hover) .np-plate {
+        transform: translate(0, 0);
+      }
+      .np-home:hover :global(svg) {
+        transform: translateX(-4px);
+      }
+      .np-secondary:hover :global(svg) {
         transform: translateX(4px);
       }
     }
@@ -174,6 +187,32 @@ const plates = ['c', 'm', 'y', 'k'] as const;
       min-height: 2.75rem;
       font-family: var(--font-display);
       font-weight: 700;
+    }
+
+    /* Phones (after the rules it adjusts). */
+    @media (max-width: 39.99rem) {
+      .np {
+        gap: 2rem;
+        padding-top: 2rem;
+      }
+      .np-art {
+        font-size: clamp(5.5rem, 40cqi, 30rem);
+      }
+      .np-foot {
+        margin-top: 1.5rem;
+      }
+      .np-text h1 {
+        text-wrap: balance;
+      }
+      .np-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+        margin-top: 2rem;
+      }
+      .np-secondary {
+        align-self: flex-start;
+      }
     }
   }
 

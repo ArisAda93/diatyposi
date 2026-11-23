@@ -27,6 +27,10 @@
  *   is a direct mapping of the scroll position, like a scrollbar, so it also runs with reduced
  *   motion; everything else is off then.
  * - `data-motion="off"` opts an element and its descendants out.
+ * - Phones and touch screens (motionProfile): the halftone prints quickly and starts a little
+ *   before the element enters (`html.mo-quick`); on phones (`html.mo-compact`, COMPACT_QUERY) the
+ *   depth entry rises less, the scrubs settle sooner and parallax moves half as far. Desktop
+ *   keeps the values above.
  *
  * Start states are applied from here only, and only to elements below the fold at init, so nothing
  * is hidden without JS. Reduced motion (live) tears the effects down to the composed page. GSAP and
@@ -175,6 +179,48 @@ export const parallaxOffset = (
   max: number,
 ): number => clamp((centre - viewportCentre) * -speed, -max, max) || 0;
 
+/**
+ * Phones: portrait under 48rem, or a short landscape touch screen. Read once per motion session
+ * (a rotation keeps a phone on the same side of it).
+ */
+export const COMPACT_QUERY = '(max-width: 47.99rem), (max-height: 31.99rem) and (pointer: coarse)';
+/** Longest halftone transition (motion.css `.mo-ht-in`, 250 + 1100 ms) plus a margin. */
+export const HALFTONE_MS = 1700;
+/** Longest quick halftone transition (motion.css `.mo-quick .mo-ht-in`: 80 + 460 ms) + margin. */
+export const HALFTONE_QUICK_MS = 900;
+
+/** Per-device tuning of the motion layer (see the module comment). */
+export interface MotionProfile {
+  /** Short halftone print-in on phones and touch screens (`html.mo-quick`). */
+  quickPrint: boolean;
+  /** IntersectionObserver rootMargin that starts the halftone print-in. */
+  halftoneMargin: string;
+  /** Safety timeout that unmasks an element whose print-in never reports its end (ms). */
+  halftoneMs: number;
+  /** Factor on every parallax speed and on the largest offset. */
+  parallaxScale: number;
+  /** Viewport fraction of the element's top where the depth scrub ends (it starts at 1). */
+  depthTo: number;
+  /** Viewport fraction of a heading's top where the registration scrub ends (starts at 0.95). */
+  registrationTo: number;
+}
+
+/**
+ * The motion tuning for a device. `compact`: a phone (COMPACT_QUERY). `finePointer`: a mouse or
+ * trackpad that hovers. Desktop (not compact, fine pointer) keeps the original values.
+ */
+export const motionProfile = (compact: boolean, finePointer: boolean): MotionProfile => {
+  const quickPrint = compact || !finePointer;
+  return {
+    quickPrint,
+    halftoneMargin: quickPrint ? '0px 0px 12% 0px' : '0px 0px -8% 0px',
+    halftoneMs: quickPrint ? HALFTONE_QUICK_MS : HALFTONE_MS,
+    parallaxScale: compact ? 0.5 : 1,
+    depthTo: compact ? 0.8 : 0.65,
+    registrationTo: compact ? 0.72 : 0.6,
+  };
+};
+
 /** Diameter (px) of a ripple from (x, y) in a box that reaches the box's farthest corner. */
 export const rippleDiameter = (x: number, y: number, width: number, height: number): number =>
   2 * Math.hypot(Math.max(x, width - x), Math.max(y, height - y));
@@ -260,8 +306,6 @@ const TILT_VARS = [
   '--mo-fit',
 ];
 const MAGNET_VARS = ['--mo-mx', '--mo-my', '--mo-bx', '--mo-by'];
-/** Longest halftone transition (motion.css) plus a margin, for the safety timeout. */
-const HALFTONE_MS = 1700;
 /** How long to wait for the GSAP chunks before showing the scrubbed elements at rest. */
 const GSAP_WAIT_MS = 8000;
 /** Parallax smoothing (per second) and the band around the viewport where it is updated. */
@@ -359,6 +403,8 @@ interface Session {
   onPointer: Cleanup[];
   /** Called when the window or the page height changes. */
   onResize: Cleanup[];
+  /** Device tuning, fixed for the session. */
+  profile: MotionProfile;
   stopped: boolean;
 }
 
@@ -389,7 +435,13 @@ const setupScrubs = (session: Session, vh: number): void => {
       if (box.top + box.height > 0) intro.push(el);
       return;
     }
-    scrubs.push({ el, prop: '--mo-reg', live: 'mo-reg', from: 0.95, to: 0.6 });
+    scrubs.push({
+      el,
+      prop: '--mo-reg',
+      live: 'mo-reg',
+      from: 0.95,
+      to: session.profile.registrationTo,
+    });
   });
 
   const siblings = new Map<Element | null, number>();
@@ -405,7 +457,7 @@ const setupScrubs = (session: Session, vh: number): void => {
       prop: '--mo-d',
       live: 'mo-d-live',
       from: 1 - index * 0.03,
-      to: 0.65 - index * 0.03,
+      to: session.profile.depthTo - index * 0.03,
     });
   });
 
@@ -614,7 +666,7 @@ const setupHalftone = (session: Session, vh: number): void => {
     // Safety: never leave an element masked if the transition does not report its end.
     timers.set(
       el,
-      window.setTimeout(() => finish(el), HALFTONE_MS),
+      window.setTimeout(() => finish(el), session.profile.halftoneMs),
     );
   };
   const io = new IntersectionObserver(
@@ -625,7 +677,7 @@ const setupHalftone = (session: Session, vh: number): void => {
         printIn(entry.target);
       });
     },
-    { rootMargin: '0px 0px -8% 0px' },
+    { rootMargin: session.profile.halftoneMargin },
   );
 
   // Safety net for an observer that never reports: when scrolling stops, print anything on screen.
@@ -999,13 +1051,19 @@ const setupParallax = (session: Session): void => {
       if (!dirty) return;
       dirty = false;
       const viewport = window.innerHeight;
-      const max = viewport * PARALLAX_MAX;
+      const scale = session.profile.parallaxScale;
+      const max = viewport * PARALLAX_MAX * scale;
       items.forEach((item) => {
         if (!item.near) return;
         // The box carries the offset written last frame: take it out to get the layout centre.
         const box = item.el.getBoundingClientRect();
         const centre = box.top + box.height / 2 - item.written;
-        item.target = parallaxOffset(centre, viewport / 2, effectiveParallax(item.speed), max);
+        item.target = parallaxOffset(
+          centre,
+          viewport / 2,
+          effectiveParallax(item.speed) * scale,
+          max,
+        );
         if (item.entered) {
           item.entered = false;
           // Off screen: jump straight to the offset. On screen (at load): settle into it.
@@ -1218,6 +1276,8 @@ const trackProgress = (): void => {
 const start = (finePointer: boolean): Cleanup => {
   const root = document.documentElement;
   const ticker = createTicker();
+  const compact = matchMedia(COMPACT_QUERY).matches;
+  const profile = motionProfile(compact, finePointer);
   const session: Session = {
     ticker,
     cleanups: [],
@@ -1226,11 +1286,14 @@ const start = (finePointer: boolean): Cleanup => {
     onScroll: [],
     onPointer: [],
     onResize: [],
+    profile,
     stopped: false,
   };
 
   root.classList.add('mo-on');
   if (finePointer) root.classList.add('mo-fine');
+  if (compact) root.classList.add('mo-compact');
+  if (profile.quickPrint) root.classList.add('mo-quick');
 
   /**
    * Each effect is set up on its own: if one throws, what it had applied is undone and its hooks
@@ -1295,7 +1358,7 @@ const start = (finePointer: boolean): Cleanup => {
     session.stopped = true;
     ticker.stop();
     session.cleanups.reverse().forEach((fn) => isolated(fn, undefined));
-    root.classList.remove('mo-on', 'mo-fine');
+    root.classList.remove('mo-on', 'mo-fine', 'mo-compact', 'mo-quick');
   };
 };
 

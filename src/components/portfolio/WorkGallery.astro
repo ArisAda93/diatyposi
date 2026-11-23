@@ -10,6 +10,8 @@
  * Feedback: each chip shows how many items it holds (a small tally); the pressed chip is printed
  * in key with a C/M plate shadow that snaps into register on press; the live count ticks when it
  * changes, and tiles that come back into view print in (`data-entering`, set by the script).
+ * Phones: the chips are one sideways row (`data-chip-row`); the script keeps the pressed chip in
+ * the middle and fades the sides that hide chips.
  */
 import { getImage as optimizeImage } from 'astro:assets';
 import WorkTile from './WorkTile.astro';
@@ -54,7 +56,7 @@ const tiles = await Promise.all(
 
 <div class="work-gallery" data-gallery>
   <div class="work-filters" data-filter-bar>
-    <div class="work-chips" role="group" aria-label={text.filterGroupLabel}>
+    <div class="work-chips" role="group" aria-label={text.filterGroupLabel} data-chip-row>
       <button type="button" class="work-chip" aria-pressed="true" data-filter={ALL}>
         <span>{text.filterAll}</span>
         <span class="chip-count">{portfolio.length}</span>
@@ -102,21 +104,67 @@ const tiles = await Promise.all(
       display: none;
     }
     /* Phones: one sideways-scrolling row, edge to edge of the screen like the chip row on
-       Υπηρεσίες: at rest the first chip lines up with the page gutter, the chips run off the
-       screen's edge instead of being cut at the gutter, the right edge fades to show there is
-       more, and the end padding lets the last chip (and its plate shadow) scroll clear of the
-       fade. The padding also keeps focus outlines and the pressed chip's shadow inside the
-       scroll box. */
+       Υπηρεσίες: at rest the first chip lines up with the page gutter (or the landscape notch
+       inset, as .wrap does), the chips run off the screen's edge instead of being cut at the
+       gutter, and a side that hides chips fades out (`data-edges` from gallery.ts; without JS
+       the chips are hidden anyway). Chips snap to the middle, where the script also brings the
+       pressed chip; the symmetric scroll padding keeps a focused or snapped chip out of both
+       fades. The padding also keeps focus outlines and the pressed chip's plate shadow inside
+       the scroll box. */
+    .work-filters {
+      --work-bleed-start: max(var(--gutter), env(safe-area-inset-left, 0px));
+      --work-bleed-end: max(var(--gutter), env(safe-area-inset-right, 0px));
+    }
     .work-chips {
+      --work-fade: 2rem;
+      --work-fade-start: 0px;
+      --work-fade-end: var(--work-fade);
       display: flex;
       gap: 0.5rem;
       overflow-x: auto;
       overscroll-behavior-x: contain;
-      scroll-padding-inline: var(--gutter) 2rem;
-      padding: 0.5rem 2rem 0.75rem var(--gutter);
-      margin-inline: calc(var(--gutter) * -1);
+      scroll-snap-type: x proximity;
+      scroll-padding-inline: var(--work-fade);
+      padding: 0.5rem max(var(--work-fade), var(--work-bleed-end)) 0.75rem var(--work-bleed-start);
+      margin-inline: calc(var(--work-bleed-start) * -1) calc(var(--work-bleed-end) * -1);
       scrollbar-width: thin;
-      mask-image: linear-gradient(to left, transparent 0, #000 2rem);
+      -webkit-mask-image: linear-gradient(
+        to right,
+        transparent 0,
+        #000 var(--work-fade-start),
+        #000 calc(100% - var(--work-fade-end)),
+        transparent 100%
+      );
+      mask-image: linear-gradient(
+        to right,
+        transparent 0,
+        #000 var(--work-fade-start),
+        #000 calc(100% - var(--work-fade-end)),
+        transparent 100%
+      );
+    }
+    @media (max-width: 47.99rem) {
+      /* With the script: fades follow the hidden chips; the end padding matches the start (at
+         least 1rem, so the pressed chip's 6px plate shadow stays inside the box). */
+      .work-chips[data-edges] {
+        --work-fade-end: 0px;
+        padding-inline-end: var(--work-bleed-end);
+      }
+      .work-chips[data-edges~='start'] {
+        --work-fade-start: var(--work-fade);
+      }
+      .work-chips[data-edges~='end'] {
+        --work-fade-end: var(--work-fade);
+      }
+    }
+    /* Touch screens: no scrollbar under the chips; the fades are the overflow hint. */
+    @media (max-width: 47.99rem) and (pointer: coarse) {
+      .work-chips {
+        scrollbar-width: none;
+      }
+      .work-chips::-webkit-scrollbar {
+        display: none;
+      }
     }
     .work-chip {
       display: inline-flex;
@@ -134,14 +182,21 @@ const tiles = await Promise.all(
       line-height: 1.2;
       white-space: nowrap;
       cursor: pointer;
+      scroll-snap-align: center;
       -webkit-tap-highlight-color: transparent;
       transition:
         background-color var(--dur-fast) linear,
         color var(--dur-fast) linear,
         box-shadow var(--dur-base) var(--ease-snap);
     }
-    .work-chip:hover {
-      background-color: var(--color-paper-2);
+    /* Hover tint only where a pointer can hover: a tapped chip must not keep it. */
+    @media (hover: hover) {
+      .work-chip:hover {
+        background-color: var(--color-paper-2);
+      }
+      .work-chip:hover .chip-count {
+        background-color: var(--color-paper);
+      }
     }
     /* Tally of the items under this chip. */
     .chip-count {
@@ -155,9 +210,6 @@ const tiles = await Promise.all(
       transition:
         background-color var(--dur-fast) linear,
         color var(--dur-fast) linear;
-    }
-    .work-chip:hover .chip-count {
-      background-color: var(--color-paper);
     }
     .work-chip[aria-pressed='true'] {
       background-color: var(--color-key);
@@ -207,6 +259,7 @@ const tiles = await Promise.all(
         overflow: visible;
         padding: 0 6px 6px 0;
         margin: 0;
+        -webkit-mask-image: none;
         mask-image: none;
       }
       .work-count {

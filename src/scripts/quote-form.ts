@@ -16,13 +16,21 @@
  * after a submit), `data-valid` once a filled-in field passes the same checks (set when the
  * visitor leaves the field or, for a flagged field, as they type; removed as soon as it no longer
  * passes, so the mark never claims more than the validation does).
+ *
+ * A submit with errors fills the summary and takes the visitor to the first field that needs
+ * fixing (scrolled to its label, clear of the fixed header and the phone call bar through the
+ * page's scroll padding, then focused). On touch screens the keyboard's “next” key
+ * (`enterkeyhint="next"`) moves on to the next field instead of submitting the form.
  */
 import {
   buildQuoteMessage,
   buildSendLinks,
   chatText,
+  firstInvalidField,
   isoDate,
+  nextQuoteField,
   parsePreselect,
+  QUOTE_FIELDS,
   validateQuote,
   type QuoteData,
   type QuoteErrors,
@@ -32,15 +40,8 @@ import { contactText } from '~/i18n/pages/contact';
 
 const text = contactText.el;
 
-const FIELDS: readonly QuoteField[] = [
-  'name',
-  'phone',
-  'email',
-  'services',
-  'quantity',
-  'date',
-  'message',
-];
+/** Devices whose keyboard is usually on screen (the “next” key applies only there). */
+const coarsePointer = window.matchMedia('(pointer: coarse)');
 
 interface FieldRefs {
   wrap: HTMLElement;
@@ -53,7 +54,7 @@ interface FieldRefs {
 }
 
 const isQuoteField = (value: string | undefined): value is QuoteField =>
-  FIELDS.some((field) => field === value);
+  QUOTE_FIELDS.some((field) => field === value);
 
 /** Whether the visitor has entered anything in a field (a valid mark needs a value). */
 const isFilled = (data: QuoteData, field: QuoteField): boolean => {
@@ -119,7 +120,7 @@ const initQuote = (root: HTMLElement): void => {
   );
 
   const refs = new Map<QuoteField, FieldRefs>();
-  for (const field of FIELDS) {
+  for (const field of QUOTE_FIELDS) {
     const wrap = form.querySelector<HTMLElement>(`[data-field="${field}"]`);
     const describe = wrap?.querySelector<HTMLElement>('[data-describe]');
     const error = wrap?.querySelector<HTMLElement>('[data-field-error]');
@@ -194,7 +195,7 @@ const initQuote = (root: HTMLElement): void => {
 
   const renderSummary = (errors: QuoteErrors): void => {
     const items: HTMLLIElement[] = [];
-    for (const field of FIELDS) {
+    for (const field of QUOTE_FIELDS) {
       const message = errors[field];
       const ref = refs.get(field);
       if (!message || !ref) continue;
@@ -224,17 +225,25 @@ const initQuote = (root: HTMLElement): void => {
     if (summaryList.childElementCount === 0) summary.hidden = true;
   };
 
+  /**
+   * Brings a field's label into view (the page's scroll padding keeps it clear of the fixed
+   * header and the call bar) and focuses its control. False when the field is not on the page.
+   */
+  const revealField = (field: QuoteField): boolean => {
+    const ref = refs.get(field);
+    if (!ref) return false;
+    ref.wrap.scrollIntoView({ block: 'start' });
+    ref.focus.focus({ preventScroll: true });
+    return true;
+  };
+
   summaryList.addEventListener('click', (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
     const link = target.closest('a');
     const field = link?.closest('li')?.dataset.summaryField;
     if (!link || !isQuoteField(field)) return;
-    const ref = refs.get(field);
-    if (!ref) return;
-    event.preventDefault();
-    ref.wrap.scrollIntoView({ block: 'start' });
-    ref.focus.focus({ preventScroll: true });
+    if (revealField(field)) event.preventDefault();
   });
 
   /** Sets or clears the valid mark of one field from the current data and errors. */
@@ -250,6 +259,26 @@ const initQuote = (root: HTMLElement): void => {
     const field = target.closest<HTMLElement>('[data-field]')?.dataset.field;
     return isQuoteField(field) ? field : null;
   };
+
+  // iOS Safari applies :active (the service tiles' press feedback) only under a touch listener.
+  form.addEventListener('touchstart', () => undefined, { passive: true });
+
+  // The on-screen keyboard's “next” key sends Enter, which would submit the form from any
+  // single-line field: move to the next field instead. Desktop keyboards keep Enter to submit.
+  form.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' || event.isComposing || !coarsePointer.matches) return;
+    if (event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) return;
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement) || target.getAttribute('enterkeyhint') !== 'next') {
+      return;
+    }
+    const field = fieldOf(target);
+    const next = field ? nextQuoteField(field) : null;
+    const nextRef = next ? refs.get(next) : undefined;
+    if (!nextRef) return;
+    event.preventDefault();
+    nextRef.focus.focus();
+  });
 
   // Fields flagged on a submit are re-checked as the visitor types or changes them. A field that
   // carries the valid mark is re-checked too, so the mark goes as soon as the value stops passing.
@@ -300,7 +329,7 @@ const initQuote = (root: HTMLElement): void => {
     event.preventDefault();
     const data = readData();
     const errors = collectErrors(data);
-    for (const field of FIELDS) {
+    for (const field of QUOTE_FIELDS) {
       const message = errors[field];
       setFieldError(field, message);
       if (message) flagged.add(field);
@@ -308,7 +337,9 @@ const initQuote = (root: HTMLElement): void => {
     }
     renderSummary(errors);
     if (!summary.hidden) {
-      summary.focus();
+      // The summary (role="alert") lists every problem; the visitor lands on the first one.
+      const first = firstInvalidField(errors);
+      if (!first || !revealField(first)) summary.focus();
       return;
     }
     showPanel(data);

@@ -39,10 +39,12 @@ import {
   type Point,
 } from '../src/scripts/hero-scene/geometry';
 import {
+  DPR_CAP,
   HANDOFF_DISTANCE,
   clamp,
   cubicBezier,
   dockProgress,
+  drawingDpr,
   easeInOutCubic,
   easeOutBack,
   guardY,
@@ -191,6 +193,38 @@ describe('placeInBox (rest position of the plates)', () => {
     expect(p.scale).toBeCloseTo(scale, 9);
     expect(p.x).toBeCloseTo(24 + (1110 - 40) * scale, 9);
     expect(p.y).toBeCloseTo(18 + (152.5 - 50) * scale, 9);
+  });
+});
+
+describe('drawingDpr (drawing-buffer resolution)', () => {
+  const MAX = 6_000_000;
+
+  it('caps a portrait phone at 1.5', () => {
+    expect(drawingDpr(3, 390, 844, 390, MAX)).toBe(DPR_CAP.phone);
+    expect(drawingDpr(2, 320, 640, 320, MAX)).toBe(DPR_CAP.phone);
+  });
+
+  it('caps a phone in landscape at 1.5 although it is wider than 768 px', () => {
+    expect(drawingDpr(3, 844, 620, 390, MAX)).toBe(DPR_CAP.phone);
+    expect(drawingDpr(3, 932, 640, 430, MAX)).toBe(DPR_CAP.phone);
+  });
+
+  it('caps tablets and desktops at 2 and keeps lower device ratios', () => {
+    expect(drawingDpr(3, 1440, 900, 900, MAX)).toBe(DPR_CAP.other);
+    expect(drawingDpr(2, 1024, 768, 768, MAX)).toBe(DPR_CAP.other);
+    expect(drawingDpr(1, 1440, 900, 900, MAX)).toBe(1);
+    expect(drawingDpr(1.25, 390, 844, 390, MAX)).toBe(1.25);
+  });
+
+  it('falls back to 1 for a missing device ratio', () => {
+    expect(drawingDpr(0, 1440, 900, 900, MAX)).toBe(1);
+    expect(drawingDpr(Number.NaN, 390, 844, 390, MAX)).toBe(1);
+  });
+
+  it('never exceeds the pixel budget', () => {
+    const dpr = drawingDpr(2, 2560, 1440, 1440, MAX);
+    expect(dpr).toBeLessThan(2);
+    expect(2560 * 1440 * dpr * dpr).toBeCloseTo(MAX, 0);
   });
 });
 

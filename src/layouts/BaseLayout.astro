@@ -4,6 +4,9 @@
  * header, footer and the mobile floating contact bar. Every page renders exactly one <h1> inside
  * the default slot.
  *
+ * Mobile call bar: <body> is padded by `--float-bar-h` (global.css), the bar's height with the
+ * safe area below 48rem and 0 elsewhere, so the end of the page never hides under it.
+ *
  * Theme: the inline head script sets `html[data-theme]` and both theme metas before first paint
  * (stored choice, else the system); the module script wires every theme toggle (theme.ts).
  * Without JS the metas and the page stay light.
@@ -148,7 +151,7 @@ const jsonLd = structuredData ? JSON.stringify(buildLocalBusiness(siteUrl, local
     {jsonLd && <script type="application/ld+json" set:html={jsonLd} />}
     <slot name="head" />
   </head>
-  <body class="flex min-h-dvh flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+  <body class="flex min-h-dvh flex-col">
     <LivingBackground />
     <a href="#main" class="skip-link">
       {t('skipLink', locale)}
@@ -164,6 +167,8 @@ const jsonLd = structuredData ? JSON.stringify(buildLocalBusiness(siteUrl, local
       import { initThemeToggle } from '~/scripts/theme';
 
       initThemeToggle();
+      // iOS Safari only applies :active (the press states) when a touch listener exists.
+      document.addEventListener('touchstart', () => {}, { passive: true });
     </script>
   </body>
 </html>

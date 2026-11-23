@@ -128,6 +128,17 @@ const speeds = ['0', '-0.06', '0.02', '-0.05'];
       align-items: baseline;
       gap: 0.875rem;
     }
+    /* A long category (“BANNERS, ΑΦΙΣΕΣ & ΜΟΥΣΑΜΑΔΕΣ”) wraps into balanced lines that hang beside
+       the number; below 64rem, where the narrower tiles make it wrap, the lines get air. */
+    .work-meta .label {
+      min-width: 0;
+      text-wrap: balance;
+    }
+    @media (max-width: 63.99rem) {
+      .work-meta .label {
+        line-height: 1.45;
+      }
+    }
     .work-num {
       font-family: var(--font-display);
       font-size: var(--text-label);
@@ -157,18 +168,28 @@ const speeds = ['0', '-0.06', '0.02', '-0.05'];
         opacity var(--dur-base) var(--ease-out),
         transform var(--dur-base) var(--ease-out);
     }
-    .work-link:hover .work-title > span,
     .work-link:focus-visible .work-title > span {
       background-size: 100% 2px;
     }
-    .work-link:hover .work-title :global(.work-title-arrow),
     .work-link:focus-visible .work-title :global(.work-title-arrow) {
       opacity: 1;
       transform: none;
     }
-    .work-link:hover .work-num,
     .work-link:focus-visible .work-num {
       color: var(--color-key);
+    }
+    /* Hover only where the pointer hovers: a tap must not leave the underline drawn. */
+    @media (hover: hover) {
+      .work-link:hover .work-title > span {
+        background-size: 100% 2px;
+      }
+      .work-link:hover .work-title :global(.work-title-arrow) {
+        opacity: 1;
+        transform: none;
+      }
+      .work-link:hover .work-num {
+        color: var(--color-key);
+      }
     }
     .work-link:focus-visible {
       outline-offset: 6px;

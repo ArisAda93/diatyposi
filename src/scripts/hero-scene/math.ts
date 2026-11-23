@@ -123,6 +123,31 @@ export const placeInBox = (box: Box, viewBox: ViewBox, px: number, py: number): 
   };
 };
 
+/**
+ * Drawing-buffer resolution caps: device pixels per CSS px on phones (narrower than `phoneWidth`,
+ * or with a viewport whose shorter side is under `phoneShortSide`, which catches phones in
+ * landscape) and elsewhere.
+ */
+export const DPR_CAP = { phone: 1.5, other: 2, phoneWidth: 768, phoneShortSide: 500 } as const;
+
+/**
+ * Device pixel ratio for a drawing buffer of `width` × `height` CSS px: the device's, capped per
+ * DPR_CAP, and lowered further so the buffer never holds more than `maxPixels`.
+ */
+export const drawingDpr = (
+  deviceDpr: number,
+  width: number,
+  height: number,
+  viewportShortSide: number,
+  maxPixels: number,
+): number => {
+  const phone = width < DPR_CAP.phoneWidth || viewportShortSide < DPR_CAP.phoneShortSide;
+  let dpr = Math.min(deviceDpr > 0 ? deviceDpr : 1, phone ? DPR_CAP.phone : DPR_CAP.other);
+  const area = Math.max(1, width * height);
+  if (area * dpr * dpr > maxPixels) dpr = Math.sqrt(maxPixels / area);
+  return dpr;
+};
+
 /** Scroll progress of the hand-off, 0 at the top of the hero, 1 once the plates are gone. */
 export const dockProgress = (scrolled: number, distance: number): number =>
   distance > 0 ? clamp(scrolled / distance) : 1;

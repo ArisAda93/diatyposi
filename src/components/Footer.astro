@@ -185,6 +185,8 @@ const year = new Date().getFullYear();
     .footer-arch-k {
       stroke: var(--color-ink-muted);
     }
+    /* Phones and tablets: lower and wider; it bleeds past the right edge and the footer's
+       `overflow: clip` cuts it there, so it never widens the page. */
     @media (max-width: 63.99rem) {
       .footer-deco {
         top: auto;
@@ -213,6 +215,12 @@ const year = new Date().getFullYear();
     .footer-top :global(.footer-reg) {
       flex: none;
       color: var(--color-ink-muted);
+    }
+    /* Small phones: the bar keeps three of its six tints, so the hairline still reads. */
+    @media (max-width: 22.49rem) {
+      .footer-top :global(.colorbar-tint:nth-child(n + 8)) {
+        display: none;
+      }
     }
 
     .footer-cols {

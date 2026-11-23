@@ -110,9 +110,18 @@ const sizes = '(min-width: 1024px) min(35vw, 520px), (min-width: 768px) 46vw, ca
 <style>
   @layer components {
     .svcp {
+      --svcp-pad-y: clamp(3.5rem, 2rem + 5vw, 7rem);
       position: relative;
       isolation: isolate;
-      padding-block: clamp(3.5rem, 2rem + 5vw, 7rem);
+      padding-block: var(--svcp-pad-y);
+    }
+    /* Below 64rem a chip jump (or keyboard focus) lands the folio and title just under the
+       sticky header and chip bar (html scroll-padding in ypiresies.astro), not the empty top
+       padding: the plate rule tucks under the bar. The desktop rail keeps the section's top. */
+    @media (max-width: 63.99rem) {
+      .svcp {
+        scroll-margin-top: calc(var(--svcp-pad-y) * -1);
+      }
     }
     /* The page's own bottom padding (--section-y) closes the last chapter, as on the other inner
        pages; its chapter padding on top of that would double the gap before the footer. */
@@ -237,12 +246,21 @@ const sizes = '(min-width: 1024px) min(35vw, 520px), (min-width: 768px) 46vw, ca
       overflow-wrap: break-word;
       hyphens: auto;
     }
+    /* Phones: the narrow measure would split words such as “επαγγελματικό” at a line end; whole
+       words wrap (balanced), and only a word wider than the column may still break. */
+    @media (max-width: 47.99rem) {
+      .svcp-title {
+        hyphens: manual;
+      }
+    }
 
     .svcp-grid {
       display: grid;
       grid-template-columns: minmax(0, 1fr);
       grid-template-areas: 'fig' 'body';
-      row-gap: 2.25rem;
+      /* One column: the photo's crop marks sit in the figure's padding, so this matches the
+         title-to-marks gap above the photo. */
+      row-gap: 1.75rem;
       margin-top: clamp(1.75rem, 1rem + 2vw, 3rem);
     }
 
@@ -356,10 +374,17 @@ const sizes = '(min-width: 1024px) min(35vw, 520px), (min-width: 768px) 46vw, ca
       white-space: normal;
       text-align: left;
     }
+    /* Phones: full width, as the hero and contact-band calls to action are. */
+    @media (max-width: 47.99rem) {
+      .svcp-cta {
+        width: 100%;
+        text-align: center;
+      }
+    }
     .svcp-cta :global(svg) {
       transition: transform var(--dur-base) var(--ease-out);
     }
-    @media (prefers-reduced-motion: no-preference) {
+    @media (hover: hover) and (prefers-reduced-motion: no-preference) {
       .svcp-cta:hover :global(svg) {
         transform: translateX(3px);
       }

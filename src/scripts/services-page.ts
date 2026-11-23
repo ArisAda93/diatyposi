@@ -5,12 +5,17 @@
  * - The index marks the chapter in the reading band of the viewport (aria-current) and the
  *   chapters before it (.is-read) with an IntersectionObserver, with or without motion. Below
  *   64rem, where the index is a sideways chip row, the current chip is scrolled to the middle of
- *   the row (the page itself never scrolls).
+ *   the row (the row's own scrollLeft: the page itself never scrolls), except while a finger is on
+ *   the row, and the row's edges fade only on the sides that have more chips (`data-edges`).
+ *   The chip-row helpers (`trackScrollEdges`, `centreInRow`) are shared with the /erga/ filter
+ *   chips (src/scripts/gallery.ts).
  * - With motion allowed, GSAP ScrollTrigger (loaded after the page has loaded) drives, scrubbed to
  *   scroll: each chapter's photo frame straightens out of a 3D turn (alternating sides), its
  *   plate-colour rule draws in, and the rail's CMYK fill follows reading progress through the
- *   chapters. Nothing is pinned. The giant outlined numbers and the halftone under-plates drift
- *   at their own depths through `data-parallax`, which the site-wide motion layer runs.
+ *   chapters (desktop only: below 64rem the rail is a chip row with no fill, so nothing is
+ *   written per scroll frame there). Nothing is pinned. On phones the turn is shallower. The
+ *   giant outlined numbers and the halftone under-plates drift at their own depths through
+ *   `data-parallax`, which the site-wide motion layer runs.
  *
  * Starting states are applied by JS only, and only to elements still below the fold when the
  * effects start, so nothing in view jumps and nothing is hidden without JS. Under reduced motion
@@ -51,6 +56,75 @@ export const centredScroll = (
   return Math.min(max, Math.max(0, start - (view - size) / 2));
 };
 
+/** Which ends of a sideways scroller have content beyond them. */
+export interface ScrollEdges {
+  start: boolean;
+  end: boolean;
+}
+
+/**
+ * Edges of a sideways scroller with more content beyond them. `slack` absorbs sub-pixel scroll
+ * positions; overscroll (iOS rubber-banding past either end) counts as resting at that end.
+ */
+export const scrollEdges = (
+  scrollLeft: number,
+  view: number,
+  content: number,
+  slack = 1,
+): ScrollEdges => {
+  const max = Math.max(0, content - view);
+  const position = Math.min(max, Math.max(0, scrollLeft));
+  return { start: position > slack, end: position < max - slack };
+};
+
+/** `data-edges` value for the CSS fade: 'start', 'end', 'start end' or '' (everything fits). */
+export const edgesAttr = ({ start, end }: ScrollEdges): string =>
+  [start ? 'start' : '', end ? 'end' : ''].filter(Boolean).join(' ');
+
+/**
+ * Keeps `data-edges` on a sideways chip row up to date (on scroll, on resize of the row or its
+ * chips, and once the web fonts have loaded), so the CSS fades only the sides that hide chips.
+ * Returns a function that schedules a re-check.
+ */
+export const trackScrollEdges = (row: HTMLElement): (() => void) => {
+  let frame = 0;
+  const update = (): void => {
+    frame = 0;
+    const value = edgesAttr(scrollEdges(row.scrollLeft, row.clientWidth, row.scrollWidth));
+    if (row.dataset.edges !== value) row.dataset.edges = value;
+  };
+  const schedule = (): void => {
+    if (frame === 0) frame = requestAnimationFrame(update);
+  };
+  row.addEventListener('scroll', schedule, { passive: true });
+  if ('ResizeObserver' in window) {
+    const observer = new ResizeObserver(schedule);
+    observer.observe(row);
+    Array.from(row.children).forEach((child) => observer.observe(child));
+  } else {
+    window.addEventListener('resize', schedule, { passive: true });
+  }
+  if ('fonts' in document) void document.fonts.ready.then(schedule);
+  update();
+  return schedule;
+};
+
+/**
+ * Scrolls a sideways row (its own scrollLeft, never the page) so `item` sits in the middle, as
+ * far as the row's scroll range allows.
+ */
+export const centreInRow = (row: HTMLElement, item: HTMLElement, smooth: boolean): void => {
+  const view = row.clientWidth;
+  const content = row.scrollWidth;
+  if (content <= view) return;
+  const rowBox = row.getBoundingClientRect();
+  const box = item.getBoundingClientRect();
+  const start = box.left - rowBox.left - row.clientLeft + row.scrollLeft;
+  const left = centredScroll(start, box.width, view, content);
+  if (Math.abs(left - row.scrollLeft) < 1) return;
+  row.scrollTo({ left, behavior: smooth ? 'smooth' : 'auto' });
+};
+
 /** Hard-stop gradient stops for the rail: one plate-colour segment per chapter. */
 export const railGradient = (total: number): string => {
   if (total <= 0) return 'none';
@@ -61,6 +135,9 @@ export const railGradient = (total: number): string => {
   });
   return `linear-gradient(to bottom, ${stops.join(', ')})`;
 };
+
+/** How long a chip row stays the visitor's after the finger lifts (covers a fling). */
+const ROW_FLING_MS = 700;
 
 const loadGsap = async () => {
   try {
@@ -91,19 +168,29 @@ export const initServicesPage = (): void => {
     rail?.style.setProperty('--svcp-progress', value.toFixed(4));
   };
 
+  // Below 64rem the chip row fades only where it hides chips. While a finger is on the row (and
+  // for its fling afterwards) the row is the visitor's: the current chip is not pulled back.
+  let rowHeld = false;
+  let rowFreeAt = 0;
+  if (chipRow) {
+    trackScrollEdges(chipRow);
+    const hold = (): void => {
+      rowHeld = true;
+    };
+    const release = (): void => {
+      rowHeld = false;
+      rowFreeAt = performance.now() + ROW_FLING_MS;
+    };
+    chipRow.addEventListener('touchstart', hold, { passive: true });
+    chipRow.addEventListener('touchend', release, { passive: true });
+    chipRow.addEventListener('touchcancel', release, { passive: true });
+  }
+
   /** Below 64rem: bring the chip of the chapter in view to the middle of the chip row. */
   const revealChip = (link: HTMLAnchorElement | undefined): void => {
     if (!link || !chipRow || desktop.matches) return;
-    const view = chipRow.clientWidth;
-    const content = chipRow.scrollWidth;
-    if (content <= view) return;
-    const rowBox = chipRow.getBoundingClientRect();
-    const box = link.getBoundingClientRect();
-    const start = box.left - rowBox.left + chipRow.scrollLeft;
-    chipRow.scrollTo({
-      left: centredScroll(start, box.width, view, content),
-      behavior: reduce.matches ? 'auto' : 'smooth',
-    });
+    if (rowHeld || performance.now() < rowFreeAt) return;
+    centreInRow(chipRow, link, !reduce.matches);
   };
 
   // Active chapter: the one crossing the band from 35% to 40% of the viewport height.
@@ -144,7 +231,11 @@ export const initServicesPage = (): void => {
 
     // Read every position first, then write.
     const vh = window.innerHeight;
-    const angle = window.innerWidth < 768 ? 10 : 16;
+    // Phones: a shallower turn, so the straightening reads as a settle, not a swing.
+    const phone = window.innerWidth < 768;
+    const angle = phone ? 10 : 16;
+    const tiltX = phone ? 4 : 7;
+    const startScale = phone ? 0.96 : 0.94;
     const plan = chapters.map((chapter) => {
       const frame = chapter.querySelector<HTMLElement>('[data-svcp-frame]');
       const rule = chapter.querySelector<HTMLElement>('[data-svcp-rule]');
@@ -166,8 +257,8 @@ export const initServicesPage = (): void => {
             p.frame,
             {
               rotateY: p.side * angle,
-              rotateX: 7,
-              scale: 0.94,
+              rotateX: tiltX,
+              scale: startScale,
               transformPerspective: 1100,
               transformOrigin: p.side === 1 ? '0% 50%' : '100% 50%',
             },
@@ -195,12 +286,20 @@ export const initServicesPage = (): void => {
 
       if (rail && list) {
         continuous = true;
-        ScrollTrigger.create({
+        // The fill only shows on the desktop rail: below 64rem it is not written per frame.
+        const trigger = ScrollTrigger.create({
           trigger: list,
           start: 'top 40%',
           end: 'bottom 60%',
-          onUpdate: (self) => setFill(self.progress),
-          onRefresh: (self) => setFill(self.progress),
+          onUpdate: (self) => {
+            if (desktop.matches) setFill(self.progress);
+          },
+          onRefresh: (self) => {
+            if (desktop.matches) setFill(self.progress);
+          },
+        });
+        desktop.addEventListener('change', (event) => {
+          if (event.matches && continuous) setFill(trigger.progress);
         });
       }
     });

@@ -2,8 +2,14 @@
 /**
  * Mobile-only bar fixed to the bottom of the screen: call and Viber. A CMYK colour-bar rule runs
  * along its top edge. The call button carries a small C/M plate shadow that collapses into
- * register when pressed; both buttons sink a little on press. BaseLayout pads the body by 4rem
- * (plus the safe area) below 48rem, which is this bar's height: keep the two in step.
+ * register when pressed; both buttons sink a little on press.
+ *
+ * Height: 0.5rem + a 3rem button + 0.5rem, plus the safe area, which is `--float-bar-h`
+ * (global.css): <body> is padded by it and other fixed UI clears it. Keep the two in step.
+ *
+ * Typing on a touch screen (a text field, text area or select has focus) slides the bar away, so
+ * it never sits on the on-screen keyboard over the field; it returns when the field loses focus.
+ * The page padding stays, so nothing moves.
  */
 import Icon from './Icon.astro';
 import { site } from '~/data/site';
@@ -16,7 +22,11 @@ interface Props {
 const { locale } = Astro.props;
 ---
 
-<nav class="floating-contact md:hidden" aria-label={t('floatingLabel', locale)}>
+<nav
+  class="floating-contact md:hidden"
+  aria-label={t('floatingLabel', locale)}
+  data-floating-contact
+>
   <a href={telHref(site.contact.phone)} class="fc-btn fc-call">
     <Icon name="phone" size={20} />
     <span>{t('callShort', locale)}</span>
@@ -39,6 +49,17 @@ const { locale } = Astro.props;
       padding: 0.5rem max(var(--gutter), env(safe-area-inset-right))
         calc(0.5rem + env(safe-area-inset-bottom)) max(var(--gutter), env(safe-area-inset-left));
       background-color: var(--color-paper);
+      transition:
+        translate var(--dur-base) var(--ease-out),
+        visibility 0s linear 0s;
+    }
+    /* Typing (script below): out of the way of the on-screen keyboard and out of the tab order. */
+    .floating-contact[data-typing] {
+      translate: 0 100%;
+      visibility: hidden;
+      transition:
+        translate var(--dur-base) var(--ease-out),
+        visibility 0s linear var(--dur-base);
     }
     @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
       .floating-contact {
@@ -132,3 +153,48 @@ const { locale } = Astro.props;
     }
   }
 </style>
+
+<script>
+  const bar = document.querySelector<HTMLElement>('[data-floating-contact]');
+  /** Input types that bring up no keyboard or picker. */
+  const NO_KEYBOARD = [
+    'checkbox',
+    'radio',
+    'button',
+    'submit',
+    'reset',
+    'range',
+    'color',
+    'file',
+    'image',
+    'hidden',
+  ];
+  /** Fields that bring up the on-screen keyboard (or a picker) when focused. */
+  const TYPING_FIELD = [
+    'textarea',
+    'select',
+    '[contenteditable]:not([contenteditable="false"])',
+    `input:not(${NO_KEYBOARD.map((type) => `[type="${type}"]`).join(', ')})`,
+  ].join(', ');
+  const touch = matchMedia('(hover: none) and (pointer: coarse)');
+
+  if (bar) {
+    let queued = 0;
+    // Checked after the focus has settled: moving from one field to the next fires focusout
+    // before focusin, which must not flash the bar in between.
+    const sync = (): void => {
+      queued = 0;
+      const active = document.activeElement;
+      bar.toggleAttribute(
+        'data-typing',
+        touch.matches && active instanceof HTMLElement && active.matches(TYPING_FIELD),
+      );
+    };
+    const queue = (): void => {
+      if (!queued) queued = window.setTimeout(sync, 0);
+    };
+    document.addEventListener('focusin', queue);
+    document.addEventListener('focusout', queue);
+    touch.addEventListener('change', queue);
+  }
+</script>

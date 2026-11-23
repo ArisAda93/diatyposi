@@ -7,10 +7,7 @@ import { capsEl } from '~/lib/text';
 
 const rows = site.hours.map((entry) => ({
   label: entry.label.el,
-  value:
-    entry.ranges.length > 0
-      ? entry.ranges.map((range) => `${range.opens} – ${range.closes}`).join(', ')
-      : t('closed'),
+  ranges: entry.ranges.map((range) => `${range.opens} – ${range.closes}`),
   closed: entry.ranges.length === 0,
 }));
 ---
@@ -24,7 +21,16 @@ const rows = site.hours.map((entry) => ({
     {rows.map((row) => (
       <div class="hours-row">
         <dt>{row.label}</dt>
-        <dd class:list={['hours-value', { muted: row.closed }]}>{row.value}</dd>
+        <dd class:list={['hours-value', { muted: row.closed }]}>
+          {row.closed
+            ? t('closed')
+            : row.ranges.map((range, i) => (
+                <>
+                  {i > 0 && ', '}
+                  <span class="hours-range">{range}</span>
+                </>
+              ))}
+        </dd>
       </div>
     ))}
   </dl>
@@ -65,14 +71,25 @@ const rows = site.hours.map((entry) => ({
       border-bottom: 1px dotted var(--color-muted);
       transform: translateY(-0.3em);
     }
+    /* On a narrow phone the day may wrap (balanced); a time range never breaks, so two ranges
+       (“09:00 – 14:00, 17:00 – 21:00”) wrap only between them. */
     .hours-row dt {
       order: 0;
       font-weight: 600;
+      text-wrap: balance;
     }
     .hours-value {
       order: 2;
       font-variant-numeric: tabular-nums;
       text-align: right;
+    }
+    .hours-range {
+      white-space: nowrap;
+    }
+    @media (max-width: 359.98px) {
+      .hours-row {
+        gap: 0.5rem;
+      }
     }
   }
 </style>
