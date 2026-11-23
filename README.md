@@ -35,11 +35,10 @@ Open http://localhost:4321. Other commands:
 
 ## Before going live: values the owner must supply
 
-Contact data (phone 697 412 2163, e-mail, Viber, WhatsApp, address, map, opening hours) is real as of 2026-11-23. Search the code for `TODO(owner)` to find the rest. Also confirm the FormSubmit activation e-mail (see “Quote form delivery” below). Most live in **`src/data/site.ts`**; the domain and the privacy-policy details are noted in the table.
+The domain (`https://diatyposi.com`, `SITE_URL` in `astro.config.mjs`) and the contact data (phone 697 412 2163, e-mail, Viber, WhatsApp, address, map, opening hours) are real as of 2026-11-23. Search the code for `TODO(owner)` to find the rest. Also confirm the FormSubmit activation e-mail (see “Quote form delivery” below). Most live in **`src/data/site.ts`**; the privacy-policy details are noted in the table.
 
 | Value                                                                               | Where                                                                 | Placeholder now                                     |
 | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------- | --------------------------------------------------- |
-| Website domain                                                                      | `astro.config.mjs` → `SITE_URL`                                       | `https://www.diatyposi.gr`                          |
 | Shop coordinates                                                                    | `site.address.geo`                                                    | `0, 0`                                              |
 | City for service-page titles (Greek locative with article, e.g. `στην Αθήνα`)       | `site.address.locative`                                               | empty (no city in titles)                           |
 | Areas served (Greek city or area names, for structured data)                        | `site.address.areaServed`                                             | empty (service pages say the whole of Greece)       |
@@ -93,6 +92,8 @@ When the original AI/PDF/SVG arrives:
 2. Run `npm run brand-assets` to regenerate `public/favicon.svg`, `favicon.ico`, `favicon-32.png`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png` and `og.jpg`.
 
 ## Deploying (static hosting)
+
+**Live site:** https://diatyposi.com is the Cloudflare Worker `diatyposi` (static assets) on the owner's Cloudflare account. Its Git build runs `npm run build`, then `npx wrangler deploy --assets ./dist --name diatyposi`, for the `main` branch. As of 2026-11-23 pushes do not start that build on their own (check the Cloudflare Workers and Pages GitHub app's access to this repository); start it from Workers & Pages → diatyposi → Deployments until then.
 
 `npm run build` writes a fully static site to `dist/`. Any static host works; set the build command to `npm run build` and the output folder to `dist`.
 

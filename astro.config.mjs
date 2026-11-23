@@ -3,8 +3,8 @@ import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 
-// TODO(owner): replace with the real domain before going live.
-const SITE_URL = 'https://www.diatyposi.gr';
+// The live domain (Cloudflare Worker `diatyposi`): canonical links, sitemap, structured data.
+const SITE_URL = 'https://diatyposi.com';
 
 export default defineConfig({
   site: SITE_URL,

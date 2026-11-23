@@ -503,7 +503,7 @@ Not worth it: **11880.com** is a German directory ("Deutschlands größte Branch
 
 In order:
 
-1. **Domain:** set `SITE_URL` in `astro.config.mjs` to the real domain (one host, e.g. `https://www.<domain>`). Redirect the other variants (http, non-www) with 301 at the host.
+1. **Domain:** done: `SITE_URL` in `astro.config.mjs` is `https://diatyposi.com` (no www). Redirect the other variants (http, `www.diatyposi.com`) to it with 301 in Cloudflare (a redirect rule on the zone).
 2. **Owner values:** fill every `TODO(owner)` left (`grep -rn "TODO(owner)" src astro.config.mjs`). Phone, e-mail, Viber, WhatsApp, street, city, postcode, the map (`mapQuery`, `mapPlaceId`, `mapUrl`) and hours are real now. Still open: `geo` (at least 5 decimals, per [Google](https://developers.google.com/search/docs/appearance/structured-data/local-business)), `locative` and `areaServed` (step 3), Facebook and Instagram URLs, the about photo and real work photos, privacy-policy legal details.
 3. **Locality:** set `site.address.locative` (e.g. "στην Αθήνα", "στο Περιστέρι", "στη Θεσσαλονίκη"; see §3.1) and `site.address.areaServed` (the municipalities the shop really serves).
 4. **Structured data switch:** set `site.contactIsPlaceholder = false` only after steps 2–3 are real.

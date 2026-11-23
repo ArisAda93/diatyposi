@@ -19,7 +19,7 @@ export interface Crumb {
   path: string;
 }
 
-/** The site root with a trailing slash, e.g. 'https://www.diatyposi.gr/'. */
+/** The site root with a trailing slash, e.g. 'https://diatyposi.com/'. */
 const baseOf = (siteUrl: string | URL): string => new URL('/', siteUrl).href;
 const businessId = (base: string): string => `${base}#business`;
 

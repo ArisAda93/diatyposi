@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ServicePageCopy } from '../src/i18n/service-page-types';
 
-const SITE = 'https://www.diatyposi.gr';
+const SITE = 'https://diatyposi.com';
 
 afterEach(() => {
   vi.resetModules();
@@ -32,21 +32,21 @@ const copy: ServicePageCopy = {
 describe('buildLocalBusiness', () => {
   it('describes the business with absolute URLs and all ten services', async () => {
     const { buildLocalBusiness } = await import('../src/lib/seo');
-    const data = buildLocalBusiness('https://www.diatyposi.gr');
+    const data = buildLocalBusiness('https://diatyposi.com');
     expect(data['@type']).toBe('LocalBusiness');
     expect(data.name).toBe('ΔΙΑΤΥΠΩΣΗ');
-    expect(data.url).toBe('https://www.diatyposi.gr/');
-    expect(data.logo).toBe('https://www.diatyposi.gr/icon-512.png');
+    expect(data.url).toBe('https://diatyposi.com/');
+    expect(data.logo).toBe('https://diatyposi.com/icon-512.png');
     const catalog = data.hasOfferCatalog as { itemListElement: { itemOffered: { url: string } }[] };
     expect(catalog.itemListElement).toHaveLength(10);
     expect(catalog.itemListElement[0]?.itemOffered.url).toBe(
-      'https://www.diatyposi.gr/ypiresies/diafimistika-dora/',
+      'https://diatyposi.com/ypiresies/diafimistika-dora/',
     );
   });
 
   it('leaves placeholder contact details out', async () => {
     const { buildLocalBusiness } = await import('../src/lib/seo');
-    const data = buildLocalBusiness('https://www.diatyposi.gr');
+    const data = buildLocalBusiness('https://diatyposi.com');
     expect(data).not.toHaveProperty('telephone');
     expect(data).not.toHaveProperty('address');
     expect(data).not.toHaveProperty('openingHoursSpecification');
@@ -93,7 +93,7 @@ describe('buildLocalBusiness', () => {
       },
     }));
     const { buildLocalBusiness } = await import('../src/lib/seo');
-    const data = buildLocalBusiness('https://www.diatyposi.gr');
+    const data = buildLocalBusiness('https://diatyposi.com');
     expect(data.telephone).toBe(actual.site.contact.phone);
     expect(data.address).toMatchObject({ '@type': 'PostalAddress', addressCountry: 'GR' });
     expect(data.openingHoursSpecification).toEqual([
@@ -147,11 +147,11 @@ describe('buildWebSite', () => {
     const { buildWebSite } = await import('../src/lib/seo');
     const data = buildWebSite(SITE);
     expect(data['@type']).toBe('WebSite');
-    expect(data['@id']).toBe('https://www.diatyposi.gr/#website');
-    expect(data.url).toBe('https://www.diatyposi.gr/');
+    expect(data['@id']).toBe('https://diatyposi.com/#website');
+    expect(data.url).toBe('https://diatyposi.com/');
     expect(data.inLanguage).toBe('el-GR');
     expect(data.alternateName).toContain('Diatyposi');
-    expect(data.publisher).toEqual({ '@id': 'https://www.diatyposi.gr/#business' });
+    expect(data.publisher).toEqual({ '@id': 'https://diatyposi.com/#business' });
     expect(data).not.toHaveProperty('potentialAction');
   });
 });
@@ -167,10 +167,10 @@ describe('buildBreadcrumbs', () => {
     expect(data['@type']).toBe('BreadcrumbList');
     const items = data.itemListElement as { position: number; name: string; item: string }[];
     expect(items.map((i) => i.position)).toEqual([1, 2, 3]);
-    expect(items[0]?.item).toBe('https://www.diatyposi.gr/');
+    expect(items[0]?.item).toBe('https://diatyposi.com/');
     expect(items[2]).toMatchObject({
       name: 'Διαφημιστικά δώρα',
-      item: 'https://www.diatyposi.gr/ypiresies/diafimistika-dora/',
+      item: 'https://diatyposi.com/ypiresies/diafimistika-dora/',
     });
   });
 });
@@ -206,10 +206,10 @@ describe('buildServiceNode', () => {
     const service = services[0]!;
     const data = buildServiceNode(SITE, service, copy);
     expect(data['@type']).toBe('Service');
-    expect(data['@id']).toBe('https://www.diatyposi.gr/ypiresies/diafimistika-dora/#service');
+    expect(data['@id']).toBe('https://diatyposi.com/ypiresies/diafimistika-dora/#service');
     expect(data.name).toBe(service.text.el.title);
     expect(data.description).toBe(copy.metaDescription);
-    expect(data.provider).toEqual({ '@id': 'https://www.diatyposi.gr/#business' });
+    expect(data.provider).toEqual({ '@id': 'https://diatyposi.com/#business' });
     const catalog = data.hasOfferCatalog as { itemListElement: unknown[] };
     expect(catalog.itemListElement).toHaveLength(service.text.el.products.length);
   });
@@ -229,7 +229,7 @@ describe('buildFaqPage', () => {
     const { buildFaqPage } = await import('../src/lib/seo');
     const data = buildFaqPage(SITE, '/ypiresies/diafimistika-dora/', copy.faq);
     expect(data['@type']).toBe('FAQPage');
-    expect(data['@id']).toBe('https://www.diatyposi.gr/ypiresies/diafimistika-dora/#faq');
+    expect(data['@id']).toBe('https://diatyposi.com/ypiresies/diafimistika-dora/#faq');
     const questions = data.mainEntity as { name: string; acceptedAnswer: { text: string } }[];
     expect(questions).toHaveLength(2);
     expect(questions[0]?.name).toBe('Ποια είναι η ελάχιστη ποσότητα;');
