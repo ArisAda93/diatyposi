@@ -1,12 +1,13 @@
 ---
 /**
- * Contact page, left column: phone, mobile, email and address from `site`, quick Viber and
- * WhatsApp links, opening hours and social links. Rows answer the pointer (the term darkens, a
- * key rule runs in at the row's start); the social links sink on press.
+ * Contact page, left column: phone (the owner's mobile, the shop's only phone), email and address
+ * from `site`, quick Viber and WhatsApp links (both open the app), opening hours and social
+ * links. Rows answer the pointer (the term darkens, a key rule runs in at the row's start); the
+ * social links sink on press.
  *
- * The phone, mobile and email rows are tap targets end to end: the link's hit area stretches
- * over its whole row (`.cd-action::after`), and a small plate at the row's end shows what a tap
- * does (call, write). A press prints that plate in key.
+ * The phone and email rows are tap targets end to end: the link's hit area stretches over its
+ * whole row (`.cd-action::after`), and a small plate at the row's end shows what a tap does
+ * (call, write). A press prints that plate in key.
  */
 import Icon from '~/components/Icon.astro';
 import OpeningHours from './OpeningHours.astro';
@@ -31,17 +32,6 @@ const text = contactText.el.details;
           <dd>
             <a href={telHref(site.contact.phone)} class="cd-big cd-action link-draw">
               {site.contact.phoneDisplay}
-            </a>
-            <span class="cd-go" aria-hidden="true">
-              <Icon name="phone" size={20} />
-            </span>
-          </dd>
-        </div>
-        <div class="cd-row cd-row-link">
-          <dt class="cd-term">{t('mobileLabel')}</dt>
-          <dd>
-            <a href={telHref(site.contact.mobile)} class="cd-big cd-action link-draw">
-              {site.contact.mobileDisplay}
             </a>
             <span class="cd-go" aria-hidden="true">
               <Icon name="phone" size={20} />
@@ -78,17 +68,9 @@ const text = contactText.el.details;
         <Icon name="viber" />
         <span>{text.viber}</span>
       </a>
-      <a
-        href={whatsappHref(site.contact.whatsapp)}
-        class="btn btn-secondary"
-        target="_blank"
-        rel="noopener"
-      >
+      <a href={whatsappHref(site.contact.whatsapp)} class="btn btn-secondary">
         <Icon name="whatsapp" />
-        <span>
-          {text.whatsapp}
-          <span class="sr-only">{` ${t('newTab')}`}</span>
-        </span>
+        <span>{text.whatsapp}</span>
       </a>
     </div>
   </div>

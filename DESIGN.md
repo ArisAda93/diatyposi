@@ -84,7 +84,7 @@ Hover: buttons get a CMY plate shadow that collapses into register on press; lin
 
 ## 6. Pages (wireframes in words)
 
-**Shared header.** Sticky paper bar, 72 px. Left: compact logo (arches + wordmark). Centre-right: nav (Αρχική, Υπηρεσίες, Έργα, Η εταιρεία, Επικοινωνία) with a drawn underline for the current page. Right: phone button with icon and number (from 1280 px; a phone icon button between 1024 and 1279 px), then the key-black “Ζητήστε προσφορά”. Under 1024 px: logo, phone icon button, “Μενού” button opening a full-screen paper menu (large display links, phone, CTA, socials; focus trapped; Esc closes).
+**Shared header.** Sticky paper bar, 72 px. Left: compact logo (arches + wordmark). Centre-right: nav (Αρχική, Υπηρεσίες, Η εταιρεία, Επικοινωνία; Έργα is hidden while under development, `hiddenSections.work` in `src/data/site.ts`) with a drawn underline for the current page. Right: phone button with icon and number (from 1280 px; a phone icon button between 1024 and 1279 px), then the key-black “Ζητήστε προσφορά”. Under 1024 px: logo, phone icon button, “Μενού” button opening a full-screen paper menu (large display links, phone, CTA, socials; focus trapped; Esc closes).
 
 **Shared footer.** Solid ink. Colour bar on top. Three columns: logo (paper wordmark) with the tagline in Comfortaa; services list; contact details with the social links under them. Bottom row: © year, privacy link.
 
@@ -93,20 +93,20 @@ Hover: buttons get a CMY plate shadow that collapses into register on press; lin
 ### Αρχική
 
 1. **Hero (one screen, round 3 §8).** One composed block on the left 7 of 12 columns: the red label, the two-line h1 “Η ιδέα σας… / γίνεται δημιουργία!”, a registration hairline, the owner's intro paragraph as its lead, two buttons and “Γνωρίστε μας”. On the right, the arches in motion (the metamorphosis loop). Crop marks, a colour bar and the scroll cue at the sheet foot. Phones: the art above the copy.
-2. **Services showcase** (round 2, §7). h2 left, link right. Desktop: a sticky 3D “plate” previews the active service (photo, icon, number, lead sentence) in that service's ink. The change between services is a C/M/Y registration transition. Beside it, an index of the nine services, in the owner's order, as large typographic rows linking to each service's own page (/ypiresies/<slug>/). Phones: rows with thumbnails.
+2. **Services showcase** (round 2, §7). h2 left, link right. Desktop: a sticky 3D “plate” previews the active service (photo, icon, number, lead sentence) in that service's ink. The change between services is a C/M/Y registration transition. Beside it, an index of the ten services, in the owner's order, as large typographic rows linking to each service's own page (/ypiresies/<slug>/). Phones: rows with thumbnails.
 3. **Μία ιδέα. Παντού. (round 3 §8).** Replaces the process section. A sticky stage on desktop where one sample mark (“Η επωνυμία σας”) is sketched, printed plate by plate and then lands on a business card, a T-shirt, a shop sign, a mug and a social post, while seven short steps scroll past, each linking to its service. It closes with “Τι θα θέλατε να φτιάξουμε;”: toggle chips that build a quote link with every chosen service pre-selected, and three promises. Phones, reduced motion and no JS: each step shows its finished illustration.
-4. **Selected work.** An editorial, staggered set of four images of different sizes on their own parallax depths, with numbered captions, “Δείτε όλα τα έργα”.
+4. **Selected work** (hidden while `hiddenSections.work`; the sections after it renumber). An editorial, staggered set of four images of different sizes on their own parallax depths, with numbered captions, “Δείτε όλα τα έργα”.
 5. **Values strip.** The owner's paragraph “Για εμάς…” on the left; on the right four rows, each a colour-bar patch (C, M, Y, K) that prints in on scroll, and one value in display type.
 6. **Statement.** Full-bleed ink section, halftone arches in the background, the tagline in display-l paper type.
 7. **Contact band.** Yellow band, ink text, a short line and two buttons (offer, call).
 
 ### Υπηρεσίες
 
-Page header (h1, short intro). Desktop: a slim sticky rail index of the nine services with CMYK reading-progress fill. Beside it, nine calm chapters on paper (round 2, §7). Each chapter has: a plate-colour rule; a folio with icon and number; h2 (owner's title); the photo in a crop-marked 3D frame that straightens on scroll; a giant number behind, tinted and outlined in the chapter's ink (round 5); the description at lead size; “Συνήθεις εργασίες” as tag chips; “Ζητήστε προσφορά για αυτό”, which pre-selects the service in the form, and “Περισσότερα για την υπηρεσία”, which opens the service's own page. Mobile: the index becomes a horizontal chip row.
+Page header (h1, short intro). Desktop: a slim sticky rail index of the ten services with CMYK reading-progress fill. Beside it, ten calm chapters on paper (round 2, §7). Each chapter has: a plate-colour rule; a folio with icon and number; h2 (owner's title); the photo in a crop-marked 3D frame that straightens on scroll; a giant number behind, tinted and outlined in the chapter's ink (round 5); the description at lead size; “Συνήθεις εργασίες” as tag chips; “Ζητήστε προσφορά για αυτό”, which pre-selects the service in the form, and “Περισσότερα για την υπηρεσία”, which opens the service's own page. Mobile: the index becomes a horizontal chip row.
 
 ### Μία υπηρεσία (`/ypiresies/<slug>/`)
 
-One page per service, nine from one template, each in the service's plate ink (its colour on Υπηρεσίες). A quiet breadcrumb trail under the header (Αρχική › Υπηρεσίες › the service, the current page as plain text). Page header: the service's short name as the label, the keyword-led h1 and a short intro. 01 the service: the owner's title as the h2; the photo in a crop-marked frame with a halftone under-plate beside the description, “Συνήθεις εργασίες” as tag chips and “Ζητήστε προσφορά”, which pre-selects the service; then two to four body sections, each a hairline, its h2 on the left and a reading column on the right (stacked on phones). 02 Συχνές ερωτήσεις: native expandable rows between hairlines, every answer in the page, a square plus marker that fills with the page's ink when open. 03 Σχετικές υπηρεσίες: two or three linked cards (ink rule, plate icon, short name, first sentence), with “Δείτε όλες τις υπηρεσίες” in the head. Contact band. No script of its own.
+One page per service, ten from one template, each in the service's plate ink (its colour on Υπηρεσίες). A quiet breadcrumb trail under the header (Αρχική › Υπηρεσίες › the service, the current page as plain text). Page header: the service's short name as the label, the keyword-led h1 and a short intro. 01 the service: the owner's title as the h2; the photo in a crop-marked frame with a halftone under-plate beside the description, “Συνήθεις εργασίες” as tag chips and “Ζητήστε προσφορά”, which pre-selects the service; then two to four body sections, each a hairline, its h2 on the left and a reading column on the right (stacked on phones). 02 Συχνές ερωτήσεις: native expandable rows between hairlines, every answer in the page, a square plus marker that fills with the page's ink when open. 03 Σχετικές υπηρεσίες: two or three linked cards (ink rule, plate icon, short name, first sentence), with “Δείτε όλες τις υπηρεσίες” in the head. Contact band. No script of its own.
 
 ### Έργα
 
@@ -118,11 +118,11 @@ Page header with the owner's intro. A two-column block: the photo slot (a crop-m
 
 ### Επικοινωνία
 
-Page header. Two columns: left, contact details, hours table, social links, the click-to-load map; right, the quote form (anchor `#prosfora`). After a valid submit, a panel shows the composed message and three send buttons (Email, Viber, WhatsApp) plus the note that files can be attached in the email or chat.
+Page header. Two columns: left, contact details, hours table, social links, the Google map of the shop (the whole box opens Google Maps); right, the quote form (anchor `#prosfora`). A valid submit sends the request to the owner's inbox through FormSubmit (front end only); a panel confirms it, or, if sending fails, offers Email, Viber and WhatsApp with the composed text.
 
 ### Πολιτική απορρήτου
 
-Plain reading page (max 68ch), honest about what the site does (no cookies, no analytics, map loads on click). Marked for the owner's legal review.
+Plain reading page (max 68ch), honest about what the site does (no cookies of its own, no analytics; the Google map loads with the contact page and the quote form goes through FormSubmit). Marked for the owner's legal review.
 
 ### 404
 
@@ -146,7 +146,7 @@ The owner asked for one unified header and hero, a full-hero motion graphic buil
   Every effect is off under reduced motion, except the scroll-progress hairline, which is a direct, non-animated mapping of the scroll position. Pointer effects are off on touch devices. No effect hides content when JS is unavailable.
 
 - **Statement.** An interactive halftone field prints the arches in dots, which swell around the pointer.
-- **Services (home).** A sticky 3D "plate" previews the active service; the change between services is a registration transition. Beside it, a large typographic index of the nine services.
+- **Services (home).** A sticky 3D "plate" previews the active service; the change between services is a registration transition. Beside it, a large typographic index of the ten services.
 - **Services page.** Calm editorial chapters: a photo in a 3D frame that straightens on scroll, a giant tinted number, a plate-colour rule, product tags, and a rail index with CMYK progress.
 
 ## 8. Notes on skills

@@ -65,7 +65,6 @@ export const buildLocalBusiness = (siteUrl: string | URL, locale: Locale = 'el')
   };
 
   if (!site.contactIsPlaceholder) {
-    const mapQuery = encodeURIComponent(site.address.mapQuery);
     Object.assign(data, {
       telephone: site.contact.phone,
       email: site.contact.email,
@@ -82,8 +81,9 @@ export const buildLocalBusiness = (siteUrl: string | URL, locale: Locale = 'el')
         latitude: site.address.geo.lat,
         longitude: site.address.geo.lng,
       },
-      // The same "open in Google Maps" search the contact page links to (MapEmbed.astro).
-      hasMap: `https://www.google.com/maps/search/?api=1&query=${mapQuery}`,
+      // The owner's Google Maps link to the shop, the one the contact page's map opens.
+      hasMap: site.address.mapUrl,
+      // Closed days (no ranges) are left out: schema.org reads a missing day as closed.
       openingHoursSpecification: site.hours
         .filter((h) => h.ranges.length > 0)
         .flatMap((h) =>

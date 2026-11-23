@@ -76,6 +76,6 @@ export const serviceDiafimistikaDoraText = {
         a: 'Ναι, και αυτό είναι το πλεονέκτημα του ενός συνεργάτη. Τυπώνουμε το λογότυπό σας σε δώρα, μπλουζάκια, κάρτες και έντυπα, με την ίδια εικόνα παντού.',
       },
     ],
-    related: ['mplouzakia-rouxismos', 'grafistikos-sxediasmos', 'kartes-fylladia-entypa'],
+    related: ['mplouzakia-rouxismos', 'grafistikos-sxediasmos', '3d-ektyposeis'],
   },
 } satisfies ServicePageText;

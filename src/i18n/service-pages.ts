@@ -8,6 +8,7 @@ import type { ServicePageCopy, ServicePageText } from './service-page-types';
 import type { Locale } from './ui';
 import { serviceDiafimistikaDoraText } from './pages/service-diafimistika-dora';
 import { serviceMplouzakiaRouxismosText } from './pages/service-mplouzakia-rouxismos';
+import { service3dEktyposeisText } from './pages/service-3d-ektyposeis';
 import { serviceGrafistikosSxediasmosText } from './pages/service-grafistikos-sxediasmos';
 import { serviceBannersAfisesMousamadesText } from './pages/service-banners-afises-mousamades';
 import { serviceEpigrafesAftokollitaVitrinesText } from './pages/service-epigrafes-aftokollita-vitrines';
@@ -19,6 +20,7 @@ import { serviceProsklitiriaKartesText } from './pages/service-prosklitiria-kart
 const copyBySlug = new Map<string, ServicePageText>([
   ['diafimistika-dora', serviceDiafimistikaDoraText],
   ['mplouzakia-rouxismos', serviceMplouzakiaRouxismosText],
+  ['3d-ektyposeis', service3dEktyposeisText],
   ['grafistikos-sxediasmos', serviceGrafistikosSxediasmosText],
   ['banners-afises-mousamades', serviceBannersAfisesMousamadesText],
   ['epigrafes-aftokollita-vitrines', serviceEpigrafesAftokollitaVitrinesText],

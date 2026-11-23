@@ -81,31 +81,28 @@ export const site = {
   contactIsPlaceholder: true,
 
   contact: {
-    // TODO(owner): landline, international format without spaces.
-    phone: '+302100000000',
-    phoneDisplay: '210 000 0000',
-    // TODO(owner): mobile, international format without spaces.
-    mobile: '+306900000000',
-    mobileDisplay: '690 000 0000',
-    // TODO(owner): public e-mail address.
-    email: 'info@diatyposi.example',
-    // TODO(owner): Viber number (international, no spaces, no +).
-    viber: '306900000000',
-    // TODO(owner): WhatsApp number (international, no spaces, no +).
-    whatsapp: '306900000000',
+    /** The owner's mobile, the shop's only phone (there is no landline). International, no spaces. */
+    phone: '+306974122163',
+    phoneDisplay: '697 412 2163',
+    email: 'dafnomilispeter@gmail.com',
+    /** Viber number (international, no spaces, no +). */
+    viber: '306974122163',
+    /** WhatsApp number (international, no spaces, no +). */
+    whatsapp: '306974122163',
   },
 
   address: {
-    // TODO(owner): street and number.
-    street: 'Οδός Παραδείγματος 1',
-    // TODO(owner): city or town.
-    city: 'Πόλη',
-    // TODO(owner): postcode.
-    postalCode: '00000',
-    region: 'Ελλάδα',
+    street: 'Ελ. Βενιζέλου 226',
+    city: 'Γάζι Ηρακλείου',
+    postalCode: '714 14',
+    region: 'Κρήτη',
     country: 'GR',
-    /** Text used for the click-to-load Google map. TODO(owner): check it finds the shop. */
-    mapQuery: 'ΔΙΑΤΥΠΩΣΗ Διαφήμιση Εκτυπώσεις',
+    /** Address as Google Maps knows it: the query of the embedded map. */
+    mapQuery: 'Ελ. Βενιζέλου 226, Γάζι 714 14',
+    /** Google's id of the shop's place (from the owner's share link): pins the business itself. */
+    mapPlaceId: '0x149a5715a9164429:0xe5509f386ea99da8',
+    /** The owner's Google Maps share link: opens the shop in the Google Maps app or site. */
+    mapUrl: 'https://maps.app.goo.gl/5qruSfzat3Tdy5386',
     // TODO(owner): shop coordinates (decimal degrees). Used for JSON-LD only.
     geo: { lat: 0, lng: 0 },
     /**
@@ -122,22 +119,32 @@ export const site = {
     areaServed: [] as string[],
   },
 
-  // TODO(owner): real opening hours.
+  /** Owner's opening hours, in weekday order. */
   hours: [
     {
-      days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-      label: { el: 'Δευτέρα – Παρασκευή' },
-      ranges: [{ opens: 'ΧΧ:ΧΧ', closes: 'ΧΧ:ΧΧ' }],
+      days: ['Monday'],
+      label: { el: 'Δευτέρα' },
+      ranges: [{ opens: '09:00', closes: '21:00' }],
+    },
+    {
+      days: ['Tuesday', 'Wednesday', 'Thursday'],
+      label: { el: 'Τρίτη – Πέμπτη' },
+      ranges: [{ opens: '15:00', closes: '21:00' }],
+    },
+    {
+      days: ['Friday'],
+      label: { el: 'Παρασκευή' },
+      ranges: [{ opens: '09:00', closes: '21:00' }],
     },
     {
       days: ['Saturday'],
       label: { el: 'Σάββατο' },
-      ranges: [{ opens: 'ΧΧ:ΧΧ', closes: 'ΧΧ:ΧΧ' }],
+      ranges: [{ opens: '09:00', closes: '18:00' }],
     },
     {
       days: ['Sunday'],
       label: { el: 'Κυριακή' },
-      ranges: [{ opens: 'ΧΧ:ΧΧ', closes: 'ΧΧ:ΧΧ' }],
+      ranges: [],
     },
   ] satisfies OpeningHours[],
 
@@ -156,13 +163,27 @@ export const site = {
 // Navigation
 // ---------------------------------------------------------------------------------------------
 
-export const nav: NavItem[] = [
+/**
+ * Sections still under development: hidden from the menus and the home page and marked noindex,
+ * but still built. To turn one back on, set its flag to false and remove its sitemap filter in
+ * astro.config.mjs.
+ */
+export const hiddenSections = {
+  /** /erga/ (portfolio page) and the home page's work teaser. */
+  work: true,
+} as const;
+
+const allNav: NavItem[] = [
   { href: '/', label: { el: 'Αρχική' } },
   { href: '/ypiresies/', label: { el: 'Υπηρεσίες' } },
   { href: '/erga/', label: { el: 'Έργα' } },
   { href: '/etaireia/', label: { el: 'Η εταιρεία' } },
   { href: '/epikoinonia/', label: { el: 'Επικοινωνία' } },
 ];
+
+export const nav: NavItem[] = allNav.filter(
+  (item) => !(hiddenSections.work && item.href === '/erga/'),
+);
 
 export const routes = {
   home: '/',
@@ -221,7 +242,8 @@ export const services: Service[] = [
           'Τσάντες υφασμάτινες',
           'Προσωποποιημένα δώρα',
         ],
-        imageAlt: 'Δύο απλές κεραμικές κούπες σε ξύλινο δίσκο',
+        imageAlt:
+          'Κούπες, ποτήρι, στυλό, σημειωματάριο, μπλοκ και υφασμάτινη τσάντα με το ίδιο λογότυπο, και κούπα με παιδική ζωγραφιά',
       },
     },
   },
@@ -241,7 +263,32 @@ export const services: Service[] = [
           'Φούτερ, καπέλα και ποδιές',
           'Μπλουζάκια για εκδηλώσεις και ομάδες',
         ],
-        imageAlt: 'Μεταξοτυπία: χέρια περνούν τη ράκλα πάνω από το τελάρο με χρώματα',
+        imageAlt:
+          'Μπλουζάκια ομάδας με λογότυπο σε κρεμάστρα και ρούχα εργασίας με το ίδιο λογότυπο: πόλο, ποδιά, καπέλο και φούτερ',
+      },
+    },
+  },
+  // Added after the owner's original nine: the title is new wording too, so all of this entry is
+  // for the owner's review (CONTENT_REVIEW.md). TODO(owner): confirm whether you also draw the 3D
+  // model from an idea or a sketch, or print from the customer's file only.
+  {
+    slug: '3d-ektyposeis',
+    icon: 'print3d',
+    image: '3d-ektyposeis-01.jpg',
+    text: {
+      el: {
+        title: 'Τρισδιάστατες εκτυπώσεις (3D printing)',
+        short: '3D εκτυπώσεις',
+        description:
+          'Πρωτότυπα, ανταλλακτικά, φιγούρες, δώρα και διακοσμητικά, τυπωμένα σε τρεις διαστάσεις από το δικό σας αρχείο. Έχετε μόνο την ιδέα; Φέρτε μας ένα σκίτσο ή μια φωτογραφία, και θα σας πούμε αν και πώς μπορεί να γίνει.',
+        products: [
+          'Πρωτότυπα και μακέτες',
+          'Ανταλλακτικά και μικρά εξαρτήματα',
+          'Φιγούρες, δώρα και διακοσμητικά',
+          'Τρισδιάστατα γράμματα και λογότυπα',
+        ],
+        imageAlt:
+          '3D εκτυπωτής τυπώνει ένα κομμάτι δίπλα σε έτοιμα αντικείμενα: ανταλλακτικό, μακέτα σπιτιού, φιγούρα και γράμματα',
       },
     },
   },
@@ -261,7 +308,8 @@ export const services: Service[] = [
           'Ανανέωση υπάρχουσας εικόνας',
           'Αρχεία έτοιμα για εκτύπωση',
         ],
-        imageAlt: 'Χέρια σχεδιάζουν με μολύβι προσχέδια λογοτύπου σε ξύλινο γραφείο',
+        imageAlt:
+          'Σκίτσα λογοτύπου, το τελικό λογότυπο σε φορητό υπολογιστή, κάρτες, επιστολόχαρτο, φάκελος, σακούλα και αυτοκόλλητα',
       },
     },
   },
@@ -281,7 +329,8 @@ export const services: Service[] = [
           'Μουσαμάδες για προσόψεις και εκδηλώσεις',
           'Πανό για εκθέσεις',
         ],
-        imageAlt: 'Μεγάλο λευκό πανό σε τοίχο από τούβλα',
+        imageAlt:
+          'Μουσαμάς στην πρόσοψη, roll-up banner στην είσοδο και αφίσα στη βιτρίνα ενός ανθοπωλείου',
       },
     },
   },
@@ -301,7 +350,8 @@ export const services: Service[] = [
           'Αυτοκόλλητα οχημάτων',
           'Ετικέτες και αυτοκόλλητα προϊόντων',
         ],
-        imageAlt: 'Χέρια με γάντια τοποθετούν λευκό βινύλιο σε καπό αυτοκινήτου',
+        imageAlt:
+          'Επιγραφή και αυτοκόλλητα βιτρίνας σε κατάστημα με τοπικά προϊόντα, και αυτοκόλλητο λογότυπο στην πόρτα ενός βαν',
       },
     },
   },
@@ -321,7 +371,8 @@ export const services: Service[] = [
           'Προσκλήσεις και ανακοινώσεις σε ψηφιακή μορφή',
           'Ενιαία εικόνα σε έντυπα και οθόνες',
         ],
-        imageAlt: 'Σχεδιασμός ανάρτησης για τα social media σε φορητό υπολογιστή',
+        imageAlt:
+          'Σειρά αναρτήσεων σε φορητό υπολογιστή, story σε κινητό και τάμπλετ, δίπλα σε φυλλάδιο και κάρτες στο ίδιο ύφος',
       },
     },
   },
@@ -341,7 +392,8 @@ export const services: Service[] = [
           'Επιλογή χαρτιού και φινιρίσματος',
           'Έλεγχος χρώματος πριν από την εκτύπωση',
         ],
-        imageAlt: 'Μηχανή όφσετ με στοίβα από τυπωμένα φύλλα',
+        imageAlt:
+          'Μηχανή όφσετ με φρεσκοτυπωμένα φύλλα και χρωματική κλίμακα, μεγεθυντικός φακός, έτοιμα έντυπα και δείγματα χαρτιού',
       },
     },
   },
@@ -361,7 +413,8 @@ export const services: Service[] = [
           'Κατάλογοι και μενού',
           'Επιστολόχαρτα, φάκελοι και μπλοκ',
         ],
-        imageAlt: 'Στοίβα από λευκές επαγγελματικές κάρτες σε παστέλ φόντο',
+        imageAlt:
+          'Επαγγελματικές κάρτες, τρίπτυχο, καρτ ποστάλ, επιστολόχαρτο, φάκελος και μπλοκ στο ίδιο σχέδιο',
       },
     },
   },
@@ -381,7 +434,8 @@ export const services: Service[] = [
           'Μενού και καρτελάκια τραπεζιού',
           'Ειδικές κατασκευές κατόπιν συνεννόησης',
         ],
-        imageAlt: 'Σετ προσκλητηρίων γάμου με φάκελο, κορδέλα και αποξηραμένα στάχυα',
+        imageAlt:
+          'Σετ προσκλητηρίων με φάκελο και κορδέλα, μενού και καρτελάκια τραπεζιού, με κλαδιά ελιάς σε λινό ύφασμα',
       },
     },
   },
@@ -403,8 +457,8 @@ export const portfolio: PortfolioItem[] = [
     featured: true,
     text: {
       el: {
-        title: 'Επαγγελματικές κάρτες',
-        alt: 'Στοίβα από λευκές επαγγελματικές κάρτες σε παστέλ φόντο',
+        title: 'Κάρτες και έντυπα',
+        alt: 'Επαγγελματικές κάρτες, τρίπτυχο, καρτ ποστάλ, επιστολόχαρτο, φάκελος και μπλοκ στο ίδιο σχέδιο',
       },
     },
   },
@@ -413,7 +467,12 @@ export const portfolio: PortfolioItem[] = [
     service: 'banners-afises-mousamades',
     standIn: true,
     featured: true,
-    text: { el: { title: 'Πανό μεγάλου μεγέθους', alt: 'Μεγάλο λευκό πανό σε τοίχο από τούβλα' } },
+    text: {
+      el: {
+        title: 'Μουσαμάς, roll-up και αφίσα',
+        alt: 'Μουσαμάς στην πρόσοψη, roll-up banner στην είσοδο και αφίσα στη βιτρίνα ενός ανθοπωλείου',
+      },
+    },
   },
   {
     image: 'rouxismos-01.jpg',
@@ -422,8 +481,8 @@ export const portfolio: PortfolioItem[] = [
     featured: true,
     text: {
       el: {
-        title: 'Μεταξοτυπία',
-        alt: 'Χέρια περνούν τη ράκλα πάνω από τελάρο μεταξοτυπίας με χρώματα',
+        title: 'Μπλουζάκια και ρούχα εργασίας',
+        alt: 'Μπλουζάκια ομάδας με λογότυπο σε κρεμάστρα και ρούχα εργασίας με το ίδιο λογότυπο: πόλο, ποδιά, καπέλο και φούτερ',
       },
     },
   },
@@ -433,20 +492,33 @@ export const portfolio: PortfolioItem[] = [
     standIn: true,
     featured: true,
     text: {
-      el: { title: 'Προσκλητήρια γάμου', alt: 'Σετ προσκλητηρίων γάμου με φάκελο και κορδέλα' },
+      el: {
+        title: 'Προσκλητήρια και καρτελάκια',
+        alt: 'Σετ προσκλητηρίων με φάκελο και κορδέλα, μενού και καρτελάκια τραπεζιού, με κλαδιά ελιάς σε λινό ύφασμα',
+      },
     },
   },
   {
     image: 'grafistiko-01.jpg',
     service: 'grafistikos-sxediasmos',
     standIn: true,
-    text: { el: { title: 'Σχεδιασμός λογοτύπου', alt: 'Προσχέδια λογοτύπου με μολύβι σε χαρτί' } },
+    text: {
+      el: {
+        title: 'Λογότυπο και εταιρική ταυτότητα',
+        alt: 'Σκίτσα λογοτύπου, το τελικό λογότυπο σε φορητό υπολογιστή, κάρτες, επιστολόχαρτο, φάκελος, σακούλα και αυτοκόλλητα',
+      },
+    },
   },
   {
     image: 'ektyposeis-01.jpg',
     service: 'psifiakes-offset-ektyposeis',
     standIn: true,
-    text: { el: { title: 'Offset εκτύπωση', alt: 'Μηχανή όφσετ με στοίβα από τυπωμένα φύλλα' } },
+    text: {
+      el: {
+        title: 'Offset εκτύπωση',
+        alt: 'Μηχανή όφσετ με φρεσκοτυπωμένα φύλλα και χρωματική κλίμακα, μεγεθυντικός φακός, έτοιμα έντυπα και δείγματα χαρτιού',
+      },
+    },
   },
   {
     image: 'ektyposeis-02.jpg',
@@ -467,7 +539,10 @@ export const portfolio: PortfolioItem[] = [
     service: 'epigrafes-aftokollita-vitrines',
     standIn: true,
     text: {
-      el: { title: 'Επικάλυψη με βινύλιο', alt: 'Τοποθέτηση λευκού βινυλίου σε καπό αυτοκινήτου' },
+      el: {
+        title: 'Επιγραφή και αυτοκόλλητα βιτρίνας',
+        alt: 'Επιγραφή και αυτοκόλλητα βιτρίνας σε κατάστημα με τοπικά προϊόντα, και αυτοκόλλητο λογότυπο στην πόρτα ενός βαν',
+      },
     },
   },
   {
@@ -482,14 +557,33 @@ export const portfolio: PortfolioItem[] = [
     image: 'dora-01.jpg',
     service: 'diafimistika-dora',
     standIn: true,
-    text: { el: { title: 'Κούπες', alt: 'Δύο απλές κεραμικές κούπες σε ξύλινο δίσκο' } },
+    text: {
+      el: {
+        title: 'Διαφημιστικά δώρα με λογότυπο',
+        alt: 'Κούπες, ποτήρι, στυλό, σημειωματάριο, μπλοκ και υφασμάτινη τσάντα με το ίδιο λογότυπο, και κούπα με παιδική ζωγραφιά',
+      },
+    },
   },
   {
     image: 'social-01.jpg',
     service: 'social-media',
     standIn: true,
     text: {
-      el: { title: 'Υλικό για social media', alt: 'Σχεδιασμός ανάρτησης σε φορητό υπολογιστή' },
+      el: {
+        title: 'Αναρτήσεις και stories',
+        alt: 'Σειρά αναρτήσεων σε φορητό υπολογιστή, story σε κινητό και τάμπλετ, δίπλα σε φυλλάδιο και κάρτες στο ίδιο ύφος',
+      },
+    },
+  },
+  {
+    image: '3d-ektyposeis-01.jpg',
+    service: '3d-ektyposeis',
+    standIn: true,
+    text: {
+      el: {
+        title: '3D εκτυπώσεις',
+        alt: '3D εκτυπωτής τυπώνει ένα κομμάτι δίπλα σε έτοιμα αντικείμενα: ανταλλακτικό, μακέτα σπιτιού, φιγούρα και γράμματα',
+      },
     },
   },
 ];

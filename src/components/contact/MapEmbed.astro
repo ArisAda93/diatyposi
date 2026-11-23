@@ -1,11 +1,18 @@
 ---
 /**
- * Click-to-load Google map. Until the visitor presses the button, the box shows a printed
- * placeholder (halftone sheet, out-of-register pin) and nothing loads from Google
- * (src/scripts/map-consent.ts swaps in the iframe). Without JS only the external link shows.
- * Hovering or focusing the button pulls the pin's plates into register; while the map loads a
- * halftone screen sweeps over the box (`data-loading`). Theme tokens throughout; the pin's
- * plates overprint with `--blend-ink` (multiply on paper, screen on the dark page).
+ * The shop on a Google map. The box holds Google's embed of the shop's place (pinned by its place
+ * id), lazy-loaded and shown without JS. The whole box is one link to the owner's Google Maps
+ * link (`site.address.mapUrl`): a new tab on desktop, the Google Maps app on phones. The map
+ * itself is out of the way of keyboard and screen readers (`tabindex="-1"`, `aria-hidden`,
+ * `inert`; the link lies over it), so the link is the box's only stop. A chip at the bottom
+ * corner says what a tap does; hovering or focusing the box prints it in key and pulls its C/M
+ * plates into register.
+ *
+ * Loading: until the iframe reports `load`, a halftone screen covers the map (`data-loading`),
+ * sweeping unless reduced motion is asked for. The iframe's own `onload` lifts it, so a map that
+ * loads before the page's scripts run is never kept hidden; a fallback lifts it LOADING_MAX_MS
+ * after the box comes into view, so a blocked or slow map shows whatever it has. Without JS the
+ * screen never shows.
  */
 import Icon from '~/components/Icon.astro';
 import { site } from '~/data/site';
@@ -14,12 +21,9 @@ import { contactText } from '~/i18n/pages/contact';
 import { capsEl } from '~/lib/text';
 
 const text = contactText.el.map;
-const query = encodeURIComponent(site.address.mapQuery);
-const embedSrc = `https://www.google.com/maps?q=${query}&output=embed`;
-const openHref = `https://www.google.com/maps/search/?api=1&query=${query}`;
-const pinPath =
-  'M12 1.5a8 8 0 0 0-8 8c0 6 8 13 8 13s8-7 8-13a8 8 0 0 0-8-8zm0 5a3 3 0 1 1 0 6 3 3 0 0 1 0-6z';
-const plates = ['c', 'm', 'y', 'k'] as const;
+const { street, postalCode, city, mapQuery, mapPlaceId, mapUrl } = site.address;
+const embedSrc = `https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&ftid=${mapPlaceId}&hl=el&z=17&output=embed`;
+const fullAddress = `${street}, ${postalCode} ${city}`;
 ---
 
 <section class="map" aria-labelledby="map-title">
@@ -28,46 +32,51 @@ const plates = ['c', 'm', 'y', 'k'] as const;
   </h2>
   <p class="map-address">
     <Icon name="pin" size={22} />
-    <span>{`${site.address.street}, ${site.address.city}`}</span>
+    <span>{`${street}, ${city}`}</span>
   </p>
 
-  <div
-    class="map-box crop-frame"
-    data-map-consent
-    data-map-src={embedSrc}
-    data-map-title={text.iframeTitle}
-    data-reveal="depth"
-  >
-    <div class="map-placeholder" data-map-placeholder>
-      <div class="map-art" aria-hidden="true">
-        <span class="map-dots halftone"></span>
-        <span class="map-pin">
-          {plates.map((plate) => (
-            <svg viewBox="0 0 24 24" class={`map-plate map-plate-${plate}`} focusable="false">
-              <path d={pinPath} fill-rule="evenodd" fill="currentColor" />
-            </svg>
-          ))}
+  <div class="map-box crop-frame" data-map data-loading data-reveal="depth">
+    <iframe
+      class="map-frame"
+      src={embedSrc}
+      title={text.iframeTitle}
+      loading="lazy"
+      referrerpolicy="no-referrer-when-downgrade"
+      tabindex="-1"
+      aria-hidden="true"
+      inert
+      onload="this.parentElement.removeAttribute('data-loading')"
+    ></iframe>
+    <a href={mapUrl} class="map-link" target="_blank" rel="noopener">
+      <span class="map-chip">
+        <Icon name="external" size={20} />
+        <span>
+          {text.open}
+          <span class="sr-only">{`: ${fullAddress} ${t('newTab')}`}</span>
         </span>
-      </div>
-      <div class="map-copy">
-        <p class="map-note">{text.note}</p>
-        <button type="button" class="btn btn-primary" data-map-load>
-          <Icon name="pin" />
-          <span>{text.load}</span>
-        </button>
-      </div>
-    </div>
+      </span>
+    </a>
   </div>
-
-  <a href={openHref} class="map-open" target="_blank" rel="noopener">
-    <Icon name="external" size={20} />
-    <span class="link">{text.open}</span>
-    <span class="sr-only">{` ${t('newTab')}`}</span>
-  </a>
 </section>
 
 <script>
-  import '~/scripts/map-consent';
+  /** Longest the loading screen stays once the map is in view, if the iframe never says `load`. */
+  const LOADING_MAX_MS = 6000;
+
+  const boxes = document.querySelectorAll<HTMLElement>('[data-map][data-loading]');
+  if (boxes.length > 0 && 'IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const box = entry.target as HTMLElement;
+        observer.unobserve(box);
+        window.setTimeout(() => box.removeAttribute('data-loading'), LOADING_MAX_MS);
+      }
+    });
+    boxes.forEach((box) => observer.observe(box));
+  } else {
+    boxes.forEach((box) => box.removeAttribute('data-loading'));
+  }
 </script>
 
 <style>
@@ -91,14 +100,13 @@ const plates = ['c', 'm', 'y', 'k'] as const;
     /* The crop marks sit 20px outside the box: keep that room so they never overflow. */
     .map-box {
       position: relative;
-      display: grid;
       margin: 1.75rem 1.25rem 1.25rem;
       aspect-ratio: 4 / 3;
       background-color: var(--color-paper-2);
       border: 1px solid var(--color-line);
     }
-    /* Phones: a square box (a 4 / 5 one under 360px), tall enough for the placeholder's art,
-       note and button, so the box keeps its ratio before and after the map loads. */
+    /* Phones: a square box (a 4 / 5 one under 360px), so the map shows the streets around the
+       shop and not only a strip. */
     @media (max-width: 39.99rem) {
       .map-box {
         aspect-ratio: 1;
@@ -110,7 +118,7 @@ const plates = ['c', 'm', 'y', 'k'] as const;
       }
     }
     /* Landscape phones: 4 / 3 of the full width would be taller than the screen; take most of
-       the screen's height instead (the placeholder still sets the floor). */
+       the screen's height instead. */
     @media (orientation: landscape) and (max-height: 30rem) {
       .map-box {
         aspect-ratio: auto;
@@ -118,18 +126,16 @@ const plates = ['c', 'm', 'y', 'k'] as const;
         min-height: max(16rem, 72svh);
       }
     }
-    :global(.no-js) .map-box {
-      display: none;
-    }
-    .map-box :global(iframe) {
+    .map-frame {
       position: absolute;
       inset: 0;
       width: 100%;
       height: 100%;
       border: 0;
     }
-    /* Loading: a halftone screen over the box until the map has arrived. */
-    .map-box[data-loading]::after {
+
+    /* Loading: a halftone screen over the map until it has arrived, then it fades away. */
+    .map-box::after {
       content: '';
       position: absolute;
       inset: 0;
@@ -138,103 +144,102 @@ const plates = ['c', 'm', 'y', 'k'] as const;
       background-color: var(--color-paper-2);
       background-image: radial-gradient(circle at center, currentColor 0 1.2px, transparent 1.8px);
       background-size: 10px 10px;
+      opacity: 0;
+      visibility: hidden;
       pointer-events: none;
+      transition:
+        opacity var(--dur-slow) var(--ease-out),
+        visibility 0s linear var(--dur-slow);
+    }
+    .map-box[data-loading]::after {
+      opacity: 1;
+      visibility: visible;
+      transition: none;
+    }
+    :global(.no-js) .map-box[data-loading]::after {
+      display: none;
     }
     @media (prefers-reduced-motion: no-preference) {
       .map-box[data-loading]::after {
         animation: map-screen 1.2s linear infinite;
       }
     }
-
-    .map-placeholder {
-      display: grid;
-      grid-template-rows: 1fr auto;
-    }
-    .map-art {
-      position: relative;
-      display: grid;
-      place-items: center;
-      min-height: 7rem;
-      overflow: hidden;
-      isolation: isolate;
-    }
-    .map-dots {
-      position: absolute;
-      inset: 0;
-      --dot: 1.2px;
-      --pitch: 10px;
-      color: var(--color-muted);
-      opacity: 0.35;
-      mask-image: radial-gradient(circle at 50% 55%, #000 0 35%, transparent 75%);
-    }
-    .map-pin {
-      position: relative;
-      display: grid;
-      width: clamp(3.5rem, 2.5rem + 4vw, 5.5rem);
-    }
-    .map-plate {
-      grid-area: 1 / 1;
-      width: 100%;
-      height: auto;
-      mix-blend-mode: var(--blend-ink);
-      transition: transform var(--dur-slow) var(--ease-snap);
-    }
-    .map-plate-c {
-      color: var(--color-cyan);
-      transform: translate(-5px, -3px);
-    }
-    .map-plate-m {
-      color: var(--color-magenta);
-      transform: translate(5px, -1px);
-    }
-    .map-plate-y {
-      color: var(--color-yellow);
-      transform: translate(-2px, 5px);
-    }
-    .map-plate-k {
-      color: var(--color-key);
-      transform: translate(1px, 0);
-    }
-    @media (prefers-reduced-motion: no-preference) {
-      .map-placeholder:has([data-map-load]:focus-visible) .map-plate {
-        transform: translate(0, 0);
-      }
-    }
-    @media (prefers-reduced-motion: no-preference) and (hover: hover) {
-      .map-placeholder:has([data-map-load]:hover) .map-plate {
-        transform: translate(0, 0);
-      }
-    }
-
-    .map-copy {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 1rem;
-      padding: clamp(1rem, 0.5rem + 2vw, 1.25rem);
-      background-color: var(--color-paper);
-      border-top: 1px solid var(--color-line);
-    }
-    .map-note {
-      max-width: 44ch;
-      font-size: var(--text-small);
-      line-height: var(--text-small--line-height);
-      color: var(--color-muted);
-    }
-
     @keyframes map-screen {
       to {
         background-position: 10px 10px;
       }
     }
 
-    .map-open {
+    /* The whole box is the link; the chip at its bottom corner names it. */
+    .map-link {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-start;
+      padding: clamp(0.75rem, 0.5rem + 1vw, 1rem);
+      color: var(--color-key);
+      text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: box-shadow var(--dur-fast) linear;
+    }
+    .map-link:is(:focus-visible, :active) {
+      box-shadow: inset 0 0 0 2px var(--color-key);
+    }
+    @media (hover: hover) {
+      .map-link:hover {
+        box-shadow: inset 0 0 0 2px var(--color-key);
+      }
+    }
+    .map-chip {
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
-      align-self: flex-start;
+      max-width: calc(100% - 4px);
       min-height: 2.75rem;
-      font-weight: 600;
+      padding: 0.5rem 0.875rem 0.5rem 0.75rem;
+      font-family: var(--font-display);
+      font-weight: 700;
+      line-height: 1.25;
+      background-color: var(--color-paper);
+      color: var(--color-key);
+      border: 2px solid var(--color-key);
+      box-shadow:
+        2px 2px 0 var(--color-cyan),
+        4px 4px 0 var(--color-magenta);
+      transition:
+        background-color var(--dur-fast) linear,
+        color var(--dur-fast) linear,
+        box-shadow var(--dur-base) var(--ease-out);
+    }
+    .map-chip :global(svg) {
+      flex: none;
+    }
+    .map-link:is(:focus-visible, :active) .map-chip {
+      background-color: var(--color-key);
+      color: var(--color-paper);
+      box-shadow: 0 0 0 transparent;
+    }
+    @media (hover: hover) {
+      .map-link:hover .map-chip {
+        background-color: var(--color-key);
+        color: var(--color-paper);
+        box-shadow: 0 0 0 transparent;
+      }
+    }
+    /* Press: the chip sinks onto the sheet as its plates come into register. */
+    @media (prefers-reduced-motion: no-preference) {
+      .map-chip {
+        transition:
+          background-color var(--dur-fast) linear,
+          color var(--dur-fast) linear,
+          box-shadow var(--dur-base) var(--ease-out),
+          transform var(--dur-fast) var(--ease-out);
+      }
+      .map-link:active .map-chip {
+        transform: translate(2px, 2px);
+      }
     }
   }
 </style>

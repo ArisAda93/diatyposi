@@ -46,6 +46,10 @@ export const icons = {
   social: s(
     '<rect x="8" y="2" width="16" height="28"/><path d="M14 6h4"/><path d="M16 21s-5-3-5-6.5a2.6 2.6 0 0 1 5-1 2.6 2.6 0 0 1 5 1C21 18 16 21 16 21z"/><path d="M14 26h4"/>',
   ),
+  /** 3D printing: the gantry with its print head and nozzle over a part built up in layers. */
+  print3d: s(
+    '<path d="M5 28V4h22v24"/><path d="M2 28h28"/><rect x="12" y="4" width="8" height="5"/><path d="M14 9l2 3 2-3"/><path d="M9 28v-4h14v4M11.5 24v-3.5h9V24M14 20.5V17h4v3.5"/>',
+  ),
 
   // --- UI (24 grid) ---
   phone: s(

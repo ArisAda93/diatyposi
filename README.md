@@ -35,22 +35,14 @@ Open http://localhost:4321. Other commands:
 
 ## Before going live: values the owner must supply
 
-Search the code for `TODO(owner)` to find each one. Most live in **`src/data/site.ts`**; the domain and the privacy-policy details are noted in the table.
+Contact data (phone 697 412 2163, e-mail, Viber, WhatsApp, address, map, opening hours) is real as of 2026-11-23. Search the code for `TODO(owner)` to find the rest. Also confirm the FormSubmit activation e-mail (see “Quote form delivery” below). Most live in **`src/data/site.ts`**; the domain and the privacy-policy details are noted in the table.
 
 | Value                                                                               | Where                                                                 | Placeholder now                                     |
 | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------- | --------------------------------------------------- |
 | Website domain                                                                      | `astro.config.mjs` → `SITE_URL`                                       | `https://www.diatyposi.gr`                          |
-| Landline (international + display)                                                  | `site.contact.phone`, `phoneDisplay`                                  | `+302100000000` / `210 000 0000`                    |
-| Mobile                                                                              | `site.contact.mobile`, `mobileDisplay`                                | `+306900000000` / `690 000 0000`                    |
-| E-mail (receives quote requests)                                                    | `site.contact.email`                                                  | `info@diatyposi.example`                            |
-| Viber number                                                                        | `site.contact.viber`                                                  | `306900000000`                                      |
-| WhatsApp number                                                                     | `site.contact.whatsapp`                                               | `306900000000`                                      |
-| Street, city, postcode                                                              | `site.address.street`, `city`, `postalCode`                           | `Οδός Παραδείγματος 1`, `Πόλη`, `00000`             |
-| Map search text                                                                     | `site.address.mapQuery`                                               | business name                                       |
 | Shop coordinates                                                                    | `site.address.geo`                                                    | `0, 0`                                              |
 | City for service-page titles (Greek locative with article, e.g. `στην Αθήνα`)       | `site.address.locative`                                               | empty (no city in titles)                           |
 | Areas served (Greek city or area names, for structured data)                        | `site.address.areaServed`                                             | empty (service pages say the whole of Greece)       |
-| Opening hours                                                                       | `site.hours`                                                          | `ΧΧ:ΧΧ – ΧΧ:ΧΧ`                                     |
 | Facebook page URL                                                                   | `site.social.facebook`                                                | `https://www.facebook.com/`                         |
 | Instagram profile URL                                                               | `site.social.instagram`                                               | `https://www.instagram.com/`                        |
 | Photo of the shop or team                                                           | `site.aboutPhoto`                                                     | none (a designed print-sheet graphic shows instead) |
@@ -69,7 +61,7 @@ The site is kept out of search results on purpose until launch: `public/_headers
 
 - **Business data, services, portfolio, navigation:** `src/data/site.ts`. Visitor-facing text is keyed by language (`el: { … }`).
 - **Interface text** (buttons, labels, error messages, page intros, meta descriptions): `src/i18n/ui.ts` and `src/i18n/pages/*.ts`.
-- **Owner copy** is used word for word: the headline, intro, partnership paragraph, values and closing line are in `ownerCopy`, and the nine service titles are `services[].text.el.title`, both in `src/data/site.ts`.
+- **Owner copy** is used word for word: the headline, intro, partnership paragraph, values and closing line are in `ownerCopy`, and the service titles are `services[].text.el.title` (all but «Τρισδιάστατες εκτυπώσεις (3D printing)», which is new wording), both in `src/data/site.ts`.
 - After changing text, run `npm run content-review` to refresh the review list.
 
 ## Swapping in real portfolio images
@@ -123,7 +115,7 @@ src/
   components/home/      home sections: hero, services showcase, idea journey, work, values, statement
   scripts/              client scripts: motion (site-wide motion layer, parallax), living-background/ (WebGL
                         ink lines), hero + hero-scene/ (WebGL plates), idea-journey, services-showcase,
-                        services-page, halftone-field (statement), gallery, quote form, map consent
+                        services-page, halftone-field (statement), gallery, quote form
   lib/                  pure helpers (links, quote, portfolio, seo, text), unit-tested in tests/
   pages/                one file per page; slugs in Latin: /ypiresies/, /erga/, /etaireia/, /epikoinonia/;
                         ypiresies/[slug].astro builds one page per service at /ypiresies/<slug>/
@@ -132,5 +124,6 @@ public/                 fonts (self-hosted WOFF2), favicons, share image, manife
 
 - **Fonts:** Commissioner (display), Inter (text) and Comfortaa (tagline), self-hosted, Greek and Latin subsets, `font-display: swap`.
 - **Motion:** every effect respects `prefers-reduced-motion` (the page then shows its composed final state) and turns off pointer effects on touch devices. Elements opt in with `data-reveal="depth"`, `data-tilt`, `data-halftone`, `data-parallax="<speed>"` or `data-bg-accent="<ink>"`, and opt out with `data-motion="off"`. Headings (`.h2`, `.display-l`), photos (`.media`), linked cards (`.card-lift`) and buttons (`.btn`) are picked up automatically.
-- **Privacy:** nothing loads from third parties until the visitor clicks “load map” on the contact page. The quote form sends nothing to a server; it prepares an e-mail, Viber or WhatsApp message that the visitor sends from their own app.
+- **Privacy:** the only third parties are the Google map on the contact page (it loads with the page; the whole box opens Google Maps) and FormSubmit (formsubmit.co), which forwards a submitted quote request to the owner's e-mail. If sending fails, the visitor can send the composed text from their own e-mail, Viber or WhatsApp app.
+- **Quote form delivery (FormSubmit):** the form posts to `https://formsubmit.co/ajax/<site.contact.email>`. The first request ever sent triggers a one-time activation e-mail from FormSubmit to that address; **the owner must click “Activate Form” in it**, otherwise every request is refused and visitors see the fallback panel. If `site.contact.email` changes, the new address needs activating too.
 - **Adding English later:** add `'en'` to `locales` in `src/i18n/ui.ts` and to `i18n.locales` in `astro.config.mjs`, add an `en` entry next to each `el` entry, and add `src/pages/en/` pages that pass `locale="en"`. Then extend the `hreflang` links in `BaseLayout.astro` (each page currently points `el` and `x-default` at itself) so every page lists its Greek and English versions, and add `en: 'en'` to the sitemap's `i18n.locales` in `astro.config.mjs`, using the same tag as `localeTags.en.html` so the sitemap and the page heads agree.

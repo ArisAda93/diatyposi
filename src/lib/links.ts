@@ -24,13 +24,17 @@ export const mailtoHref = (email: string, subject?: string, body?: string): stri
   return `mailto:${email}${params.length ? `?${params.join('&')}` : ''}`;
 };
 
-/** WhatsApp click-to-chat link with optional prefilled text. */
+/**
+ * WhatsApp chat link with optional prefilled text. The app's own scheme opens a chat with the
+ * number straight in the WhatsApp app (phone or desktop), with no wa.me page in between.
+ */
 export const whatsappHref = (phone: string, text?: string): string =>
-  `https://wa.me/${intlDigits(phone)}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
+  `whatsapp://send?phone=${intlDigits(phone)}${text ? `&text=${encodeURIComponent(text)}` : ''}`;
 
 /**
- * Viber chat link. `draft` prefills the message box (supported by the Viber apps on mobile and
- * desktop). The number must carry an encoded +.
+ * Viber chat link: opens a chat with the number in the Viber app. `draft` prefills the message
+ * box. The number carries an encoded + (`%2B`), the form Viber's chat links use on every
+ * platform.
  */
 export const viberHref = (phone: string, draft?: string): string =>
   `viber://chat?number=${encodeURIComponent(`+${intlDigits(phone)}`)}${

@@ -28,7 +28,6 @@ export const ui = {
     requestQuote: 'Ζητήστε προσφορά',
     ourServices: 'Οι υπηρεσίες μας',
     phoneLabel: 'Τηλέφωνο',
-    mobileLabel: 'Κινητό',
     emailLabel: 'Email',
     addressLabel: 'Διεύθυνση',
     hoursLabel: 'Ωράριο',

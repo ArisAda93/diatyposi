@@ -18,6 +18,9 @@ export default defineConfig({
   integrations: [
     sitemap({
       i18n: { defaultLocale: 'el', locales: { el: 'el' } },
+      // /erga/ is hidden while under development. Keep in step with hiddenSections.work in
+      // src/data/site.ts: remove this filter when the flag goes back to false.
+      filter: (page) => !page.endsWith('/erga/'),
     }),
   ],
   vite: {

@@ -14,10 +14,11 @@ import {
 } from '../src/scripts/services-page';
 
 describe('services (owner order)', () => {
-  it('lists the nine services in the order the owner asked for', () => {
+  it('lists the ten services in the order the owner asked for, 3D printing third', () => {
     expect(services.map((s) => s.slug)).toEqual([
       'diafimistika-dora',
       'mplouzakia-rouxismos',
+      '3d-ektyposeis',
       'grafistikos-sxediasmos',
       'banners-afises-mousamades',
       'epigrafes-aftokollita-vitrines',
@@ -29,6 +30,7 @@ describe('services (owner order)', () => {
     expect(services.map((s) => s.text.el.title)).toEqual([
       'Διαφημιστικά δώρα & προσωποποιημένα προϊόντα',
       'Εκτυπώσεις σε μπλουζάκια & επαγγελματικό ρουχισμό',
+      'Τρισδιάστατες εκτυπώσεις (3D printing)',
       'Γραφιστικός σχεδιασμός & δημιουργία λογοτύπων',
       'Διαφημιστικά banners, αφίσες & μουσαμάδες',
       'Επιγραφές, αυτοκόλλητα & βιτρίνες καταστημάτων',
@@ -38,10 +40,10 @@ describe('services (owner order)', () => {
       'Προσκλητήρια, κάρτες & ειδικές κατασκευές',
     ]);
   });
-  it('has nine unique slugs', () => {
+  it('has ten unique slugs', () => {
     const slugs = services.map((s) => s.slug);
-    expect(slugs).toHaveLength(9);
-    expect(new Set(slugs).size).toBe(9);
+    expect(slugs).toHaveLength(10);
+    expect(new Set(slugs).size).toBe(10);
   });
 });
 

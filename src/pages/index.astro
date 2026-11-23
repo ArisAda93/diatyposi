@@ -1,7 +1,7 @@
 ---
 /**
  * Αρχική. Section order follows DESIGN.md §6: hero (the page's single h1, with the owner's intro),
- * services, the idea journey, selected work, values, statement, contact band.
+ * services, the idea journey, selected work (hidden while `hiddenSections.work`), values, statement, contact band.
  */
 import BaseLayout from '~/layouts/BaseLayout.astro';
 import Hero from '~/components/home/Hero.astro';
@@ -12,6 +12,7 @@ import Values from '~/components/home/Values.astro';
 import Statement from '~/components/home/Statement.astro';
 import ContactBand from '~/components/ContactBand.astro';
 import SectionRail from '~/components/SectionRail.astro';
+import { hiddenSections } from '~/data/site';
 import { homeText } from '~/i18n/pages/home';
 import { withLocality } from '~/lib/seo';
 ---
@@ -25,7 +26,7 @@ import { withLocality } from '~/lib/seo';
   <Hero />
   <ServicesShowcase />
   <IdeaJourney />
-  <WorkTeaser />
+  {!hiddenSections.work && <WorkTeaser />}
   <Values />
   <Statement />
   <ContactBand />

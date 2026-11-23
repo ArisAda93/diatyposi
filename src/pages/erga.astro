@@ -2,18 +2,20 @@
 /**
  * Έργα: page header, then the filterable gallery with its lightbox (WorkGallery). The section
  * paints no background; it tints the living background through `data-bg-accent`.
+ * Under development: while `hiddenSections.work` is set the page is still built but unlinked,
+ * noindex and left out of the sitemap.
  */
 import BaseLayout from '~/layouts/BaseLayout.astro';
 import PageHeader from '~/components/PageHeader.astro';
 import WorkGallery from '~/components/portfolio/WorkGallery.astro';
-import { portfolio } from '~/data/site';
+import { hiddenSections, portfolio } from '~/data/site';
 import { workText } from '~/i18n/pages/work';
 
 const text = workText.el;
 const hasStandIns = portfolio.some((item) => item.standIn);
 ---
 
-<BaseLayout title={text.metaTitle} description={text.metaDescription}>
+<BaseLayout title={text.metaTitle} description={text.metaDescription} noindex={hiddenSections.work}>
   <PageHeader
     label={text.headerLabel}
     title={text.headerTitle}

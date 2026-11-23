@@ -74,6 +74,6 @@ export const serviceGrafistikosSxediasmosText = {
         a: 'Η τιμή εξαρτάται από το τι θα σχεδιάσουμε: μόνο λογότυπο ή ολόκληρη ταυτότητα με έντυπα και εφαρμογές.\n\nΠείτε μας τι χρειάζεστε και θα σας δώσουμε προσφορά πριν ξεκινήσουμε.',
       },
     ],
-    related: ['kartes-fylladia-entypa', 'epigrafes-aftokollita-vitrines', 'social-media'],
+    related: ['kartes-fylladia-entypa', 'epigrafes-aftokollita-vitrines', '3d-ektyposeis'],
   },
 } satisfies ServicePageText;

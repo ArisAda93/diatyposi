@@ -1,15 +1,24 @@
 ---
 /**
- * Quote request form (section #prosfora on the contact page), styled as a print-shop job ticket.
- * Validation, ?ypiresia= pre-selection and message composition run in src/scripts/quote-form.ts;
- * nothing is sent to a server. Without JS the form is hidden and a note with the direct contact
- * links takes its place, so the section is never a dead end.
+ * Quote request form (section #prosfora on the contact page), styled as a print-shop job ticket
+ * in two numbered parts: 01 the visitor's details (name and phone side by side, email below),
+ * 02 the job (optional service tiles, quantity and date side by side, the description), then the
+ * submit row behind a perforation line. Validation, ?ypiresia= pre-selection and delivery run in
+ * src/scripts/quote-form.ts: a valid submit posts the request to FormSubmit, which emails it to
+ * the shop (site.contact.email); SendPanel.astro then shows whether it arrived and, when it did
+ * not, the send-it-yourself fallback. Without JS the form is hidden and a note with the direct
+ * contact links takes its place, so the section is never a dead end.
  *
  * Field feedback: focus prints a yellow plate under the field and marks its label; a field that
  * passes (`data-valid`, from the script) shows a key check; an error (`data-invalid`) gets the
  * red rule and a short shake. Service choices are drawn square checkboxes that print a key tick
- * with a plate pop. The panel itself is the paper job ticket (allowed: it is a card, not a
- * full-width section).
+ * with a plate pop. While the request is on its way the submit button (and the panel's retry
+ * button, which shares the `.q-send` look) reads “Αποστολή…” and prints a small C, M, Y, K
+ * strip in place of its arrow (static under reduced motion). The panel itself is the paper job
+ * ticket (allowed: it is a card, not a full-width section).
+ *
+ * The layout follows the form's own width (container queries), not the viewport's, because the
+ * form sits in a column beside the contact details on wide screens.
  *
  * Dark theme: the ticket and the fields are dark paper with light key text; the fields' resting
  * border is a softer key (still ≥ 3:1), full key on hover and focus; the passed-field check is
@@ -90,142 +99,163 @@ const text = contactText.el.form;
 
       <p class="text-small muted">{text.requiredNote}</p>
 
-      <div class="q-grid">
-        <Field field="name" id="q-name" label={text.nameLabel}>
-          <input
-            id="q-name"
-            name="name"
-            type="text"
-            class="input"
-            autocomplete="name"
-            autocapitalize="words"
-            autocorrect="off"
-            spellcheck="false"
-            enterkeyhint="next"
-            required
-            aria-required="true"
-            data-describe
-          />
-        </Field>
+      <div class="q-part" role="group" aria-labelledby="q-part-contact">
+        <h3 id="q-part-contact" class="q-part-title">
+          <span class="q-part-num" aria-hidden="true">
+            01
+          </span>
+          <span>{text.partContact}</span>
+        </h3>
+        <div class="q-grid">
+          <Field field="name" id="q-name" label={text.nameLabel}>
+            <input
+              id="q-name"
+              name="name"
+              type="text"
+              class="input"
+              autocomplete="name"
+              autocapitalize="words"
+              autocorrect="off"
+              spellcheck="false"
+              enterkeyhint="next"
+              required
+              aria-required="true"
+              data-describe
+            />
+          </Field>
 
-        <Field field="phone" id="q-phone" label={text.phoneLabel} hint={text.phoneHint}>
-          <input
-            id="q-phone"
-            name="phone"
-            type="tel"
-            class="input"
-            autocomplete="tel"
-            enterkeyhint="next"
-            required
-            aria-required="true"
-            aria-describedby="q-phone-hint"
-            data-describe
-          />
-        </Field>
+          <Field field="phone" id="q-phone" label={text.phoneLabel}>
+            <input
+              id="q-phone"
+              name="phone"
+              type="tel"
+              class="input"
+              autocomplete="tel"
+              enterkeyhint="next"
+              required
+              aria-required="true"
+              data-describe
+            />
+          </Field>
 
-        <Field field="email" id="q-email" label={text.emailLabel} optional class="q-span">
-          <input
-            id="q-email"
-            name="email"
-            type="email"
-            class="input"
-            autocomplete="email"
-            autocapitalize="off"
-            autocorrect="off"
-            spellcheck="false"
-            enterkeyhint="next"
-            data-describe
-          />
-        </Field>
-
-        <div class="field q-span" data-field="services">
-          <fieldset class="q-services" aria-describedby="q-services-hint" data-describe>
-            <legend class="field-label">{text.servicesLegend}</legend>
-            <p id="q-services-hint" class="field-hint">
-              {text.servicesHint}
-            </p>
-            {/* Above the tiles: a long list must not push its error out of view. */}
-            <p id="q-services-error" class="field-error" data-field-error hidden>
-              <span class="sr-only">{`${text.errorPrefix} `}</span>
-              <span data-error-text></span>
-            </p>
-            <ul class="svc-grid">
-              {services.map((service, i) => (
-                <li>
-                  <label class="svc-tile" for={`q-svc-${service.slug}`}>
-                    <input
-                      id={`q-svc-${service.slug}`}
-                      class="svc-check"
-                      type="checkbox"
-                      name="services"
-                      value={service.slug}
-                      data-title={service.text.el.title}
-                    />
-                    <span class="svc-name">{service.text.el.short}</span>
-                    <span class="svc-num" aria-hidden="true">
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-          </fieldset>
+          <Field field="email" id="q-email" label={text.emailLabel} optional class="q-span">
+            <input
+              id="q-email"
+              name="email"
+              type="email"
+              class="input"
+              autocomplete="email"
+              autocapitalize="off"
+              autocorrect="off"
+              spellcheck="false"
+              enterkeyhint="next"
+              data-describe
+            />
+          </Field>
         </div>
-
-        <Field
-          field="quantity"
-          id="q-quantity"
-          label={text.quantityLabel}
-          hint={text.quantityHint}
-          optional
-        >
-          <input
-            id="q-quantity"
-            name="quantity"
-            type="text"
-            class="input"
-            autocomplete="off"
-            enterkeyhint="next"
-            aria-describedby="q-quantity-hint"
-            data-describe
-          />
-        </Field>
-
-        <Field field="date" id="q-date" label={text.dateLabel} optional>
-          <input id="q-date" name="date" type="date" class="input" data-describe />
-        </Field>
-
-        <Field
-          field="message"
-          id="q-message"
-          label={text.messageLabel}
-          hint={text.messageHint}
-          class="q-span"
-        >
-          <textarea
-            id="q-message"
-            name="message"
-            class="input q-textarea"
-            rows="6"
-            required
-            aria-required="true"
-            aria-describedby="q-message-hint"
-            data-describe
-          ></textarea>
-        </Field>
       </div>
 
-      <p class="attach-note">
-        <Icon name="paperclip" size={22} />
-        <span>{text.attach}</span>
-      </p>
+      <div class="q-part" role="group" aria-labelledby="q-part-job">
+        <h3 id="q-part-job" class="q-part-title">
+          <span class="q-part-num" aria-hidden="true">
+            02
+          </span>
+          <span>{text.partJob}</span>
+        </h3>
+        <div class="q-grid">
+          {/* Optional, so it has no error slot: the script reads the ticks and marks nothing. */}
+          <div class="field q-span" data-field="services">
+            <fieldset class="q-services" data-describe>
+              <legend class="field-label">
+                {text.servicesLegend}
+                <span class="field-optional">{` ${text.optional}`}</span>
+              </legend>
+              <ul class="svc-grid">
+                {services.map((service, i) => (
+                  <li>
+                    <label class="svc-tile" for={`q-svc-${service.slug}`}>
+                      <input
+                        id={`q-svc-${service.slug}`}
+                        class="svc-check"
+                        type="checkbox"
+                        name="services"
+                        value={service.slug}
+                        data-title={service.text.el.title}
+                      />
+                      <span class="svc-name">{service.text.el.short}</span>
+                      <span class="svc-num" aria-hidden="true">
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </fieldset>
+          </div>
+
+          <Field field="quantity" id="q-quantity" label={text.quantityLabel} optional>
+            <input
+              id="q-quantity"
+              name="quantity"
+              type="text"
+              class="input"
+              autocomplete="off"
+              enterkeyhint="next"
+              data-describe
+            />
+          </Field>
+
+          <Field field="date" id="q-date" label={text.dateLabel} optional>
+            <input id="q-date" name="date" type="date" class="input" data-describe />
+          </Field>
+
+          <Field
+            field="message"
+            id="q-message"
+            label={text.messageLabel}
+            hint={text.messageHint}
+            class="q-span"
+          >
+            <textarea
+              id="q-message"
+              name="message"
+              class="input q-textarea"
+              rows="6"
+              required
+              aria-required="true"
+              aria-describedby="q-message-hint"
+              data-describe
+            ></textarea>
+          </Field>
+        </div>
+      </div>
+
+      {/* Honeypot: people never see or reach it; a bot that fills it gets a quiet “sent”. */}
+      <div class="q-hp" aria-hidden="true">
+        <label for="q-hp">{text.honeyLabel}</label>
+        <input
+          id="q-hp"
+          name="_honey"
+          type="text"
+          tabindex="-1"
+          autocomplete="off"
+          aria-hidden="true"
+          data-honeypot
+        />
+      </div>
 
       <div class="q-submit">
-        <button type="submit" class="btn btn-primary">
-          <span>{text.submit}</span>
-          <Icon name="arrow-right" class="q-submit-arrow" />
+        <button type="submit" class="btn btn-primary q-send" data-submit>
+          <span data-submit-label>{text.submit}</span>
+          <Icon name="arrow-right" class="q-send-arrow" />
+          <span class="q-progress" aria-hidden="true">
+            <i></i>
+            <i></i>
+            <i></i>
+            <i></i>
+          </span>
         </button>
-        <p class="text-small muted max-w-[46ch]">
+        <p class="text-small muted q-submit-note">
           {`${text.noSend} `}
           <a href={routes.privacy} class="link q-privacy-link">
             {text.privacyLink}
@@ -235,6 +265,9 @@ const text = contactText.el.form;
     </form>
 
     <SendPanel />
+
+    {/* Outside the form and the panels, so it still speaks while either is hidden. */}
+    <p class="sr-only" role="status" data-submit-status></p>
   </div>
 </section>
 
@@ -295,15 +328,44 @@ const text = contactText.el.form;
       margin-top: 2.5rem;
     }
     .quote-form {
+      container: quote-form / inline-size;
       display: flex;
       flex-direction: column;
-      gap: 1.75rem;
+      gap: 2.25rem;
     }
+
+    /* The ticket's two parts: a key rule with the part's number and title. */
+    .q-part {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      min-width: 0;
+    }
+    .q-part-title {
+      display: flex;
+      align-items: baseline;
+      gap: 0.75rem;
+      padding-top: 0.875rem;
+      border-top: 2px solid var(--color-key);
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 760;
+      line-height: 1.25;
+    }
+    .q-part-num {
+      flex: none;
+      font-size: var(--text-label);
+      font-weight: 750;
+      letter-spacing: 0.12em;
+      color: var(--color-red);
+      font-variant-numeric: tabular-nums;
+    }
+
     .q-grid {
       display: grid;
-      gap: 1.75rem 1.5rem;
+      gap: 1.5rem 1.25rem;
     }
-    @media (min-width: 40rem) {
+    @container quote-form (min-width: 26rem) {
       .q-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
@@ -311,8 +373,9 @@ const text = contactText.el.form;
         grid-column: 1 / -1;
       }
       /* Two fields in a row share its tracks (Field.astro's head and body), so their controls
-         sit level even when only one has a hint (phone beside name, quantity beside date); a
-         head without a hint sits down on its control. Without subgrid each field just stacks. */
+         sit level even when one label wraps and the other does not (phone beside name,
+         quantity beside date); a head sits down on its control. Without subgrid each field
+         just stacks. */
       @supports (grid-template-rows: subgrid) {
         .q-grid > :global(.field:not(.q-span)) {
           display: grid;
@@ -474,19 +537,16 @@ const text = contactText.el.form;
     .q-services legend {
       padding: 0;
     }
+    /* One column on phones, two even columns once the form has room (ten services: five rows,
+       no lone tile). */
     .svc-grid {
       display: grid;
       gap: 0.5rem;
       margin-top: 0.5rem;
     }
-    @media (min-width: 40rem) {
+    @container quote-form (min-width: 30rem) {
       .svc-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-    }
-    @media (min-width: 80rem) {
-      .svc-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
       }
     }
     /* The whole tile is the label, so the whole tile (at least 52px tall) is the tap target. */
@@ -642,32 +702,41 @@ const text = contactText.el.form;
       text-underline-offset: 3px;
     }
 
-    /* Attachment note (form and send panel). */
-    .quote :global(.attach-note) {
-      display: flex;
-      gap: 0.75rem;
-      align-items: flex-start;
-      margin-top: 1.75rem;
-      padding: 1rem 1.125rem;
-      background-color: var(--color-paper);
-      border-left: 4px solid var(--color-key);
-    }
-    .quote-form .attach-note {
-      margin-top: 0;
-    }
-    .quote :global(.attach-note svg) {
-      flex: none;
-      margin-top: 0.1em;
+    /* Honeypot: off screen, out of the tab order and the accessibility tree. */
+    .q-hp {
+      position: absolute;
+      left: -9999px;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
     }
 
+    /* Submit row: behind the ticket's perforation, the button and the privacy note. */
     .q-submit {
       display: flex;
       flex-direction: column;
       align-items: flex-start;
       gap: 1rem;
+      padding-top: 1.75rem;
+      border-top: 2px dashed color-mix(in srgb, var(--color-key) 40%, transparent);
+    }
+    @container quote-form (min-width: 36rem) {
+      .q-submit {
+        flex-direction: row;
+        align-items: center;
+        gap: 1.5rem;
+      }
+      .q-submit .btn {
+        flex: none;
+      }
     }
     .q-submit .btn {
       white-space: normal;
+    }
+    .q-submit-note {
+      max-width: 46ch;
     }
     /* The privacy link keeps its look but takes a hit area at least 44px tall, centred on the
        link whatever its line box rounds to. */
@@ -683,17 +752,76 @@ const text = contactText.el.form;
       height: max(2.75rem, 100%);
       translate: 0 -50%;
     }
-    .q-submit :global(.q-submit-arrow) {
+
+    /* Send buttons (this form's submit and the panel's retry, SendPanel.astro). */
+    .quote :global(.q-send-arrow) {
       transition: transform var(--dur-base) var(--ease-out);
     }
     @media (prefers-reduced-motion: no-preference) {
-      .q-submit .btn:focus-visible :global(.q-submit-arrow) {
+      .quote :global(.q-send:focus-visible .q-send-arrow) {
         transform: translateX(4px);
       }
     }
     @media (prefers-reduced-motion: no-preference) and (hover: hover) {
-      .q-submit .btn:hover :global(.q-submit-arrow) {
+      .quote :global(.q-send:hover .q-send-arrow) {
         transform: translateX(4px);
+      }
+    }
+    /* Sending (`aria-busy`, set with `aria-disabled` so the button keeps focus): full strength,
+       no lift or plates, and a C, M, Y, K strip in place of the arrow. */
+    .quote :global(.q-send[aria-busy='true']) {
+      opacity: 1;
+    }
+    .quote :global(.q-send[aria-busy='true']:focus-visible) {
+      transform: none;
+      box-shadow: none;
+    }
+    .quote :global(.q-send[aria-busy='true'] .q-send-arrow) {
+      display: none;
+    }
+    .quote :global(.q-progress) {
+      display: none;
+      flex: none;
+      align-items: center;
+      gap: 3px;
+    }
+    .quote :global(.q-send[aria-busy='true'] .q-progress) {
+      display: inline-flex;
+    }
+    .quote :global(.q-progress i) {
+      width: 0.5rem;
+      height: 0.5rem;
+      background-color: currentColor;
+    }
+    .quote :global(.q-progress i:nth-child(1)) {
+      background-color: var(--color-cyan);
+    }
+    .quote :global(.q-progress i:nth-child(2)) {
+      background-color: var(--color-magenta);
+    }
+    .quote :global(.q-progress i:nth-child(3)) {
+      background-color: var(--color-yellow);
+    }
+    /* Each plate prints out of register and snaps in, one after another, then the strip clears. */
+    @media (prefers-reduced-motion: no-preference) {
+      .quote :global(.q-progress i) {
+        animation: q-plate-print 1.4s var(--ease-out) infinite both;
+      }
+      .quote :global(.q-progress i:nth-child(2)) {
+        animation-delay: 0.14s;
+      }
+      .quote :global(.q-progress i:nth-child(3)) {
+        animation-delay: 0.28s;
+      }
+      .quote :global(.q-progress i:nth-child(4)) {
+        animation-delay: 0.42s;
+      }
+    }
+    /* Forced colours would paint the plates the button's own colour: draw them in text colour. */
+    @media (forced-colors: active) {
+      .quote :global(.q-progress i:nth-child(n)) {
+        forced-color-adjust: none;
+        background-color: ButtonText;
       }
     }
   }
@@ -711,6 +839,21 @@ const text = contactText.el.form;
     }
     70% {
       translate: -3px 0;
+    }
+  }
+  @keyframes q-plate-print {
+    0% {
+      opacity: 0.2;
+      translate: -2px -2px;
+    }
+    30%,
+    70% {
+      opacity: 1;
+      translate: 0 0;
+    }
+    100% {
+      opacity: 0.2;
+      translate: 0 0;
     }
   }
   /* The ticked box lands with a C/M plate shadow that snaps into register. */

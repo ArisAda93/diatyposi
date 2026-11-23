@@ -30,7 +30,7 @@ const copy: ServicePageCopy = {
 };
 
 describe('buildLocalBusiness', () => {
-  it('describes the business with absolute URLs and all nine services', async () => {
+  it('describes the business with absolute URLs and all ten services', async () => {
     const { buildLocalBusiness } = await import('../src/lib/seo');
     const data = buildLocalBusiness('https://www.diatyposi.gr');
     expect(data['@type']).toBe('LocalBusiness');
@@ -38,7 +38,7 @@ describe('buildLocalBusiness', () => {
     expect(data.url).toBe('https://www.diatyposi.gr/');
     expect(data.logo).toBe('https://www.diatyposi.gr/icon-512.png');
     const catalog = data.hasOfferCatalog as { itemListElement: { itemOffered: { url: string } }[] };
-    expect(catalog.itemListElement).toHaveLength(9);
+    expect(catalog.itemListElement).toHaveLength(10);
     expect(catalog.itemListElement[0]?.itemOffered.url).toBe(
       'https://www.diatyposi.gr/ypiresies/diafimistika-dora/',
     );
@@ -62,9 +62,9 @@ describe('buildLocalBusiness', () => {
   });
 
   it('publishes the areas served only once contact details are real', async () => {
-    await mockSite((actual) => ({
+    const actual = await mockSite((real) => ({
       contactIsPlaceholder: false,
-      address: { ...actual.site.address, areaServed: ['Αθήνα', 'Πειραιάς'] },
+      address: { ...real.site.address, areaServed: ['Αθήνα', 'Πειραιάς'] },
     }));
     const { buildLocalBusiness } = await import('../src/lib/seo');
     const data = buildLocalBusiness(SITE);
@@ -72,7 +72,7 @@ describe('buildLocalBusiness', () => {
       { '@type': 'Place', name: 'Αθήνα' },
       { '@type': 'Place', name: 'Πειραιάς' },
     ]);
-    expect(data.hasMap).toMatch(/^https:\/\/www\.google\.com\/maps\//);
+    expect(data.hasMap).toBe(actual.site.address.mapUrl);
   });
 
   it('includes contact details, hours and profiles once they are real', async () => {
@@ -105,6 +105,40 @@ describe('buildLocalBusiness', () => {
       },
     ]);
     expect(data.sameAs).toHaveLength(2);
+  });
+
+  it("builds the shop's opening hours, leaving the closed Sunday out", async () => {
+    const actual = await mockSite(() => ({ contactIsPlaceholder: false }));
+    const { buildLocalBusiness } = await import('../src/lib/seo');
+    const data = buildLocalBusiness(SITE);
+    expect(data.telephone).toBe('+306974122163');
+    expect(data.hasMap).toBe(actual.site.address.mapUrl);
+    expect(data.openingHoursSpecification).toEqual([
+      {
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: ['Monday'],
+        opens: '09:00',
+        closes: '21:00',
+      },
+      {
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: ['Tuesday', 'Wednesday', 'Thursday'],
+        opens: '15:00',
+        closes: '21:00',
+      },
+      {
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: ['Friday'],
+        opens: '09:00',
+        closes: '21:00',
+      },
+      {
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: ['Saturday'],
+        opens: '09:00',
+        closes: '18:00',
+      },
+    ]);
   });
 });
 
@@ -149,9 +183,9 @@ describe('pageCrumbs', () => {
 
   it('names a navigation page by its menu label', async () => {
     const { pageCrumbs } = await import('../src/lib/seo');
-    expect(pageCrumbs('/erga/', 'Κάτι άλλο')).toEqual([
+    expect(pageCrumbs('/epikoinonia/', 'Κάτι άλλο')).toEqual([
       { name: 'Αρχική', path: '/' },
-      { name: 'Έργα', path: '/erga/' },
+      { name: 'Επικοινωνία', path: '/epikoinonia/' },
     ]);
   });
 

@@ -41,12 +41,15 @@ describe('mailto', () => {
 });
 
 describe('chat deep links', () => {
-  it('builds WhatsApp links with prefilled text', () => {
-    const href = whatsappHref('+30 690 000 0000', 'Γεια σας & καλημέρα');
+  it('builds app-opening WhatsApp links with international digits and prefilled text', () => {
+    const href = whatsappHref('+30 697 412 2163', 'Γεια σας & καλημέρα');
     expect(href).toBe(
-      `https://wa.me/306900000000?text=${encodeURIComponent('Γεια σας & καλημέρα')}`,
+      `whatsapp://send?phone=306974122163&text=${encodeURIComponent('Γεια σας & καλημέρα')}`,
     );
-    expect(whatsappHref('306900000000')).toBe('https://wa.me/306900000000');
+    // The & in the text is encoded, so it never starts a new parameter.
+    expect(href.match(/&/g)).toHaveLength(1);
+    expect(new URL(href).searchParams.get('text')).toBe('Γεια σας & καλημέρα');
+    expect(whatsappHref('306974122163')).toBe('whatsapp://send?phone=306974122163');
   });
   it('builds Viber links with an encoded + and a draft', () => {
     const href = viberHref('306900000000', 'Γεια σας');

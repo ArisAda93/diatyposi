@@ -1,12 +1,21 @@
 ---
 /**
- * Shown after a valid quote form submit (src/scripts/quote-form.ts fills it): the three send
- * links, the attachment note, a read-only preview of the text with a copy button, and a way
- * back to the form. The hrefs below are plain fallbacks; the script adds the composed text.
+ * The quote form's result, shown in place of the form after a valid submit
+ * (src/scripts/quote-form.ts shows one variant and moves focus to its heading):
  *
- * When it appears (the moment a valid form is submitted) the panel prints in from the top and
- * the check is stamped on with a C/M plate that snaps into register. Reduced motion: it simply
- * appears.
+ * - Sent (`data-result="success"`): FormSubmit delivered the request to the shop's inbox. A short
+ *   thank-you, a note that files (which the form cannot carry) go by email, Viber or WhatsApp,
+ *   with those three links, and “Νέο αίτημα”, which clears the form and brings it back.
+ * - Not sent (`data-result="failure"`): a polite apology, “Δοκιμάστε ξανά” (sends the same request
+ *   again; it shares the submit button's sending state, `.q-send` in QuoteForm.astro), the
+ *   send-it-yourself fallback (email, Viber and WhatsApp with the composed text, and the text
+ *   itself to copy, behind a disclosure) and a way back to the form with everything kept.
+ *
+ * The hrefs below are plain fallbacks; the script adds the subject and the composed text.
+ * Chat links open the app itself (viber://, whatsapp://), so none opens a new tab.
+ *
+ * A panel prints in from the top; the sent check is stamped on with a C/M plate that snaps into
+ * register. Reduced motion: it simply appears.
  */
 import Icon from '~/components/Icon.astro';
 import { site } from '~/data/site';
@@ -14,106 +23,209 @@ import { t } from '~/i18n/ui';
 import { contactText } from '~/i18n/pages/contact';
 import { mailtoHref, viberHref, whatsappHref } from '~/lib/links';
 
-const text = contactText.el.send;
+const text = contactText.el.result;
 ---
 
-<div class="send-panel" data-send-panel hidden>
-  <h3 class="h3 send-heading" tabindex="-1" data-send-heading>
-    <Icon name="check" size={28} class="send-check" />
-    <span>{text.heading}</span>
+<div class="result" data-result="success" hidden>
+  <h3 class="h3 result-heading" tabindex="-1" data-result-heading>
+    <span class="result-mark result-mark-ok" aria-hidden="true">
+      <Icon name="check" size={26} />
+    </span>
+    <span>{text.success.heading}</span>
   </h3>
-  <p class="mt-3 max-w-[52ch]">{text.intro}</p>
+  <p class="result-text">{text.success.text}</p>
 
-  <div class="send-actions">
-    <a href={mailtoHref(site.contact.email)} class="btn btn-primary" data-send="email">
-      <Icon name="mail" />
-      <span>{text.email}</span>
-    </a>
-    <a href={viberHref(site.contact.viber)} class="btn btn-secondary" data-send="viber">
-      <Icon name="viber" />
-      <span>{text.viber}</span>
-    </a>
-    <a
-      href={whatsappHref(site.contact.whatsapp)}
-      class="btn btn-secondary"
-      target="_blank"
-      rel="noopener"
-      data-send="whatsapp"
-    >
-      <Icon name="whatsapp" />
-      <span>
-        {text.whatsapp}
-        <span class="sr-only">{` ${t('newTab')}`}</span>
-      </span>
-    </a>
-  </div>
-
-  <p class="attach-note">
-    <Icon name="paperclip" size={22} />
-    <span>{text.attach}</span>
-  </p>
-
-  <div class="send-preview">
-    <label for="q-preview" class="field-label">
-      {text.previewLabel}
-    </label>
-    <p id="q-preview-hint" class="field-hint">
-      {text.previewHint}
+  <div class="result-box">
+    <p class="result-box-text">
+      <Icon name="paperclip" size={22} />
+      <span>{text.success.files}</span>
     </p>
-    <textarea
-      id="q-preview"
-      class="input preview-text"
-      rows="11"
-      readonly
-      aria-describedby="q-preview-hint"
-      data-preview
-    ></textarea>
-    <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
-      <button type="button" class="btn btn-secondary" data-copy>
-        <Icon name="copy" />
-        <span>{text.copy}</span>
-      </button>
-      <p class="text-small" role="status" data-copy-status></p>
+    <div class="send-actions">
+      <a href={mailtoHref(site.contact.email)} class="btn btn-secondary" data-files="email">
+        <Icon name="mail" />
+        <span>{t('email')}</span>
+      </a>
+      <a href={viberHref(site.contact.viber)} class="btn btn-secondary" data-files="viber">
+        <Icon name="viber" />
+        <span>{t('viber')}</span>
+      </a>
+      <a href={whatsappHref(site.contact.whatsapp)} class="btn btn-secondary" data-files="whatsapp">
+        <Icon name="whatsapp" />
+        <span>{t('whatsapp')}</span>
+      </a>
     </div>
   </div>
 
-  <button type="button" class="back-link" data-edit>
+  <button type="button" class="text-action" data-again>
+    <span class="link">{text.success.again}</span>
+    <Icon name="arrow-right" size={20} />
+  </button>
+</div>
+
+<div class="result" data-result="failure" hidden>
+  <h3 class="h3 result-heading" tabindex="-1" data-result-heading>
+    <span class="result-mark result-mark-fail" aria-hidden="true">
+      !
+    </span>
+    <span>{text.failure.heading}</span>
+  </h3>
+  <p class="result-text">{text.failure.text}</p>
+
+  <div class="result-retry">
+    <button type="button" class="btn btn-primary q-send" data-retry>
+      <span data-submit-label>{text.failure.retry}</span>
+      <Icon name="arrow-right" class="q-send-arrow" />
+      <span class="q-progress" aria-hidden="true">
+        <i></i>
+        <i></i>
+        <i></i>
+        <i></i>
+      </span>
+    </button>
+  </div>
+
+  <div class="result-box">
+    <h4 class="result-subhead">{text.failure.fallbackHeading}</h4>
+    <p class="result-hint">{text.failure.fallbackHint}</p>
+    <div class="send-actions">
+      <a href={mailtoHref(site.contact.email)} class="btn btn-secondary" data-send="email">
+        <Icon name="mail" />
+        <span>{text.failure.email}</span>
+      </a>
+      <a href={viberHref(site.contact.viber)} class="btn btn-secondary" data-send="viber">
+        <Icon name="viber" />
+        <span>{text.failure.viber}</span>
+      </a>
+      <a href={whatsappHref(site.contact.whatsapp)} class="btn btn-secondary" data-send="whatsapp">
+        <Icon name="whatsapp" />
+        <span>{text.failure.whatsapp}</span>
+      </a>
+    </div>
+
+    <details class="result-copy">
+      <summary class="result-copy-summary">
+        <Icon name="chevron-right" size={20} class="result-copy-chevron" />
+        <span>{text.failure.previewSummary}</span>
+      </summary>
+      <div class="send-preview">
+        <label for="q-preview" class="field-label">
+          {text.failure.previewLabel}
+        </label>
+        <p id="q-preview-hint" class="result-hint">
+          {text.failure.previewHint}
+        </p>
+        <textarea
+          id="q-preview"
+          class="input preview-text"
+          rows="10"
+          readonly
+          aria-describedby="q-preview-hint"
+          data-preview
+        ></textarea>
+        <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
+          <button type="button" class="btn btn-secondary" data-copy>
+            <Icon name="copy" />
+            <span>{text.failure.copy}</span>
+          </button>
+          <p class="text-small" role="status" data-copy-status></p>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <button type="button" class="text-action text-action-back" data-edit>
     <Icon name="chevron-left" size={20} />
-    <span class="link">{text.edit}</span>
+    <span class="link">{text.failure.edit}</span>
   </button>
 </div>
 
 <style>
   @layer components {
-    .send-panel {
+    .result {
       display: flex;
       flex-direction: column;
       container-type: inline-size;
     }
-    .send-heading {
+    .result-heading {
       display: flex;
       align-items: flex-start;
-      gap: 0.75rem;
+      gap: 0.875rem;
       outline-offset: 6px;
     }
-    .send-heading :global(.send-check) {
+    /* The result's stamp: a square plate, yellow with an ink check or red with a paper “!”. */
+    .result-mark {
       flex: none;
+      display: grid;
+      place-items: center;
+      width: 2.125rem;
+      height: 2.125rem;
       margin-top: 0.05em;
-      padding: 3px;
+      font-family: var(--font-display);
+      font-size: 1.375rem;
+      font-weight: 850;
+      line-height: 1;
+    }
+    .result-mark-ok {
       background: var(--color-yellow);
       /* Ink on yellow in both themes. */
       color: var(--ink-fixed);
     }
-    .send-actions {
-      display: grid;
+    .result-mark-fail {
+      background: var(--color-red);
+      color: var(--color-paper);
+    }
+    .result-text {
+      max-width: 52ch;
+      margin-top: 0.875rem;
+    }
+
+    /* A paper box with a key rule: the files note, or the send-it-yourself fallback. */
+    .result-box {
+      display: flex;
+      flex-direction: column;
       gap: 0.75rem;
       margin-top: 1.75rem;
+      padding: 1.125rem 1.125rem 1.25rem 1.25rem;
+      background-color: var(--color-paper);
+      border-left: 4px solid var(--color-key);
+    }
+    .result-box-text {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+    }
+    .result-box-text :global(svg) {
+      flex: none;
+      margin-top: 0.1em;
+    }
+    .result-subhead {
+      font-family: var(--font-display);
+      font-weight: 720;
+      font-size: 1.0625rem;
+      line-height: 1.3;
+    }
+    .result-hint {
+      font-size: var(--text-small);
+      line-height: var(--text-small--line-height);
+      color: var(--color-muted);
+    }
+    .result-retry {
+      margin-top: 1.5rem;
+    }
+    .result-retry .btn {
+      white-space: normal;
+    }
+
+    .send-actions {
+      display: grid;
+      gap: 0.625rem;
+      margin-top: 0.25rem;
     }
     .send-actions .btn {
       justify-content: flex-start;
       white-space: normal;
     }
-    @container (min-width: 36rem) {
+    @container (min-width: 34rem) {
       .send-actions {
         grid-template-columns: repeat(3, minmax(0, 1fr));
       }
@@ -122,15 +234,47 @@ const text = contactText.el.send;
         padding-inline: 1rem;
       }
     }
+
+    /* The copyable text, folded away under the send buttons. */
+    .result-copy {
+      margin-top: 0.25rem;
+    }
+    .result-copy-summary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      min-height: 2.75rem;
+      font-family: var(--font-display);
+      font-weight: 700;
+      cursor: pointer;
+      list-style: none;
+    }
+    .result-copy-summary::-webkit-details-marker {
+      display: none;
+    }
+    .result-copy-summary :global(.result-copy-chevron) {
+      flex: none;
+      transition: transform var(--dur-base) var(--ease-out);
+    }
+    .result-copy[open] .result-copy-summary :global(.result-copy-chevron) {
+      transform: rotate(90deg);
+    }
+    @media (hover: hover) {
+      .result-copy-summary:hover > span {
+        text-decoration: underline;
+        text-decoration-thickness: 2px;
+        text-underline-offset: 0.2em;
+      }
+    }
     .send-preview {
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
-      margin-top: 2rem;
+      margin-top: 0.75rem;
     }
     /* Beats the shared .quote .input rule (QuoteForm.astro). */
     .send-preview .preview-text {
-      min-height: 14rem;
+      min-height: 12rem;
       resize: vertical;
       font-size: 0.9375rem;
       line-height: 1.6;
@@ -142,42 +286,62 @@ const text = contactText.el.send;
         font-size: 1rem;
       }
     }
-    @media (prefers-reduced-motion: no-preference) {
-      .send-panel:not([hidden]) {
-        /* No fill: the clip must not outlast the animation (it would cut focus rings). */
-        animation: send-print 560ms var(--ease-out);
-      }
-      .send-panel:not([hidden]) .send-heading :global(.send-check) {
-        animation: send-stamp 700ms var(--ease-snap) 160ms both;
-      }
-    }
-    .back-link {
+
+    /* Quiet text actions: “Νέο αίτημα” and “Πίσω στη φόρμα” (44px tall). */
+    .text-action {
       display: inline-flex;
       align-items: center;
       gap: 0.375rem;
       align-self: flex-start;
       min-height: 2.75rem;
-      margin-top: 1.75rem;
+      margin-top: 1.5rem;
       font-family: var(--font-display);
       font-weight: 700;
       cursor: pointer;
     }
-    .back-link :global(svg) {
+    .text-action :global(svg) {
+      flex: none;
       transition: transform var(--dur-base) var(--ease-out);
     }
     @media (prefers-reduced-motion: no-preference) {
-      .back-link:focus-visible :global(svg) {
+      .text-action:focus-visible :global(svg) {
+        transform: translateX(4px);
+      }
+      .text-action-back:focus-visible :global(svg) {
         transform: translateX(-4px);
       }
     }
     @media (prefers-reduced-motion: no-preference) and (hover: hover) {
-      .back-link:hover :global(svg) {
+      .text-action:hover :global(svg) {
+        transform: translateX(4px);
+      }
+      .text-action-back:hover :global(svg) {
         transform: translateX(-4px);
+      }
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .result:not([hidden]) {
+        /* No fill: the clip must not outlast the animation (it would cut focus rings). */
+        animation: result-print 560ms var(--ease-out);
+      }
+      .result:not([hidden]) .result-mark-ok {
+        animation: result-stamp 700ms var(--ease-snap) 160ms both;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .result-copy-summary :global(.result-copy-chevron) {
+        transition: none;
+      }
+    }
+    @media (forced-colors: active) {
+      .result-mark {
+        border: 2px solid CanvasText;
       }
     }
   }
 
-  @keyframes send-print {
+  @keyframes result-print {
     from {
       opacity: 0;
       clip-path: inset(0 0 100% 0);
@@ -187,7 +351,7 @@ const text = contactText.el.send;
       clip-path: inset(0 0 0 0);
     }
   }
-  @keyframes send-stamp {
+  @keyframes result-stamp {
     0% {
       transform: scale(1.6) rotate(-12deg);
       box-shadow:

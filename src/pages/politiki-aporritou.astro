@@ -32,8 +32,9 @@ const toc = [
 ] as const;
 const num = (id: (typeof toc)[number]['id']): string =>
   String(toc.findIndex((entry) => entry.id === id) + 1).padStart(2, '0');
-const updatedIso = '2026-11-22';
+const updatedIso = '2026-11-23';
 const googlePrivacy = 'https://policies.google.com/privacy';
+const formSubmit = 'https://formsubmit.co/';
 const dataAuthority = 'https://www.dpa.gr/';
 ---
 
@@ -108,9 +109,17 @@ const dataAuthority = 'https://www.dpa.gr/';
           <span>{text.form.heading}</span>
         </h2>
         <p>{text.form.body}</p>
-        <p>{text.form.apps}</p>
+        <p>
+          {`${text.form.serviceBefore} `}
+          <a href={formSubmit} class="link" target="_blank" rel="noopener">
+            {text.form.serviceLink}
+            <span class="sr-only">{` ${t('newTab')}`}</span>
+          </a>
+          .
+        </p>
         {/* TODO(owner): confirm how incoming messages are used and how long they are kept. */}
         <p>{text.form.use}</p>
+        <p>{text.form.apps}</p>
       </section>
 
       <section aria-labelledby="pp-map">

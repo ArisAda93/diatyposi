@@ -105,6 +105,7 @@ Only the feminine article την/στην (like δεν and μην) drops its fin
 | `/ypiresies/`                                | εκτυπώσεις και διαφήμιση {Πόλη}            | Υπηρεσίες εκτύπωσης & διαφήμισης                 | Υπηρεσίες εκτύπωσης και διαφήμισης                            |
 | `/ypiresies/diafimistika-dora/`              | διαφημιστικά δώρα                          | Διαφημιστικά & προσωποποιημένα δώρα              | Διαφημιστικά δώρα με λογότυπο και προσωποποιημένα δώρα        |
 | `/ypiresies/mplouzakia-rouxismos/`           | στάμπες σε μπλουζάκια                      | Στάμπες σε μπλουζάκια & επαγγελματικός ρουχισμός | Μπλουζάκια με στάμπα και ρούχα εργασίας με λογότυπο           |
+| `/ypiresies/3d-ektyposeis/`                  | 3D εκτύπωση / 3D εκτυπώσεις                | 3D εκτύπωση: πρωτότυπα, ανταλλακτικά, φιγούρες   | 3D εκτυπώσεις: πρωτότυπα, ανταλλακτικά, φιγούρες και δώρα     |
 | `/ypiresies/grafistikos-sxediasmos/`         | σχεδιασμός λογοτύπου                       | Σχεδιασμός λογοτύπου & εταιρική ταυτότητα        | Σχεδιασμός λογοτύπου, εταιρικής ταυτότητας και εντύπων        |
 | `/ypiresies/banners-afises-mousamades/`      | μουσαμάς διαφημιστικός / roll up banner    | Μουσαμάδες, roll up banners, πανό & αφίσες       | Διαφημιστικοί μουσαμάδες, banners και αφίσες                  |
 | `/ypiresies/epigrafes-aftokollita-vitrines/` | επιγραφές καταστημάτων                     | Επιγραφές καταστημάτων & αυτοκόλλητα βιτρίνας    | Επιγραφές καταστημάτων, αυτοκόλλητα βιτρίνας και οχημάτων     |
@@ -131,10 +132,10 @@ Only the feminine article την/στην (like δεν and μην) drops its fin
 
 - **Primary:** εκτυπώσεις και διαφήμιση {Πόλη}
 - **Secondary:** υπηρεσίες τυπογραφείου; διαφημιστικό υλικό; διαφημιστικά και εκτυπώσεις; εκτυπώσεις {Πόλη}; ψηφιακές εκτυπώσεις {Πόλη}
-- **Intent:** commercial investigation; the hub that links to the nine service pages.
+- **Intent:** commercial investigation; the hub that links to the ten service pages.
 - **Title (32):** "Υπηρεσίες εκτύπωσης & διαφήμισης"
 - **h1:** "Υπηρεσίες εκτύπωσης και διαφήμισης" (shipped; the former heading "Ό,τι χρειάζεται η εικόνα σας, σε ένα μέρος." now opens the intro under it).
-- **Meta (159):** "Όλες οι υπηρεσίες της ΔΙΑΤΥΠΩΣΗΣ: εκτυπώσεις, κάρτες και έντυπα, banners, επιγραφές, ρουχισμός, δώρα, λογότυπα και υλικό για social media. Δείτε τι φτιάχνουμε."
+- **Meta (159):** "Οι υπηρεσίες της ΔΙΑΤΥΠΩΣΗΣ: εκτυπώσεις και 3D εκτυπώσεις, κάρτες, έντυπα, banners, επιγραφές, ρουχισμός, δώρα, λογότυπα και social media. Δείτε τι φτιάχνουμε."
 - **Note:** once service pages exist, each chapter on /ypiresies/ should be a short summary that links to its page ("Περισσότερα για …"), not a copy of the service page text, so the two never compete for the same query.
 
 #### `/ypiresies/diafimistika-dora/`
@@ -155,6 +156,16 @@ Only the feminine article την/στην (like δεν and μην) drops its fin
 - **h1:** "Μπλουζάκια με στάμπα και ρούχα εργασίας με λογότυπο"
 - **Meta (153):** "Στάμπες σε μπλουζάκια για ομάδες, εκδηλώσεις και επιχειρήσεις, ρούχα εργασίας, φούτερ, καπέλα και ποδιές με λογότυπο. Στείλτε μας το σχέδιο για προσφορά."
 - **Do not:** mention κέντημα (embroidery). Mention μεταξοτυπία or any other method only after the owner confirms it (the current μεταξοτυπία photo is a stand-in).
+
+#### `/ypiresies/3d-ektyposeis/`
+
+- **Primary:** 3D εκτύπωση / 3D εκτυπώσεις
+- **Secondary:** 3D printing; τρισδιάστατη εκτύπωση (αντικειμένων); 3D εκτύπωση ανταλλακτικών; 3D εκτύπωση μινιατούρας; 3D εκτύπωση πλαστικού; 3D γράμματα (τοίχου); πρωτότυπα / μακέτες; 3D εκτυπώσεις {Πόλη} / 3D printing {Πόλη}
+- **Intent:** commercial, strongly local (autocomplete completes "3d εκτυπώσεις" and "3d printing" with city names, Ηράκλειο among them, checked 23 Nov 2026 with the method of §2). Informational searches about the technology ("τρισδιάστατη εκτύπωση σπιτιού / στην ιατρική") and searches for buying a printer ("3d printer") are a different intent; do not target them.
+- **Title (46):** "3D εκτύπωση: πρωτότυπα, ανταλλακτικά, φιγούρες"
+- **h1:** "3D εκτυπώσεις: πρωτότυπα, ανταλλακτικά, φιγούρες και δώρα"
+- **Meta (153):** "3D εκτυπώσεις από το δικό σας αρχείο: πρωτότυπα, μακέτες, ανταλλακτικά, φιγούρες, δώρα και τρισδιάστατα γράμματα. Στείλτε μας το αρχείο σας για προσφορά."
+- **Do not:** name a printing technology (FDM, resin), materials (PLA, PETG, metal), colours, a largest print size or turnaround times until the owner confirms them; "3d εκτύπωση μετάλλου" is searched but not offered.
 
 #### `/ypiresies/grafistikos-sxediasmos/`
 
@@ -257,7 +268,7 @@ Only the feminine article την/στην (like δεν and μην) drops its fin
 
 ## 4. Content guidance for the service-page writers
 
-General rules for all nine pages:
+General rules for all ten pages:
 
 - **Length and structure:** a lead paragraph (1–3 sentences) that contains the primary query and the `{loc}` token once, right after a word (see City below); 2–4 sections with h2s; 6–8 FAQs (the template's type allows 4–6 for the page and FAQ markup; pick the strongest from the candidates below); 2–3 related services. Aim for roughly 500–900 words of real content per page. Every page must be distinct; no shared boilerplate paragraphs.
 - **Language:** natural Greek with τόνοι and final ς. Use singular and plural naturally (μουσαμάς / μουσαμάδες, επιγραφή / επιγραφές, κάρτα / κάρτες); Google understands inflection. Do not repeat the keyword mechanically; do not add Greeklish or accentless variants.
@@ -279,7 +290,7 @@ General rules for all nine pages:
   - Ποιο δώρο ταιριάζει σε πελάτες, ποιο σε εκδήλωση ή έκθεση;
   - Θα δω πώς θα είναι το δώρο πριν από την παραγωγή; (owner)
   - Πόσο κοστίζουν τα διαφημιστικά δώρα; (explain what the price depends on; no figures)
-- **Related:** mplouzakia-rouxismos, grafistikos-sxediasmos, kartes-fylladia-entypa.
+- **Related:** mplouzakia-rouxismos, grafistikos-sxediasmos, 3d-ektyposeis.
 
 ### 4.2 Εκτυπώσεις σε μπλουζάκια & επαγγελματικό ρουχισμό (`mplouzakia-rouxismos`)
 
@@ -307,7 +318,7 @@ General rules for all nine pages:
   - Μπορείτε να ανανεώσετε το λογότυπο που ήδη έχω;
   - Μπορείτε να ετοιμάσετε το αρχείο μου ώστε να είναι σωστό για εκτύπωση;
   - Πόσο κοστίζει ένα λογότυπο; (what it depends on; no figures)
-- **Related:** kartes-fylladia-entypa, epigrafes-aftokollita-vitrines, social-media.
+- **Related:** kartes-fylladia-entypa, epigrafes-aftokollita-vitrines, 3d-ektyposeis.
 
 ### 4.4 Διαφημιστικά banners, αφίσες & μουσαμάδες (`banners-afises-mousamades`)
 
@@ -392,6 +403,22 @@ General rules for all nine pages:
   - Τι είναι οι ειδικές κατασκευές;
 - **Related:** kartes-fylladia-entypa, social-media, diafimistika-dora.
 
+### 4.10 Τρισδιάστατες εκτυπώσεις (3D printing) (`3d-ektyposeis`)
+
+The tenth service, added after the owner's nine and listed third. Its title is new wording, not the owner's, so it goes to the owner for review with the rest of the copy.
+
+- **Topics:** what 3D printing is in one plain paragraph (an object built layer by layer from a digital model, no mould); product groups from site.ts (πρωτότυπα και μακέτες; ανταλλακτικά και μικρά εξαρτήματα; φιγούρες, δώρα και διακοσμητικά; τρισδιάστατα γράμματα και λογότυπα); printing from the customer's ready file (STL); with only an idea, a photo, a sketch with dimensions or the broken part, the shop says whether and how it can be done (no promise to draw the model until the owner confirms it); choosing size, material and colour by use (fit, load, heat, detail); the logo in 3D next to the shop's signs, cards and clothing.
+- **FAQ candidates:**
+  - Τι χρειάζεστε για να τυπώσετε ένα αντικείμενο σε 3D;
+  - Μπορείτε να φτιάξετε ένα ανταλλακτικό που έσπασε;
+  - Ποια υλικά και χρώματα χρησιμοποιείτε; (owner; no materials named until confirmed)
+  - Πόσο μεγάλο αντικείμενο μπορείτε να τυπώσετε; (owner; no sizes until confirmed)
+  - Μπορείτε να σχεδιάσετε το μοντέλο αν δεν έχω αρχείο; (owner)
+  - Μπορώ να έχω το λογότυπό μου σε τρισδιάστατη μορφή;
+  - Πόσο κοστίζει μια 3D εκτύπωση; (what it depends on; no figures)
+- **Owner must confirm:** printing technology, materials, colours, the largest size per print, finishing (sanding, painting), accepted file formats besides STL, whether the shop draws 3D models from an idea or a sketch.
+- **Related:** diafimistika-dora, grafistikos-sxediasmos, epigrafes-aftokollita-vitrines.
+
 ---
 
 ## 5. Off-site and local SEO actions for the owner
@@ -407,9 +434,9 @@ Google ranks local results on **relevance, distance and prominence**; prominence
    - **Additional (choose 3–5 that are true):** Digital printing service; Commercial printer (if offset is done in-house); Sign shop; Advertising agency; Graphic designer; Promotional products supplier; Screen printer or a T-shirt / custom apparel printing category **only if** the shop does that printing itself. "Print shop", "Digital printing service" and "Commercial printer" are confirmed category names used by print shops ([GMB Everywhere](https://www.gmbeverywhere.com/categories/print-shop-google-business-profile)); the others must be confirmed in the picker.
 4. **Address and map pin:** exact street address (Greek), ΤΚ written "123 45", correct municipality; drag the pin onto the shop door. If customers do not visit (unlikely for this shop), use a service area instead.
 5. **Hours:** regular hours plus special hours for holidays (Χριστούγεννα, Πάσχα, 15 Αυγούστου, August closure if any). "ανοιχτό τώρα" queries filter on this.
-6. **Phone:** the landline as primary, mobile as additional. Same numbers as the site.
+6. **Phone:** the mobile, 697 412 2163, as the primary number (the shop has no landline). Same number as the site.
 7. **Website:** `https://<domain>/`. Optional UTM for tracking in analytics: `https://<domain>/?utm_source=google&utm_medium=organic&utm_campaign=gbp` (the canonical tag makes the parameter harmless).
-8. **Services:** add all nine services with the owner's titles and a 1–2 sentence description each, written from the page leads (no prices). Under **Products** (which allow a link), add the key items (Επαγγελματικές κάρτες, Μουσαμάδες, Roll-up banners, Αυτοκόλλητα βιτρίνας, Μπλουζάκια με στάμπα, Κούπες με λογότυπο, Προσκλητήρια γάμου…) each linking to its `/ypiresies/<slug>/` page.
+8. **Services:** add all ten services with their titles and a 1–2 sentence description each, written from the page leads (no prices). Under **Products** (which allow a link), add the key items (Επαγγελματικές κάρτες, Μουσαμάδες, Roll-up banners, Αυτοκόλλητα βιτρίνας, Μπλουζάκια με στάμπα, Κούπες με λογότυπο, Προσκλητήρια γάμου…) each linking to its `/ypiresies/<slug>/` page.
 9. **Description (750 chars):** plain Greek: who the shop is, the main services, the city/area. No links, no keyword lists.
 10. **Photos (real, not stock):** storefront from the street (helps people find the door), interior and counter, machines, team at work, and 3–5 finished jobs per service. Add new work photos every month. Use the same real photos on /erga/.
 11. **Posts:** 2–4 per month: new work, seasonal offers on window stickers (εκπτώσεις, Χριστούγεννα), wedding/baptism season, back-to-school, year-end corporate gifts and calendars. Each post links to the matching service page.
@@ -461,14 +488,14 @@ Not worth it: **11880.com** is a German directory ("Deutschlands größte Branch
 
 1. Search Console: add a **Domain property** (DNS TXT record) so www/non-www and http/https are all covered.
 2. Submit `https://<domain>/sitemap-index.xml`.
-3. URL Inspection → "Request indexing" for `/`, `/ypiresies/`, the nine service pages and `/epikoinonia/`.
+3. URL Inspection → "Request indexing" for `/`, `/ypiresies/`, the ten service pages and `/epikoinonia/`.
 4. Watch Pages (indexing), Breadcrumbs enhancement report, and Performance → Queries filtered by country Greece. After 4–8 weeks, rewrite titles of pages with impressions but low CTR.
 5. Bing Webmaster Tools: sign in and **import from Search Console** (sites and sitemaps come over). Optional: IndexNow for faster Bing pickup.
 
 ### 5.7 Links between GBP and the site
 
 - GBP website → home page; GBP products/posts → the matching service pages; GBP booking/quote → `/epikoinonia/#prosfora`.
-- Site → GBP: the contact page's "open in Google Maps" link should open the verified place (update `site.address.mapQuery` to the exact GBP name + city, or use the place's share link once verified); a "Αφήστε μας κριτική" link to the GBP review URL can go on the contact page.
+- Site → GBP: the contact page's "open in Google Maps" link should open the verified place (it already uses the owner's share link, `site.address.mapUrl`, and the embedded map is pinned by `site.address.mapPlaceId`; check both still open the verified place once the profile is verified); a "Αφήστε μας κριτική" link to the GBP review URL can go on the contact page.
 
 ---
 
@@ -477,12 +504,12 @@ Not worth it: **11880.com** is a German directory ("Deutschlands größte Branch
 In order:
 
 1. **Domain:** set `SITE_URL` in `astro.config.mjs` to the real domain (one host, e.g. `https://www.<domain>`). Redirect the other variants (http, non-www) with 301 at the host.
-2. **Owner values:** fill every `TODO(owner)` (`grep -rn "TODO(owner)" src astro.config.mjs`): phones, e-mail, Viber, WhatsApp, street, city, postcode, `mapQuery`, `geo` (at least 5 decimals, per [Google](https://developers.google.com/search/docs/appearance/structured-data/local-business)), hours, Facebook and Instagram URLs, about photo, privacy-policy legal details.
+2. **Owner values:** fill every `TODO(owner)` left (`grep -rn "TODO(owner)" src astro.config.mjs`). Phone, e-mail, Viber, WhatsApp, street, city, postcode, the map (`mapQuery`, `mapPlaceId`, `mapUrl`) and hours are real now. Still open: `geo` (at least 5 decimals, per [Google](https://developers.google.com/search/docs/appearance/structured-data/local-business)), `locative` and `areaServed` (step 3), Facebook and Instagram URLs, the about photo and real work photos, privacy-policy legal details.
 3. **Locality:** set `site.address.locative` (e.g. "στην Αθήνα", "στο Περιστέρι", "στη Θεσσαλονίκη"; see §3.1) and `site.address.areaServed` (the municipalities the shop really serves).
 4. **Structured data switch:** set `site.contactIsPlaceholder = false` only after steps 2–3 are real.
-5. **Copy:** the nine service pages approved by the owner (`npm run content-review`), no "TODO(owner)" left in visible text, stand-in labels still shown on any stand-in image.
+5. **Copy:** the ten service pages approved by the owner (`npm run content-review`), no "TODO(owner)" left in visible text, stand-in labels still shown on any stand-in image.
 6. **Indexing switch:** delete the `X-Robots-Tag: noindex` rule in `public/_headers` (the file holds nothing else, so delete the file). Confirm after deploy that no page sends `X-Robots-Tag: noindex` and no `<meta name="robots" content="noindex">` except the 404 page.
-7. **robots.txt and sitemap:** open `https://<domain>/robots.txt` (Allow all, Sitemap line on the real domain) and `https://<domain>/sitemap-index.xml` (all pages, including the nine `/ypiresies/<slug>/`, on the real domain, no 404).
+7. **robots.txt and sitemap:** open `https://<domain>/robots.txt` (Allow all, Sitemap line on the real domain) and `https://<domain>/sitemap-index.xml` (all pages, including the ten `/ypiresies/<slug>/`, on the real domain, no 404).
 8. **Search Console + Bing:** §5.6 (verify, submit sitemap, request indexing).
 9. **Rich results:** test `/`, one service page and `/epikoinonia/` in the [Rich Results Test](https://search.google.com/test/rich-results) (Breadcrumb, Local business) and in the [Schema Markup Validator](https://validator.schema.org/) (WebSite site name, Service, FAQPage, which the Rich Results Test no longer covers).
 10. **GBP:** verified, website field pointing to the live domain, NAP identical to the footer/contact page (§5.1, §5.3).
@@ -500,7 +527,7 @@ In order:
 - **Canonical** on every indexable page; the 404 page is `noindex` (`BaseLayout.astro`).
 - **One h1 per page**, semantic headings, Greek alt text on images, AVIF/WebP via Astro images.
 - **Latin slugs** (/ypiresies/, /erga/, /etaireia/, /epikoinonia/) that Google accepts as transliterated words.
-- **LocalBusiness JSON-LD** (`src/lib/seo.ts`) with a guard that leaves out placeholder contact data (`contactIsPlaceholder`), plus `hasOfferCatalog` listing the nine services, `logo`, `image`, `slogan`.
+- **LocalBusiness JSON-LD** (`src/lib/seo.ts`) with a guard that leaves out placeholder contact data (`contactIsPlaceholder`), plus `hasOfferCatalog` listing the services (ten now), `logo`, `image`, `slogan`.
 - **Open Graph and Twitter cards** with a 1200×630 share image (matters for links shared on Viber, Messenger, WhatsApp).
 - **Self-hosted fonts with Greek subsets**, preloaded; no third-party requests until the visitor opts in to the map.
 - **Conversion paths:** tap-to-call, Viber, WhatsApp, a quote form that pre-selects the service (`quoteHref`).
