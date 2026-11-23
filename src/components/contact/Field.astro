@@ -5,6 +5,10 @@
  * `data-describe` and, when there is a hint, aria-describedby="<id>-hint".
  * Styles live in QuoteForm.astro (shared with the services fieldset). The script sets
  * `data-invalid` or `data-valid` on the wrapper; the styles key the field's feedback on them.
+ *
+ * The label and hint form the field's head, the control and its error its body: where two fields
+ * share a row, the heads and the bodies line up across it (QuoteForm.astro), so the two controls
+ * sit level even when only one of them has a hint.
  */
 import type { QuoteField } from '~/lib/quote';
 import { contactText } from '~/i18n/pages/contact';
@@ -24,18 +28,22 @@ const text = contactText.el.form;
 ---
 
 <div class:list={['field', className]} data-field={field}>
-  <label for={id} class="field-label">
-    {label}
-    {optional && <span class="field-optional">{` ${text.optional}`}</span>}
-  </label>
-  {hint && (
-    <p id={`${id}-hint`} class="field-hint">
-      {hint}
+  <div class="field-head">
+    <label for={id} class="field-label">
+      {label}
+      {optional && <span class="field-optional">{` ${text.optional}`}</span>}
+    </label>
+    {hint && (
+      <p id={`${id}-hint`} class="field-hint">
+        {hint}
+      </p>
+    )}
+  </div>
+  <div class="field-body">
+    <slot />
+    <p id={`${id}-error`} class="field-error" data-field-error hidden>
+      <span class="sr-only">{`${text.errorPrefix} `}</span>
+      <span data-error-text></span>
     </p>
-  )}
-  <slot />
-  <p id={`${id}-error`} class="field-error" data-field-error hidden>
-    <span class="sr-only">{`${text.errorPrefix} `}</span>
-    <span data-error-text></span>
-  </p>
+  </div>
 </div>

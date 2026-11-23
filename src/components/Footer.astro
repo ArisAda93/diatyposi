@@ -138,8 +138,8 @@ const year = new Date().getFullYear();
       <p class="muted">
         © {year} {site.name}. {t('copyright', locale)}
       </p>
-      <a href={routes.privacy} class="link muted inline-flex min-h-11 items-center self-start">
-        {t('footerPrivacy', locale)}
+      <a href={routes.privacy} class="muted inline-flex min-h-11 items-center self-start">
+        <span class="link">{t('footerPrivacy', locale)}</span>
       </a>
     </div>
   </div>
@@ -236,12 +236,19 @@ const year = new Date().getFullYear();
       flex-direction: column;
       gap: 0.125rem;
     }
+    /*
+     * 44px rows. The hit area comes from the padding and the drawn rule (`.link-draw`) is laid
+     * on the content box, so it runs under the text, not 8px below it at the row's foot.
+     */
     .footer-link {
       display: inline-flex;
       flex-wrap: wrap;
       gap: 0.35em;
       align-items: center;
       min-height: 2.75rem;
+      padding-block: 0.5rem;
+      background-origin: content-box;
+      background-clip: content-box;
     }
     .footer-mail {
       overflow-wrap: anywhere;

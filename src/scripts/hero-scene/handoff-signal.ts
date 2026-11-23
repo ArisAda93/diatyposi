@@ -1,5 +1,8 @@
 /**
- * The hero's hand-over into the site-wide floating plates of the living background.
+ * The hero's hand-over signal: where its plates are while the scroll fades them out. Round 4's
+ * floating plates of the living background followed it; since round 5 the background draws ink
+ * lines and nothing listens, but the signal stays available (and tested) for a layer that wants to
+ * pick the plates up.
  *
  * While the live hero scene (scene.ts) runs, it publishes where its plates are and how far the
  * scroll hand-off has gone (choreography.ts handoff, unchanged): on `document` as the event

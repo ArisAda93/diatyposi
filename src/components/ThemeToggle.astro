@@ -256,11 +256,33 @@ const plates = ['c', 'm', 'y', 'k'] as const;
       background-color: var(--color-paper);
       translate: calc(2.75rem - 1.5rem) 0;
     }
-    .theme-row:is(:hover, :focus-visible) .theme-switch {
+    .theme-row:focus-visible .theme-switch {
       box-shadow:
         2px 2px 0 var(--color-cyan),
         4px 4px 0 var(--color-magenta),
         6px 6px 0 var(--color-yellow);
+    }
+    /* Hover only where the pointer can hover (a tap must not leave the plates out). */
+    @media (hover: hover) {
+      .theme-row:hover .theme-switch {
+        box-shadow:
+          2px 2px 0 var(--color-cyan),
+          4px 4px 0 var(--color-magenta),
+          6px 6px 0 var(--color-yellow);
+      }
+    }
+
+    /* Forced colours repaint backgrounds as the canvas: keep the switch's knob and fill drawn. */
+    @media (forced-colors: active) {
+      .theme-switch-knob {
+        background-color: CanvasText;
+      }
+      :global(html[data-theme='dark']) .theme-switch {
+        background-color: Canvas;
+      }
+      :global(html[data-theme='dark']) .theme-switch-knob {
+        background-color: CanvasText;
+      }
     }
   }
 

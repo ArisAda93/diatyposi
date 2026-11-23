@@ -9,12 +9,12 @@
  * (the pattern hero.ts uses) and import the scene with a dynamic import; the scene builds itself
  * in short tasks (scene.ts). Without a usable context (no WebGL, a software renderer through
  * `failIfMajorPerformanceCaveat`, a failed chunk or shader) no canvas is added and the layer stays
- * paper and grain. Reduced motion still gets the sheet, as one static frame (scene.ts); the
+ * paper and grain. Reduced motion still gets the lines, as one static frame (scene.ts); the
  * preference is followed live.
  *
- * Section accents: `data-bg-accent="cyan|magenta|yellow|key"` on a section blends the field
- * towards that ink while the section holds the viewport centre (an IntersectionObserver on a thin
- * band at the centre). Without one there, the balanced CMYK mix shows.
+ * Section accents: `data-bg-accent="cyan|magenta|yellow|key"` on a section lets that ink's lines
+ * lead (the others quieten) while the section holds the viewport centre (an IntersectionObserver
+ * on a thin band at the centre). Without one there, every ink prints at full strength.
  *
  * Theme (theme.ts contract): `html[data-theme]` is read at start and again right before the
  * scene starts, and every `dt:themechange` on `document` is routed to it (scene.ts setTheme:

@@ -184,10 +184,10 @@ html {
 @layer base {
   /*
    * Background stack (back to front): the paper on <html>, the living background (fixed,
-   * z-index −1: the halftone sheet, then the grain; LivingBackground.astro), then the content.
-   * <body> and full-width light sections stay transparent so the sheet shows through; ink
+   * z-index −1: the ink lines, then the grain; LivingBackground.astro), then the content.
+   * <body> and full-width light sections stay transparent so the lines show through; ink
    * sections and the yellow contact band paint their own opaque backgrounds. <body> must keep no
-   * background (it would paint over the sheet). Content that blends with the sheet (the hero
+   * background (it would paint over the lines). Content that blends with the paper (the hero
    * canvas, `mix-blend-mode: multiply`) must have no isolating ancestor (isolation, transform,
    * filter, opacity < 1, or a z-index on a positioned ancestor) between it and <body>.
    */
@@ -197,6 +197,14 @@ html {
     scroll-padding-top: calc(var(--header-h) + 1.5rem);
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+    /* The page scrollbar in the paper's own tones (follows the theme). */
+    scrollbar-color: color-mix(in srgb, var(--color-key) 35%, var(--color-paper)) var(--color-paper);
+    /* A tap flashes the yellow highlighter instead of the platform's grey box. */
+    -webkit-tap-highlight-color: color-mix(in srgb, var(--color-yellow) 35%, transparent);
+  }
+  /* Inner scrollers (menu, lightbox, chip rows) keep the platform's themed scrollbars. */
+  body {
+    scrollbar-color: auto;
   }
 
   @media (prefers-reduced-motion: no-preference) {
@@ -236,7 +244,12 @@ html {
     text-wrap: balance;
   }
 
-  p {
+  /* Running text and list items: no one-word last lines where the browser can avoid them. */
+  p,
+  li,
+  dd,
+  figcaption,
+  blockquote {
     text-wrap: pretty;
   }
 
@@ -326,7 +339,9 @@ html {
     width: 100%;
     max-width: calc(var(--wrap) + 2 * var(--gutter));
     margin-inline: auto;
-    padding-inline: var(--gutter);
+    /* viewport-fit=cover (BaseLayout): in landscape the content clears the notch. */
+    padding-inline: max(var(--gutter), env(safe-area-inset-left, 0px))
+      max(var(--gutter), env(safe-area-inset-right, 0px));
   }
 
   .grid-12 {
@@ -431,13 +446,22 @@ html {
     height: 1.25rem;
     flex: none;
   }
-  .btn:hover,
+  /* Hover only where the pointer can hover: a tap must not leave a button lifted (sticky hover). */
   .btn:focus-visible {
     transform: translate(-2px, -2px);
     box-shadow:
       2px 2px 0 var(--color-cyan),
       4px 4px 0 var(--color-magenta),
       6px 6px 0 var(--color-yellow);
+  }
+  @media (hover: hover) {
+    .btn:hover {
+      transform: translate(-2px, -2px);
+      box-shadow:
+        2px 2px 0 var(--color-cyan),
+        4px 4px 0 var(--color-magenta),
+        6px 6px 0 var(--color-yellow);
+    }
   }
   /* Clear of the plates (they reach 4px past the lifted face). */
   .btn:focus-visible {
@@ -457,7 +481,7 @@ html {
     background-color: transparent;
     color: var(--color-key);
   }
-  .btn-secondary:is(:hover, :focus-visible) {
+  .btn-secondary:focus-visible {
     background-color: var(--color-paper);
   }
   .on-ink .btn {
@@ -470,11 +494,43 @@ html {
   .on-ink .btn-secondary {
     color: var(--color-paper);
   }
-  .on-ink .btn-secondary:is(:hover, :focus-visible) {
+  .on-ink .btn-secondary:focus-visible {
     background-color: var(--color-ink);
+  }
+  @media (hover: hover) {
+    .btn-secondary:hover {
+      background-color: var(--color-paper);
+    }
+    .on-ink .btn-secondary:hover {
+      background-color: var(--color-ink);
+    }
   }
   .btn-block {
     width: 100%;
+  }
+  /*
+   * Disabled (`disabled`, or `aria-disabled="true"` on a link): a faded face that neither lifts,
+   * prints its plates nor takes the pointer (so no hover, magnetic pull or ripple either). An
+   * aria-disabled link stays focusable and shows only the focus ring.
+   */
+  .btn:is(:disabled, [aria-disabled='true']) {
+    opacity: 0.45;
+    pointer-events: none;
+  }
+  .btn[aria-disabled='true']:focus-visible {
+    transform: none;
+    box-shadow: none;
+  }
+  /*
+   * Small phones (under 24rem): a long label may wrap instead of running out of its column.
+   * Wider, labels stay on one line (the header's buttons are sized for that).
+   */
+  @media (max-width: 23.99rem) {
+    .btn {
+      white-space: normal;
+      text-align: center;
+      text-wrap: balance;
+    }
   }
 
   /*
@@ -501,12 +557,21 @@ html {
       scale var(--dur-base) var(--ease-snap),
       box-shadow var(--dur-base) var(--ease-out);
   }
-  .menu-btn:is(:hover, :focus-visible) {
+  .menu-btn:focus-visible {
     transform: translate(-2px, -2px);
     box-shadow:
       2px 2px 0 var(--color-cyan),
       4px 4px 0 var(--color-magenta),
       6px 6px 0 var(--color-yellow);
+  }
+  @media (hover: hover) {
+    .menu-btn:hover {
+      transform: translate(-2px, -2px);
+      box-shadow:
+        2px 2px 0 var(--color-cyan),
+        4px 4px 0 var(--color-magenta),
+        6px 6px 0 var(--color-yellow);
+    }
   }
   .menu-btn:focus-visible {
     outline-offset: 6px;
@@ -782,6 +847,46 @@ html {
 }
 
 /* ------------------------------------------------------------------------------------------ */
+/* Forced colours (Windows contrast themes): gradients are dropped there, so the drawn link    */
+/* rules would vanish. Links fall back to a real underline, which the system colours.          */
+/* ------------------------------------------------------------------------------------------ */
+
+@media (forced-colors: active) {
+  .link,
+  .link-draw:is(:hover, :focus-visible, [aria-current='page']) {
+    text-decoration: underline;
+    text-decoration-thickness: from-font;
+    text-underline-offset: 0.2em;
+  }
+}
+
+/* ------------------------------------------------------------------------------------------ */
+/* Print: always the light page (the dark tokens are screen only). Ink sections keep their     */
+/* ink, or their paper-coloured text would print white on white; headings stay with what      */
+/* follows them and pictures are not cut across pages. Chrome that only works on screen (the  */
+/* header actions, the mobile call bar, the section rail…) hides in its own component.         */
+/* ------------------------------------------------------------------------------------------ */
+
+@media print {
+  .on-ink {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    break-after: avoid;
+  }
+  img,
+  svg,
+  picture,
+  figure {
+    break-inside: avoid;
+  }
+}
+
+/* ------------------------------------------------------------------------------------------ */
 /* Page transitions (same-origin navigations, CSS only; browsers without support just load)   */
 /* The outgoing page lifts away as it fades; the new one settles up into place. Off with      */
 /* reduced motion: then navigations are instant, as without support.                          */
@@ -792,10 +897,20 @@ html {
     navigation: auto;
   }
   ::view-transition-old(root) {
-    animation: page-out 200ms cubic-bezier(0.65, 0, 0.35, 1) both;
+    animation: page-out 200ms var(--ease-in-out) both;
   }
   ::view-transition-new(root) {
-    animation: page-in 380ms cubic-bezier(0.2, 0.8, 0.2, 1) 60ms both;
+    animation: page-in 380ms var(--ease-out) 60ms both;
+  }
+  /*
+   * The header and the mobile call bar are the same on every page: they stay in place and only
+   * cross-fade (their names are set in Header.astro and FloatingContact.astro), so the chrome
+   * does not jump with the page.
+   */
+  ::view-transition-group(site-header),
+  ::view-transition-group(floating-contact) {
+    animation-duration: 260ms;
+    animation-timing-function: var(--ease-out);
   }
 }
 

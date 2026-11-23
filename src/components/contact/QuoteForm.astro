@@ -175,6 +175,7 @@ const text = contactText.el.form;
             name="quantity"
             type="text"
             class="input"
+            autocomplete="off"
             aria-describedby="q-quantity-hint"
             data-describe
           />
@@ -299,10 +300,24 @@ const text = contactText.el.form;
       .q-grid > :global(.q-span) {
         grid-column: 1 / -1;
       }
+      /* Two fields in a row share its tracks (Field.astro's head and body), so their controls
+         sit level even when only one has a hint (phone beside name, quantity beside date); a
+         head without a hint sits down on its control. Without subgrid each field just stacks. */
+      @supports (grid-template-rows: subgrid) {
+        .q-grid > :global(.field:not(.q-span)) {
+          display: grid;
+          grid-row: span 2;
+          grid-template-rows: subgrid;
+          row-gap: 0.5rem;
+        }
+        .q-grid > :global(.field:not(.q-span) > .field-head) {
+          align-self: end;
+        }
+      }
     }
 
     /* Field parts (shared with Field.astro and SendPanel.astro). */
-    .quote :global(.field) {
+    .quote :global(:is(.field, .field-head, .field-body)) {
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
@@ -327,7 +342,7 @@ const text = contactText.el.form;
         width var(--dur-base) var(--ease-out),
         margin-right var(--dur-base) var(--ease-out);
     }
-    .quote :global(.field:focus-within > .field-label)::before,
+    .quote :global(.field:focus-within .field-label)::before,
     .quote :global(.q-services:focus-within > .field-label)::before {
       width: 0.625rem;
       margin-right: 0.5rem;

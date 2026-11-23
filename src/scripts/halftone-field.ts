@@ -414,13 +414,12 @@ export const initHalftoneField = (section: HTMLElement): void => {
       if (visible) wake();
     }).observe(section);
 
-    window.addEventListener(
-      'scroll',
-      () => {
-        if (progress < 1) wake();
-      },
-      { passive: true },
-    );
+    // Scrolling only drives the print-in; once the field is fully printed it stops listening.
+    const onScroll = (): void => {
+      if (progress < 1) wake();
+      else window.removeEventListener('scroll', onScroll);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
     document.addEventListener('visibilitychange', wake);
     new ResizeObserver(() => {
       const rect = section.getBoundingClientRect();

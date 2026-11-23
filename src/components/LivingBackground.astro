@@ -4,10 +4,11 @@
  * behind all content (z-index −1, no pointer events, hidden from assistive technology).
  *
  * - Always: the paper grain, drawn above the canvas and below the content (::after).
- * - After first paint, where hardware WebGL is usable: the receding halftone sheet of arch glyphs
- *   and the floating 3D logo plates (src/scripts/living-background/), faded in over the paper. It
- *   is cleared to the paper colour (dark paper in the dark theme), so it never shifts anything
- *   and the page looks the same until it arrives.
+ * - After first paint, where hardware WebGL is usable: a few braids of thin ink lines in the
+ *   logo's C, M, Y and K that flow slowly across the screen and keep clear of the page's text and
+ *   UI (src/scripts/living-background/), faded in over the paper. It is cleared to the paper
+ *   colour (dark paper in the dark theme), so it never shifts anything and the page looks the same
+ *   until it arrives.
  * - Theme switch: the canvas is hidden (`is-switching`), swaps inks and paper, and fades back in
  *   (`is-theme-fade` keeps that fade short). The hiding is a cut, not a fade: theme.ts sets
  *   `html.theme-switching` during the switch, which turns transitions off (global.css).
@@ -57,7 +58,7 @@
     .living-bg :global(.living-bg-canvas.is-live.is-switching) {
       opacity: 0;
     }
-    /* The paper grain (it used to sit on <body>): above the sheet, below the content. */
+    /* The paper grain (it used to sit on <body>): above the lines, below the content. */
     .living-bg::after {
       content: '';
       position: absolute;

@@ -17,9 +17,8 @@
  * - The stage (decorative, aria-hidden) fills the hero; src/scripts/hero.ts inserts the scene's
  *   canvas there after first paint (src/scripts/hero-scene/). Its first frame draws the arches
  *   exactly where the SVG has them, then it fades in over it. On scroll the plates fade out in
- *   the art column while the header logo's arches pulse in register (the rules are below), and
- *   the living background's floating plates take over from the art box (`data-hero-art`;
- *   hero-scene/handoff-signal.ts).
+ *   the art column while the header logo's arches pulse in register (the rules are below); the
+ *   site-wide ink lines of the living background stay behind the page throughout.
  * - Dark theme: the scene screens light inks on black (hero-scene/theme.ts); the SVG mark, the
  *   ghosts and the rules follow the tokens, and overprint uses `--blend-ink` (screen in dark).
  * - The sheet's crop-marked trim recedes slightly on scroll (`data-parallax`). The foot carries
@@ -281,6 +280,14 @@ const ghosts = ['c', 'm', 'y'] as const;
     .hero-line {
       display: block;
     }
+    /* Narrow phones (under 400 px): the longer line (about 8.6 em) still fits the column at
+       16 px gutters, with a little room to spare, so the headline keeps its two lines down to
+       360 px. */
+    @media (max-width: 24.99rem) {
+      .hero .hero-title {
+        font-size: clamp(2.25rem, 10.25vw, 2.5rem);
+      }
+    }
 
     /* C/M/Y ghost copies of the headline, only shown during the intro. */
     .hero-ghosts {
@@ -355,9 +362,6 @@ const ghosts = ['c', 'm', 'y'] as const;
       font-weight: 700;
       color: var(--color-key);
       text-decoration: none;
-    }
-    .hero-about:hover .link {
-      background-size: 100% 2px;
     }
     .hero-about :global(svg) {
       transition: transform var(--dur-base) var(--ease-out);
@@ -493,7 +497,7 @@ const ghosts = ['c', 'm', 'y'] as const;
     }
 
     @media (prefers-reduced-motion: no-preference) {
-      .hero-about:hover :global(svg) {
+      .hero-about:is(:hover, :focus-visible) :global(svg) {
         transform: translateX(3px);
       }
     }

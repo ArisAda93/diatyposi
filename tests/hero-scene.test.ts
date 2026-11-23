@@ -817,7 +817,7 @@ describe('theme (light ink on paper, light on a dark sheet)', () => {
   });
 });
 
-describe('hand-over signal to the floating plates', () => {
+describe('hand-over signal (where the hero plates are while they fade out)', () => {
   const detail = (overrides: Partial<HeroHandoffDetail> = {}): HeroHandoffDetail => ({
     live: true,
     progress: 0.4,

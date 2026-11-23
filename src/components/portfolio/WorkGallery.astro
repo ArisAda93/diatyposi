@@ -101,15 +101,22 @@ const tiles = await Promise.all(
     :global(.no-js) .work-filters {
       display: none;
     }
-    /* Phones: one sideways-scrolling row; padding keeps focus outlines inside the scroll box. */
+    /* Phones: one sideways-scrolling row, edge to edge of the screen like the chip row on
+       Υπηρεσίες: at rest the first chip lines up with the page gutter, the chips run off the
+       screen's edge instead of being cut at the gutter, the right edge fades to show there is
+       more, and the end padding lets the last chip (and its plate shadow) scroll clear of the
+       fade. The padding also keeps focus outlines and the pressed chip's shadow inside the
+       scroll box. */
     .work-chips {
       display: flex;
       gap: 0.5rem;
       overflow-x: auto;
       overscroll-behavior-x: contain;
-      padding: 0.5rem 0.375rem 0.75rem;
-      margin-inline: -0.375rem;
+      scroll-padding-inline: var(--gutter) 2rem;
+      padding: 0.5rem 2rem 0.75rem var(--gutter);
+      margin-inline: calc(var(--gutter) * -1);
       scrollbar-width: thin;
+      mask-image: linear-gradient(to left, transparent 0, #000 2rem);
     }
     .work-chip {
       display: inline-flex;
@@ -200,6 +207,7 @@ const tiles = await Promise.all(
         overflow: visible;
         padding: 0 6px 6px 0;
         margin: 0;
+        mask-image: none;
       }
       .work-count {
         flex: none;

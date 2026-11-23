@@ -1,41 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { ARCH, ARCH_PLATES } from '../src/components/logo-paths';
-import { ART } from '../src/scripts/hero-scene/choreography';
-import { boundsOf, sampleOutline } from '../src/scripts/hero-scene/geometry';
 import { PARALLAX_GAIN, PARALLAX_MAX } from '../src/scripts/motion';
 import {
   ACCENTS,
-  ACCENT_MIX,
+  ACCENT_WEIGHTS,
   BALANCED,
-  MAX_TINT,
+  LOW_END_DENSITY,
+  PLATES,
   blendFor,
-  blendMix,
   bufferDpr,
-  cellHash,
   contrastRatio,
-  dampMix,
+  dampWeights,
   densityFactor,
-  dollyShift,
-  glyphShape,
-  gridFor,
   hexToRgb,
   inkCaps,
-  inkThresholds,
   isDarkBlend,
+  maxInkAlpha,
   maxRgb,
   minRgb,
-  LOW_END_DENSITY,
-  maxInkAlpha,
-  mixFor,
-  mixRgb,
-  mixSettled,
+  modulo,
   parseAccent,
   parseCssColor,
   parseTheme,
-  perspectiveMatrix,
   pickAccent,
-  pitchFor,
-  plateColours,
   printAll,
   printLight,
   printMin,
@@ -44,58 +30,42 @@ import {
   printScreen,
   printWith,
   relativeLuminance,
-  sheetFrame,
-  sheetMatrix,
   shouldDraw,
-  tintColor,
-  toNdc,
-  vignette,
-  waveAt,
-  wrapRow,
-  type GlyphBlend,
-  type GridOptions,
+  weightsFor,
+  weightsSettled,
+  type Accent,
+  type InkBlend,
+  type InkCaps,
+  type InkWeights,
   type Plate,
-  type InkMix,
   type Rgb,
-  type VignetteOptions,
 } from '../src/scripts/living-background/math';
 import {
-  HERO_ART_WIDTH,
-  HERO_MARK_CENTRE,
+  BRAID_INKS,
   INK_INDEX,
-  apparentWidth,
-  blendPose,
-  depthFade,
-  freePose,
-  loopBand,
-  markFromArt,
-  markSlots,
-  parallaxRate,
-  pickRegisterGroup,
-  plateCycle,
-  plateRows,
-  plateSpecs,
-  pointerInfluence,
-  poolSize,
-  registerEnvelope,
-  registerTarget,
-  springStep,
-  toWorld,
-  travellerPose,
-  viewUnit,
-  visiblePlates,
-  wrapAngle,
-  type PlateBudget,
-  type PlatePose,
-  type PlateTuning,
-  type PlateView,
-  type RegisterCandidate,
-} from '../src/scripts/living-background/plates';
+  LINE_STRIDE,
+  braidCount,
+  braidY,
+  lineAt,
+  lineInk,
+  lineSpecs,
+  loopMargin,
+  pointerPush,
+  random,
+  stripVertices,
+  writeLines,
+  type BraidBudget,
+  type LinePoint,
+  type LineSpec,
+  type LineTuning,
+  type LineView,
+} from '../src/scripts/living-background/lines';
 import {
   PARALLAX_MIRROR,
   containsRect,
   fitRects,
   inkAlpha,
+  insideAlpha,
   mergeRects,
   parallaxReach,
   textMaskAt,
@@ -107,19 +77,33 @@ import {
 import { yieldToMain } from '../src/scripts/living-background/tasks';
 
 // The scene's tuning (scene.ts), so the properties below hold for what ships.
-const FOV = 46;
-const TILT = -0.9;
-const GRID: GridOptions = {
-  pitchSmall: 46,
-  pitchLarge: 42,
-  smallWidth: 480,
-  largeWidth: 1440,
-  maxInstances: 9000,
-  margin: 0.18,
-  extraRows: 3,
+const LINES: LineTuning = {
+  river: { amp: [0.05, 0.09], cycles: [0.45, 0.8], speed: [0.05, 0.09] },
+  weave: { amp: [0.03, 0.05], cycles: [0.9, 1.5], speed: [0.08, 0.14] },
+  nodes: { cycles: [0.7, 1.1], speed: [0.03, 0.06], floor: 0.08 },
+  parallax: [0.18, 0.32],
+  scrollPhase: { river: 0.6, weave: 0.9 },
+  width: [1.1, 1.5],
+  keyWidth: 0.85,
+  openInk: 0.7,
 };
-const VIGNETTE: VignetteOptions = { inner: 0.8, outer: 1.6, calm: 0.7, calmRadius: 0.6 };
-const ALPHA_MAX = { k: 0.12, c: 0.2, m: 0.15, y: 0.42 };
+const BRAIDS: BraidBudget = {
+  desktop: 2,
+  tablet: 2,
+  phone: 1,
+  phoneWidth: 600,
+  tabletWidth: 1024,
+  lowEnd: 0.6,
+};
+const LINE_SEED = 5;
+const TEXT_INSIDE = 0.2;
+/** The contrast-safe caps start from these ceilings (light paper). */
+const ALPHA_MAX: InkCaps = { k: 0.12, c: 0.2, m: 0.15, y: 0.42 };
+/** The lines' design ceilings away from text. */
+const LINE_CEILING: Record<'light' | 'dark', InkCaps> = {
+  light: { k: 0.22, c: 0.55, m: 0.42, y: 0.85 },
+  dark: { k: 0.24, c: 0.55, m: 0.55, y: 0.5 },
+};
 
 const PAPER = hexToRgb('#FAFAF7');
 const KEY = hexToRgb('#221F20');
@@ -128,177 +112,440 @@ const MUTED = hexToRgb('#5A5650');
 const CYAN = hexToRgb('#00AEEF');
 const MAGENTA = hexToRgb('#ED008C');
 const YELLOW = hexToRgb('#FFF100');
+const INKS: Record<Plate, Rgb> = { k: KEY, c: CYAN, m: MAGENTA, y: YELLOW };
 const TEXTS = [RED, MUTED, KEY];
 const MIN_CONTRAST = 4.6;
 
-/** Screen y (px from the centre, up) of the sheet point at `v`, by direct projection. */
-const projectY = (v: number, height: number, fovDeg: number, tilt: number): number => {
-  const distance = height / 2 / Math.tan((fovDeg * Math.PI) / 360);
-  const y = v * Math.cos(tilt);
-  const depth = distance - v * Math.sin(tilt);
-  return (y * distance) / depth;
+// ------------------------------------------------------------------------------------------------
+// Ink lines
+// ------------------------------------------------------------------------------------------------
+
+const TAU = Math.PI * 2;
+const VIEW: LineView = { width: 1440, height: 900 };
+const PHONE: LineView = { width: 390, height: 844 };
+const SPECS = lineSpecs(BRAIDS.desktop, LINES, LINE_SEED);
+
+/** The lines of each braid, in braid order. */
+const braidsOf = (specs: readonly LineSpec[]): LineSpec[][] => {
+  const out: LineSpec[][] = [];
+  specs.forEach((spec) => {
+    (out[spec.braid] ??= []).push(spec);
+  });
+  return out;
 };
 
-describe('the sheet in perspective', () => {
-  it('sees more of the sheet above the centre than below it (the top recedes)', () => {
-    const frame = sheetFrame(1440, 900, FOV, TILT);
-    expect(frame.vTop).toBeGreaterThan(0);
-    expect(frame.vBottom).toBeLessThan(0);
-    expect(frame.vTop).toBeGreaterThan(-frame.vBottom);
-    expect(frame.halfWidthTop).toBeGreaterThan(720);
-    expect(frame.halfWidthBottom).toBeLessThan(720);
+/** Where `spec` crosses column `x`, with the margin the scene loops in for that view. */
+const at = (spec: LineSpec, x: number, time: number, scroll: number, view = VIEW): LinePoint =>
+  lineAt(spec, x, time, scroll, view, LINES, loopMargin(LINES, view.height));
+
+const within = (value: number, range: readonly [number, number]): void => {
+  expect(value).toBeGreaterThanOrEqual(range[0] - 1e-12);
+  expect(value).toBeLessThanOrEqual(range[1] + 1e-12);
+};
+
+/** Distance between two angles around the circle (rad, 0–π). */
+const turnBetween = (a: number, b: number): number => {
+  const d = modulo(a - b, TAU);
+  return Math.min(d, TAU - d);
+};
+
+describe('line composition', () => {
+  it('draws the four inks of the logo in every braid, in print order', () => {
+    expect(BRAID_INKS).toEqual(['c', 'm', 'y', 'k']);
+    [1, 2, 3].forEach((n) => {
+      const specs = lineSpecs(n, LINES, LINE_SEED);
+      expect(specs).toHaveLength(4 * n);
+      const braids = braidsOf(specs);
+      expect(braids).toHaveLength(n);
+      braids.forEach((lines) => expect(lines.map((l) => l.ink)).toEqual(['c', 'm', 'y', 'k']));
+    });
+    expect(lineSpecs(0, LINES, LINE_SEED)).toEqual([]);
+    expect(lineSpecs(-2, LINES, LINE_SEED)).toEqual([]);
   });
 
-  it('meets the sheet exactly at the top and bottom edges of the viewport', () => {
-    const frame = sheetFrame(1440, 900, FOV, TILT);
-    expect(projectY(frame.vTop, 900, FOV, TILT)).toBeCloseTo(450, 6);
-    expect(projectY(frame.vBottom, 900, FOV, TILT)).toBeCloseTo(-450, 6);
-  });
-
-  it('reduces to the viewport itself for an untilted sheet', () => {
-    const frame = sheetFrame(1200, 800, FOV, 0);
-    expect(frame.vTop).toBeCloseTo(400, 6);
-    expect(frame.vBottom).toBeCloseTo(-400, 6);
-    expect(frame.halfWidthTop).toBeCloseTo(600, 6);
-    expect(frame.halfWidthBottom).toBeCloseTo(600, 6);
-  });
-});
-
-describe('halftone grid', () => {
-  const viewports: [number, number][] = [
-    [360, 740],
-    [390, 844],
-    [768, 1024],
-    [1280, 720],
-    [1440, 900],
-    [1920, 1080],
-    [2560, 1440],
-    [5120, 2880],
-  ];
-
-  it('covers the whole visible sheet, with margins', () => {
-    viewports.forEach(([w, h]) => {
-      const frame = sheetFrame(w, h, FOV, TILT);
-      const grid = gridFor(frame, w, GRID);
-      expect(grid.rowStart * grid.pitch).toBeLessThanOrEqual(frame.vBottom);
-      expect((grid.rowStart + grid.rows) * grid.pitch).toBeGreaterThanOrEqual(frame.vTop);
-      const widest = 2 * Math.max(frame.halfWidthTop, frame.halfWidthBottom);
-      expect(grid.cols * grid.pitch).toBeGreaterThanOrEqual(widest);
-      expect(grid.count).toBe(grid.cols * grid.rows);
+  it('keeps the lines of one braid together, each on its own weave phase', () => {
+    braidsOf(lineSpecs(3, LINES, LINE_SEED)).forEach((lines) => {
+      const [first] = lines;
+      if (!first) throw new Error('empty braid');
+      lines.forEach((line) => {
+        expect(line.base).toBe(first.base);
+        expect(line.parallax).toBe(first.parallax);
+        expect(line.river).toEqual(first.river);
+        expect(line.nodes).toEqual(first.nodes);
+        expect(line.weave.amp).toBe(first.weave.amp);
+        expect(line.weave.cycles).toBe(first.weave.cycles);
+        expect(line.weave.speed).toBe(first.weave.speed);
+      });
+      // Spread around the circle, so the lines cross one another.
+      lines.forEach((a, i) => {
+        lines.slice(i + 1).forEach((b) => {
+          expect(turnBetween(a.weave.phase, b.weave.phase)).toBeGreaterThan(TAU / 8);
+        });
+      });
     });
   });
 
-  it('never exceeds the instance cap, even on very large screens', () => {
-    viewports.forEach(([w, h]) => {
-      const grid = gridFor(sheetFrame(w, h, FOV, TILT), w, GRID);
-      expect(grid.count).toBeLessThanOrEqual(GRID.maxInstances);
-      expect(grid.pitch).toBeGreaterThanOrEqual(GRID.pitchLarge);
+  it('spreads the braids over the page height, one per slice of the band', () => {
+    [1, 2, 3, 5].forEach((n) => {
+      const bases = braidsOf(lineSpecs(n, LINES, LINE_SEED)).map((lines) => lines[0]?.base ?? NaN);
+      bases.forEach((base, b) => {
+        expect(base).toBeGreaterThanOrEqual(b / n);
+        expect(base).toBeLessThan((b + 1) / n);
+      });
     });
   });
 
-  it('is coarser and sparser on small screens', () => {
-    expect(pitchFor(390, GRID)).toBe(GRID.pitchSmall);
-    expect(pitchFor(1920, GRID)).toBe(GRID.pitchLarge);
-    expect(pitchFor(390, GRID)).toBeGreaterThan(pitchFor(1440, GRID));
-    const phone = gridFor(sheetFrame(390, 844, FOV, TILT), 390, GRID);
-    const desktop = gridFor(sheetFrame(1440, 900, FOV, TILT), 1440, GRID);
-    expect(phone.count).toBeLessThan(desktop.count);
-    // Fewer glyphs per px² of screen.
-    expect(phone.count / (390 * 844)).toBeLessThan(desktop.count / (1440 * 900));
-  });
-});
-
-describe('rows wrapping around the travelling window', () => {
-  it('puts every row inside the window, on its own residue', () => {
-    [
-      [0, 10, 0],
-      [3, 10, 3.4],
-      [7, 12, -25.5],
-      [0, 37, 812.2],
-      [36, 37, -0.01],
-    ].forEach(([index = 0, count = 1, start = 0]) => {
-      const row = wrapRow(index, count, start);
-      expect(row).toBeGreaterThanOrEqual(start);
-      expect(row).toBeLessThan(start + count);
-      expect(Math.abs((row - index) % count)).toBe(0);
+  it('stays within the tuning, the key line a little finer', () => {
+    lineSpecs(4, LINES, LINE_SEED).forEach((spec) => {
+      within(spec.parallax, LINES.parallax);
+      // Below 1: the lines lag the page (depth).
+      expect(spec.parallax).toBeLessThan(1);
+      within(spec.river.amp, LINES.river.amp);
+      within(spec.river.cycles, LINES.river.cycles);
+      within(Math.abs(spec.river.speed), LINES.river.speed);
+      within(spec.weave.amp, LINES.weave.amp);
+      within(spec.weave.cycles, LINES.weave.cycles);
+      within(Math.abs(spec.weave.speed), LINES.weave.speed);
+      within(spec.nodes.cycles, LINES.nodes.cycles);
+      within(Math.abs(spec.nodes.speed), LINES.nodes.speed);
+      [spec.river.phase, spec.weave.phase, spec.nodes.phase].forEach((phase) =>
+        expect(Number.isFinite(phase)).toBe(true),
+      );
+      const [thin, wide] = LINES.width;
+      within(
+        spec.width,
+        spec.ink === 'k' ? [thin * LINES.keyWidth, wide * LINES.keyWidth] : [thin, wide],
+      );
     });
   });
 
-  it('covers each row of the window exactly once', () => {
-    const count = 11;
-    const start = -4.3;
-    const rows = Array.from({ length: count }, (_, j) => wrapRow(j, count, start));
-    expect(new Set(rows).size).toBe(count);
-    expect(Math.min(...rows)).toBe(Math.ceil(start));
-    expect(Math.max(...rows)).toBe(Math.ceil(start) + count - 1);
+  it('composes the same lines on every visit', () => {
+    expect(lineSpecs(2, LINES, LINE_SEED)).toEqual(lineSpecs(2, LINES, LINE_SEED));
+    expect(lineSpecs(2, LINES, LINE_SEED + 1)).not.toEqual(lineSpecs(2, LINES, LINE_SEED));
+    const a = random(7);
+    const b = random(7);
+    for (let i = 0; i < 200; i++) {
+      const value = a();
+      expect(value).toBe(b());
+      expect(value).toBeGreaterThanOrEqual(0);
+      expect(value).toBeLessThan(1);
+    }
   });
 });
 
-describe('scroll dolly', () => {
-  it('starts at 0 and travels in proportion to the scroll', () => {
-    expect(dollyShift(0, 0.32, 34)).toBe(0);
-    expect(dollyShift(2000, 0.32, 34)).toBeCloseTo(2 * dollyShift(1000, 0.32, 34));
-    expect(dollyShift(1000, 0.32, 34)).toBeGreaterThan(0);
+describe('braids looping through the page', () => {
+  const margin = loopMargin(LINES, VIEW.height);
+
+  it('keeps every braid centre inside the looping band', () => {
+    SPECS.forEach((spec) => {
+      for (let scroll = -5000; scroll < 30_000; scroll += 97.3) {
+        const y = braidY(spec, scroll, VIEW, margin);
+        expect(y).toBeGreaterThanOrEqual(-margin);
+        expect(y).toBeLessThan(VIEW.height + margin);
+      }
+    });
   });
 
-  it('moves the sheet less than the content (depth)', () => {
-    const pitch = 34;
-    expect(dollyShift(1000, 0.32, pitch) * pitch).toBeLessThan(1000);
+  it('moves each braid up by its parallax as the page scrolls down, and back again', () => {
+    const band = VIEW.height + 2 * margin;
+    SPECS.forEach((spec) => {
+      let steady = 0;
+      for (let scroll = 0; scroll < 9000; scroll += 113) {
+        const before = braidY(spec, scroll, VIEW, margin);
+        const after = braidY(spec, scroll + 10, VIEW, margin);
+        if (after < before) {
+          expect(before - after).toBeCloseTo(10 * spec.parallax, 6);
+          steady++;
+        } else {
+          // It wrapped: out at the top, back in at the bottom.
+          expect(after - before).toBeCloseTo(band - 10 * spec.parallax, 6);
+        }
+        // Scrolling back gives back the same place.
+        expect(braidY(spec, scroll, VIEW, margin)).toBe(before);
+      }
+      expect(steady).toBeGreaterThan(70);
+    });
   });
 
-  it('is 0 without a pitch', () => {
-    expect(dollyShift(500, 0.32, 0)).toBe(0);
+  it('reaches no farther from its braid than the loop margin allows', () => {
+    [VIEW, PHONE].forEach((view) => {
+      const room = loopMargin(LINES, view.height);
+      lineSpecs(3, LINES, LINE_SEED).forEach((spec) => {
+        const reach = (spec.river.amp + spec.weave.amp) * view.height;
+        expect(reach).toBeLessThanOrEqual(room - spec.width);
+        [0, 811, 4200].forEach((scroll) => {
+          const centre = braidY(spec, scroll, view, room);
+          [0, 7.3, 61].forEach((time) => {
+            for (let x = 0; x <= view.width; x += 24) {
+              const { y } = at(spec, x, time, scroll, view);
+              expect(Math.abs(y - centre)).toBeLessThanOrEqual(reach + 1e-9);
+            }
+          });
+        });
+      });
+    });
   });
-});
 
-describe('breathing waves', () => {
-  it('stays within 0–1 everywhere and at all times', () => {
-    for (let u = -40; u <= 40; u += 3.5) {
-      for (let v = -60; v <= 60; v += 4) {
-        for (let t = 0; t < 60; t += 7.3) {
-          const w = waveAt(u, v, t);
-          expect(w).toBeGreaterThanOrEqual(0);
-          expect(w).toBeLessThanOrEqual(1);
+  it('wraps only out of sight: leaves at the top and comes back at the bottom', () => {
+    [VIEW, PHONE].forEach((view) => {
+      const room = loopMargin(LINES, view.height);
+      SPECS.forEach((spec) => {
+        let previous = braidY(spec, 0, view, room);
+        let wraps = 0;
+        for (let scroll = 1; scroll < 20_000; scroll++) {
+          const y = braidY(spec, scroll, view, room);
+          if (y > previous) {
+            wraps++;
+            [0, 13.7].forEach((time) => {
+              for (let x = 0; x <= view.width; x += 30) {
+                const out = at(spec, x, time, scroll - 1, view);
+                const back = at(spec, x, time, scroll, view);
+                expect(out.y + spec.width).toBeLessThan(0);
+                expect(back.y - spec.width).toBeGreaterThan(view.height);
+              }
+            });
+          }
+          previous = y;
+        }
+        // Many passes over a long page.
+        expect(wraps).toBeGreaterThan(1);
+      });
+    });
+  });
+
+  it('keeps the braid clear of the band ends whenever one of its lines is in view', () => {
+    SPECS.forEach((spec) => {
+      for (let scroll = 0; scroll < 8000; scroll += 53) {
+        const centre = braidY(spec, scroll, VIEW, margin);
+        for (let x = 0; x <= VIEW.width; x += 60) {
+          const { y } = at(spec, x, 4.4, scroll);
+          if (y >= 0 && y <= VIEW.height) {
+            expect(centre).toBeGreaterThan(-margin + spec.width);
+            expect(centre).toBeLessThan(VIEW.height + margin - spec.width);
+          }
         }
       }
-    }
-  });
-
-  it('breathes over time at a given glyph', () => {
-    const samples = Array.from({ length: 120 }, (_, i) => waveAt(5, -3, i * 0.5));
-    expect(Math.max(...samples) - Math.min(...samples)).toBeGreaterThan(0.3);
-  });
-
-  it('is not in step across the sheet', () => {
-    const row = Array.from({ length: 40 }, (_, u) => waveAt(u, 0, 10));
-    expect(Math.max(...row) - Math.min(...row)).toBeGreaterThan(0.3);
+    });
   });
 });
 
-describe('cell hash', () => {
-  it('is stable and within [0, 1)', () => {
-    for (let u = -20; u < 20; u += 0.5) {
-      for (let v = -20; v < 20; v++) {
-        const h = cellHash(u, v);
-        expect(h).toBeGreaterThanOrEqual(0);
-        expect(h).toBeLessThan(1);
-        expect(cellHash(u, v)).toBe(h);
+describe('line shape', () => {
+  it('is continuous across the screen (under a pixel per pixel)', () => {
+    SPECS.forEach((spec) => {
+      [0, 4.2, 33].forEach((time) => {
+        [0, 1500].forEach((scroll) => {
+          let previous = at(spec, -20, time, scroll).y;
+          for (let x = -19; x <= VIEW.width + 20; x++) {
+            const { y } = at(spec, x, time, scroll);
+            expect(Math.abs(y - previous)).toBeLessThanOrEqual(1);
+            previous = y;
+          }
+        });
+      });
+    });
+  });
+
+  it('meets where the braid narrows and parts between the nodes', () => {
+    const time = 2.5;
+    braidsOf(SPECS).forEach((lines) => {
+      const [first] = lines;
+      if (!first) throw new Error('empty braid');
+      let node = 0;
+      let open = 0;
+      let least = Infinity;
+      let most = -Infinity;
+      for (let x = -VIEW.width; x <= 2 * VIEW.width; x += 0.5) {
+        const { spread } = at(first, x, time, 0);
+        expect(spread).toBeGreaterThanOrEqual(0);
+        expect(spread).toBeLessThanOrEqual(1);
+        if (spread < least) [least, node] = [spread, x];
+        if (spread > most) [most, open] = [spread, x];
+      }
+      /** How far apart the braid's lines are at column x. */
+      const gap = (x: number): number => {
+        const points = lines.map((line) => at(line, x, time, 0));
+        // One braid, one set of nodes.
+        points.forEach((p) => expect(p.spread).toBe(points[0]?.spread));
+        const ys = points.map((p) => p.y);
+        return Math.max(...ys) - Math.min(...ys);
+      };
+      const meet = 2 * LINES.nodes.floor * first.weave.amp * VIEW.height;
+      expect(least).toBeLessThan(1e-3);
+      expect(most).toBeGreaterThan(0.999);
+      expect(gap(node)).toBeLessThanOrEqual(meet + 0.01);
+      expect(gap(open)).toBeGreaterThan(3 * meet);
+    });
+  });
+
+  it('drifts slowly with time', () => {
+    SPECS.forEach((spec) => {
+      let moved = 0;
+      for (let x = 0; x <= VIEW.width; x += 40) {
+        const now = at(spec, x, 12, 600).y;
+        // One frame at 30 fps: at most a couple of pixels.
+        expect(Math.abs(at(spec, x, 12 + 1 / 30, 600).y - now)).toBeLessThanOrEqual(2);
+        moved = Math.max(moved, Math.abs(at(spec, x, 22, 600).y - now));
+      }
+      expect(moved).toBeGreaterThan(2);
+    });
+  });
+
+  it('follows the scroll, and the waves shift with it', () => {
+    const margin = loopMargin(LINES, VIEW.height);
+    SPECS.forEach((spec) => {
+      expect(Math.abs(at(spec, 720, 3, 200).y - at(spec, 720, 3, 0).y)).toBeGreaterThan(1);
+      // Relative to the braid's place, the shape itself changes with the scroll.
+      const shape = (x: number, scroll: number): number =>
+        at(spec, x, 3, scroll).y - braidY(spec, scroll, VIEW, margin);
+      let shifted = 0;
+      for (let x = 0; x <= VIEW.width; x += 40) {
+        shifted = Math.max(shifted, Math.abs(shape(x, 450) - shape(x, 0)));
+      }
+      expect(shifted).toBeGreaterThan(1);
+    });
+  });
+});
+
+describe('ink along a line', () => {
+  it('prints full where the lines meet and openInk of it at the widest spread', () => {
+    expect(lineInk(0, LINES.openInk)).toBe(1);
+    expect(lineInk(1, LINES.openInk)).toBeCloseTo(LINES.openInk, 12);
+    let previous = Infinity;
+    for (let spread = 0; spread <= 1; spread += 0.05) {
+      const ink = lineInk(spread, LINES.openInk);
+      expect(ink).toBeLessThanOrEqual(previous);
+      within(ink, [LINES.openInk, 1]);
+      previous = ink;
+    }
+  });
+
+  it('clamps the spread to 0–1', () => {
+    expect(lineInk(-1, LINES.openInk)).toBe(1);
+    expect(lineInk(2, LINES.openInk)).toBeCloseTo(LINES.openInk, 12);
+  });
+});
+
+describe('lines parting around the pointer', () => {
+  // The scene's POINTER.
+  const radius = 140;
+  const strength = 26;
+  const peak = (Math.exp(-0.5) / Math.SQRT2) * strength;
+
+  it('does nothing without a radius', () => {
+    expect(pointerPush(10, 20, 0, strength)).toBe(0);
+    expect(pointerPush(10, 20, -5, strength)).toBe(0);
+  });
+
+  it('pushes points below the pointer down and points above it up', () => {
+    [-150, -40, 0, 60, 200].forEach((dx) => {
+      [5, 30, 85, 160].forEach((dy) => {
+        const down = pointerPush(dx, dy, radius, strength);
+        expect(down).toBeGreaterThan(0);
+        expect(pointerPush(dx, -dy, radius, strength)).toBeCloseTo(-down, 12);
+      });
+      expect(Math.abs(pointerPush(dx, 0, radius, strength))).toBe(0);
+    });
+  });
+
+  it('pushes hardest about 0.7 radius from the pointer, about 0.43 of the strength', () => {
+    let best = 0;
+    let where = 0;
+    for (let dy = 0; dy <= 3 * radius; dy += 0.25) {
+      const push = pointerPush(0, dy, radius, strength);
+      if (push > best) [best, where] = [push, dy];
+    }
+    expect(best / strength).toBeCloseTo(Math.exp(-0.5) / Math.SQRT2, 4);
+    expect(where / radius).toBeCloseTo(Math.SQRT1_2, 2);
+    for (let dx = -3 * radius; dx <= 3 * radius; dx += 7) {
+      for (let dy = -3 * radius; dy <= 3 * radius; dy += 7) {
+        expect(Math.abs(pointerPush(dx, dy, radius, strength))).toBeLessThanOrEqual(peak + 1e-9);
       }
     }
   });
 
-  it('gives roughly the requested accent share across the sheet', () => {
-    let accents = 0;
-    const n = 120;
-    for (let u = 0; u < n; u++) {
-      for (let v = 0; v < n; v++) if (cellHash(u + 0.5 * (v % 2), v) < 0.1) accents++;
-    }
-    expect(accents / (n * n)).toBeGreaterThan(0.07);
-    expect(accents / (n * n)).toBeLessThan(0.13);
+  it('fades out beyond three radii', () => {
+    [3, 5].forEach((reach) => {
+      for (let angle = 0; angle < TAU; angle += Math.PI / 12) {
+        const dx = Math.cos(angle) * reach * radius;
+        const dy = Math.sin(angle) * reach * radius;
+        expect(Math.abs(pointerPush(dx, dy, radius, strength))).toBeLessThanOrEqual(
+          1e-3 * strength,
+        );
+      }
+    });
   });
 });
 
+describe('line instance data', () => {
+  it('matches the shader ink order (k, c, m, y)', () => {
+    expect(INK_INDEX).toEqual({ k: 0, c: 1, m: 2, y: 3 });
+    PLATES.forEach((plate, i) => expect(INK_INDEX[plate]).toBe(i));
+  });
+
+  it('writes every line in the documented layout', () => {
+    expect(LINE_STRIDE).toBe(16);
+    const out = new Float32Array(SPECS.length * LINE_STRIDE);
+    expect(writeLines(SPECS, out)).toBe(SPECS.length);
+    SPECS.forEach((s, i) => {
+      const row = Array.from(out.subarray(i * LINE_STRIDE, (i + 1) * LINE_STRIDE));
+      const expected = [
+        s.base,
+        s.parallax,
+        s.width,
+        INK_INDEX[s.ink],
+        s.river.amp,
+        s.river.cycles,
+        s.river.phase,
+        s.river.speed,
+        s.weave.amp,
+        s.weave.cycles,
+        s.weave.phase,
+        s.weave.speed,
+        s.nodes.cycles,
+        s.nodes.phase,
+        s.nodes.speed,
+        0,
+      ].map((v) => Math.fround(v));
+      expect(row).toEqual(expected);
+    });
+  });
+
+  it('stops at the buffer capacity, leaving the rest untouched', () => {
+    const out = new Float32Array(LINE_STRIDE * 2 + 5).fill(-7);
+    expect(writeLines(SPECS, out)).toBe(2);
+    expect(Array.from(out.slice(LINE_STRIDE * 2))).toEqual([-7, -7, -7, -7, -7]);
+    expect(writeLines(SPECS, new Float32Array(0))).toBe(0);
+    expect(writeLines([], out)).toBe(0);
+  });
+
+  it('builds each line as a strip of stations from one end to the other', () => {
+    [1, 8, 96].forEach((segments) => {
+      const strip = stripVertices(segments);
+      const vertices = strip.length / 2;
+      expect(vertices).toBe((segments + 1) * 2);
+      let previous = 0;
+      for (let i = 0; i < vertices; i++) {
+        const t = strip[i * 2] ?? NaN;
+        const side = strip[i * 2 + 1];
+        expect(side).toBe(i % 2 === 0 ? -1 : 1);
+        expect(t).toBeGreaterThanOrEqual(previous);
+        previous = t;
+      }
+      expect(strip[0]).toBe(0);
+      expect(strip[strip.length - 2]).toBe(1);
+    });
+    // At least one segment.
+    expect(stripVertices(0).length).toBe(stripVertices(1).length);
+  });
+});
+
+// ------------------------------------------------------------------------------------------------
+// Section accents
+// ------------------------------------------------------------------------------------------------
+
 describe('section accents', () => {
+  const own: Record<Accent, Plate> = { cyan: 'c', magenta: 'm', yellow: 'y', key: 'k' };
+
   it('reads data-bg-accent values', () => {
     ACCENTS.forEach((accent) => expect(parseAccent(accent)).toBe(accent));
     expect(parseAccent(' Cyan ')).toBe('cyan');
@@ -313,86 +560,63 @@ describe('section accents', () => {
     expect(pickAccent(['yellow', 'nonsense', null])).toBe('yellow');
     expect(pickAccent([])).toBeNull();
     expect(pickAccent([null, ''])).toBeNull();
-    expect(mixFor(null)).toBe(BALANCED);
   });
 
-  it('keeps every mix a proper split of the accent inks', () => {
-    [BALANCED, ...Object.values(ACCENT_MIX)].forEach((mix) => {
-      expect(mix.c + mix.m + mix.y).toBeCloseTo(1, 6);
-      expect(mix.share).toBeGreaterThan(0);
-      expect(mix.share).toBeLessThan(1);
-      expect(mix.tint).toBeGreaterThanOrEqual(0);
-      expect(mix.tint).toBeLessThanOrEqual(MAX_TINT);
+  it('prints every ink at full strength by default', () => {
+    expect(weightsFor(null)).toEqual(BALANCED);
+    PLATES.forEach((plate) => expect(BALANCED[plate]).toBe(1));
+  });
+
+  it('leads with the section ink and quietens the others', () => {
+    ACCENTS.forEach((accent) => {
+      const weights = weightsFor(accent);
+      expect(weights).toEqual(ACCENT_WEIGHTS[accent]);
+      expect(weights[own[accent]]).toBe(1);
+      PLATES.filter((plate) => plate !== own[accent]).forEach((plate) => {
+        expect(weights[plate]).toBeLessThan(1);
+        expect(weights[plate]).toBeGreaterThan(0);
+      });
     });
   });
 
-  it('lets the C/M/Y inks carry the default mix, key a minority', () => {
-    expect(BALANCED.share).toBeGreaterThan(0.5);
-    // Cyan and yellow have the highest contrast caps, so they lead; magenta follows.
-    expect(BALANCED.c).toBeGreaterThan(BALANCED.m);
-    expect(BALANCED.y).toBeGreaterThan(BALANCED.m);
-    expect(BALANCED.tint).toBe(0);
-  });
-
-  it('leans towards the section ink', () => {
-    const { cyan, magenta, yellow, key } = ACCENT_MIX;
-    expect(cyan.c).toBeGreaterThan(Math.max(cyan.m, cyan.y));
-    expect(magenta.m).toBeGreaterThan(Math.max(magenta.c, magenta.y));
-    expect(yellow.y).toBeGreaterThan(Math.max(yellow.c, yellow.m));
-    [cyan, magenta, yellow].forEach((mix) => {
-      expect(mix.share).toBeGreaterThan(BALANCED.share);
-      expect(mix.tint).toBeGreaterThan(0);
+  it('never prints a line above its own alpha (every weight within 0–1)', () => {
+    [BALANCED, ...Object.values(ACCENT_WEIGHTS)].forEach((weights) => {
+      PLATES.forEach((plate) => within(weights[plate], [0, 1]));
     });
-    // Key: mostly key ink, untinted.
-    expect(key.share).toBeLessThan(BALANCED.share);
-    expect(key.tint).toBe(0);
   });
 
-  it('blends smoothly between mixes', () => {
-    const a = BALANCED;
-    const b = ACCENT_MIX.magenta;
-    expect(blendMix(a, b, 0)).toEqual(a);
-    expect(blendMix(a, b, 1)).toEqual(b);
-    const half = blendMix(a, b, 0.5);
-    expect(half.m).toBeGreaterThan(a.m);
-    expect(half.m).toBeLessThan(b.m);
+  it('hands out copies, so damping never changes the tables', () => {
+    const cyan = weightsFor('cyan');
+    cyan.c = 0;
+    expect(ACCENT_WEIGHTS.cyan.c).toBe(1);
+    const balanced = weightsFor(null);
+    balanced.k = 0;
+    expect(BALANCED.k).toBe(1);
   });
 
   it('settles on the target without overshooting, at any frame rate', () => {
-    const target = ACCENT_MIX.cyan;
-    let mix: InkMix = BALANCED;
-    let previous = mix.c;
+    const target = weightsFor('cyan');
+    let weights: InkWeights = weightsFor(null);
+    expect(weightsSettled(weights, target)).toBe(false);
+    let previous = weights.k;
     for (let i = 0; i < 400; i++) {
-      mix = dampMix(mix, target, 1.8, 1 / 60);
-      expect(mix.c).toBeGreaterThanOrEqual(previous);
-      expect(mix.c).toBeLessThanOrEqual(target.c + 1e-9);
-      previous = mix.c;
+      weights = dampWeights(weights, target, 1.8, 1 / 60);
+      expect(weights.k).toBeLessThanOrEqual(previous);
+      expect(weights.k).toBeGreaterThanOrEqual(target.k - 1e-9);
+      expect(weights.c).toBeCloseTo(1, 12);
+      previous = weights.k;
     }
-    expect(mixSettled(mix, target)).toBe(true);
-    const twoShort = dampMix(dampMix(BALANCED, target, 1.8, 0.008), target, 1.8, 0.008);
-    expect(twoShort.share).toBeCloseTo(dampMix(BALANCED, target, 1.8, 0.016).share, 10);
-  });
-
-  it('turns weights into increasing hash thresholds', () => {
-    const [c, cm] = inkThresholds({ c: 1, m: 1, y: 1, share: 0.5, tint: 0 });
-    expect(c).toBeCloseTo(1 / 3);
-    expect(cm).toBeCloseTo(2 / 3);
-    const [bc, bcm] = inkThresholds(BALANCED);
-    expect(bc).toBeCloseTo(BALANCED.c);
-    expect(bcm - bc).toBeCloseTo(BALANCED.m);
-    Object.values(ACCENT_MIX).forEach((mix) => {
-      const [t1, t2] = inkThresholds(mix);
-      expect(t1).toBeGreaterThanOrEqual(0);
-      expect(t2).toBeGreaterThanOrEqual(t1);
-      expect(t2).toBeLessThanOrEqual(1);
-    });
-  });
-
-  it('tints towards the weighted accent inks', () => {
-    const pure = tintColor({ c: 1, m: 0, y: 0, share: 0.2, tint: 0.2 }, CYAN, MAGENTA, YELLOW);
-    pure.forEach((channel, i) => expect(channel).toBeCloseTo(CYAN[i] ?? NaN));
+    expect(weightsSettled(weights, target)).toBe(true);
+    const start = weightsFor(null);
+    const twoShort = dampWeights(dampWeights(start, target, 1.8, 0.008), target, 1.8, 0.008);
+    const oneLong = dampWeights(start, target, 1.8, 0.016);
+    PLATES.forEach((plate) => expect(twoShort[plate]).toBeCloseTo(oneLong[plate], 10));
   });
 });
+
+// ------------------------------------------------------------------------------------------------
+// Contrast caps
+// ------------------------------------------------------------------------------------------------
 
 describe('contrast caps (text on the paper stays AA)', () => {
   it('measures contrast like WCAG', () => {
@@ -428,67 +652,26 @@ describe('contrast caps (text on the paper stays AA)', () => {
     });
   });
 
-  it('keeps the key cap safe for key glyphs tinted towards any accent', () => {
-    const keyCap = (ink: readonly [number, number, number]): number =>
-      Math.min(...TEXTS.map((text) => maxInkAlpha(PAPER, ink, text, MIN_CONTRAST)));
-    const cap = Math.min(
-      keyCap(KEY),
-      ...[CYAN, MAGENTA, YELLOW].map((ink) => keyCap(mixRgb(KEY, ink, MAX_TINT))),
-    );
-    [CYAN, MAGENTA, YELLOW].forEach((ink) => {
-      for (let t = 0; t <= MAX_TINT; t += MAX_TINT / 4) {
-        const glyph = printOn(PAPER, mixRgb(KEY, ink, t), cap);
-        TEXTS.forEach((text) => {
-          expect(contrastRatio(text, glyph)).toBeGreaterThanOrEqual(MIN_CONTRAST);
-        });
-      }
-    });
-    // Key ink stays a light touch on the paper.
-    expect(cap).toBeLessThan(0.15);
-  });
-
-  it('caps every plate under its ceiling and keeps one glyph of it readable', () => {
-    const inks = { k: KEY, c: CYAN, m: MAGENTA, y: YELLOW };
-    const caps = inkCaps(PAPER, inks, TEXTS, ALPHA_MAX, MIN_CONTRAST, MAX_TINT);
-    (['k', 'c', 'm', 'y'] as const).forEach((plate) => {
+  it('caps every ink under its ceiling and keeps one line of it readable', () => {
+    const caps = inkCaps(PAPER, INKS, TEXTS, ALPHA_MAX, MIN_CONTRAST);
+    PLATES.forEach((plate) => {
       expect(caps[plate]).toBeGreaterThan(0);
       expect(caps[plate]).toBeLessThanOrEqual(ALPHA_MAX[plate]);
       TEXTS.forEach((text) => {
-        const glyph = printOn(PAPER, inks[plate], caps[plate]);
-        expect(contrastRatio(text, glyph)).toBeGreaterThanOrEqual(MIN_CONTRAST);
+        const line = printOn(PAPER, INKS[plate], caps[plate]);
+        expect(contrastRatio(text, line)).toBeGreaterThanOrEqual(MIN_CONTRAST);
       });
     });
-    // Tinted key glyphs stay readable under the key cap.
-    [CYAN, MAGENTA, YELLOW].forEach((ink) => {
-      const glyph = printOn(PAPER, mixRgb(KEY, ink, MAX_TINT), caps.k);
-      TEXTS.forEach((text) => {
-        expect(contrastRatio(text, glyph)).toBeGreaterThanOrEqual(MIN_CONTRAST);
-      });
-    });
-    // Yellow and cyan may print stronger than key: they carry the presence.
+    // Yellow may print strongest: it barely moves the luminance.
     expect(caps.y).toBeGreaterThan(caps.c);
-    expect(caps.c).toBeGreaterThan(caps.k);
+    expect(caps.y).toBeGreaterThan(caps.m);
+    expect(caps.y).toBeGreaterThan(caps.k);
   });
 
-  describe('where glyphs overlap', () => {
-    const inks: Record<Plate, readonly [number, number, number]> = {
-      k: KEY,
-      c: CYAN,
-      m: MAGENTA,
-      y: YELLOW,
-    };
-    const plates: Plate[] = ['k', 'c', 'm', 'y'];
-    /** Every ink a plate can print with: key also tinted, finely sampled. */
-    const shades = (plate: Plate): (readonly [number, number, number])[] =>
-      plate === 'k'
-        ? [0, 0.25, 0.5, 0.75, 1].flatMap((f) =>
-            [CYAN, MAGENTA, YELLOW].map((ink) => mixRgb(KEY, ink, MAX_TINT * f)),
-          )
-        : [inks[plate]];
-
+  describe('where lines overlap', () => {
     it('combines per channel under MIN, never darker than the darker of the two', () => {
       expect(minRgb([0.2, 0.9, 0.5], [0.6, 0.3, 0.5])).toEqual([0.2, 0.3, 0.5]);
-      // The same ink over itself looks like one glyph.
+      // The same ink over itself looks like one line.
       expect(printMin(PAPER, CYAN, 0.1, CYAN, 0.1)).toEqual(printOn(PAPER, CYAN, 0.1));
       // Cyan with yellow: cyan's red, yellow's blue (reads green), each no darker than alone.
       const green = printMin(PAPER, CYAN, 0.1, YELLOW, 0.4);
@@ -498,25 +681,21 @@ describe('contrast caps (text on the paper stays AA)', () => {
       green.forEach((channel, i) => expect(channel).toBeLessThanOrEqual(PAPER[i] ?? 0));
     });
 
-    it('multiplies in the fallback, darker than either glyph', () => {
+    it('multiplies in the fallback, darker than either line', () => {
       const both = printPair(PAPER, CYAN, 0.1, MAGENTA, 0.1, 'multiply');
       expect(relativeLuminance(both)).toBeLessThan(
         relativeLuminance(printMin(PAPER, CYAN, 0.1, MAGENTA, 0.1)),
       );
     });
 
-    (['min', 'multiply'] as GlyphBlend[]).forEach((blend) => {
-      it(`keeps every text readable on every pair of glyphs at their caps (${blend})`, () => {
-        const caps = inkCaps(PAPER, inks, TEXTS, ALPHA_MAX, MIN_CONTRAST, MAX_TINT, blend);
-        plates.forEach((p) => {
-          plates.forEach((q) => {
-            shades(p).forEach((a) => {
-              shades(q).forEach((b) => {
-                const pair = printPair(PAPER, a, caps[p], b, caps[q], blend);
-                TEXTS.forEach((text) => {
-                  expect(contrastRatio(text, pair)).toBeGreaterThanOrEqual(MIN_CONTRAST);
-                });
-              });
+    (['min', 'multiply'] as InkBlend[]).forEach((blend) => {
+      it(`keeps every text readable on every pair of lines at their caps (${blend})`, () => {
+        const caps = inkCaps(PAPER, INKS, TEXTS, ALPHA_MAX, MIN_CONTRAST, blend);
+        PLATES.forEach((p) => {
+          PLATES.forEach((q) => {
+            const pair = printPair(PAPER, INKS[p], caps[p], INKS[q], caps[q], blend);
+            TEXTS.forEach((text) => {
+              expect(contrastRatio(text, pair)).toBeGreaterThanOrEqual(MIN_CONTRAST);
             });
           });
         });
@@ -524,21 +703,14 @@ describe('contrast caps (text on the paper stays AA)', () => {
     });
 
     it('keeps some ink under MIN and under the multiply fallback, within the ceilings', () => {
-      const min = inkCaps(PAPER, inks, TEXTS, ALPHA_MAX, MIN_CONTRAST, MAX_TINT, 'min');
-      const multiply = inkCaps(PAPER, inks, TEXTS, ALPHA_MAX, MIN_CONTRAST, MAX_TINT, 'multiply');
-      plates.forEach((plate) => {
+      const min = inkCaps(PAPER, INKS, TEXTS, ALPHA_MAX, MIN_CONTRAST, 'min');
+      const multiply = inkCaps(PAPER, INKS, TEXTS, ALPHA_MAX, MIN_CONTRAST, 'multiply');
+      PLATES.forEach((plate) => {
         expect(min[plate]).toBeGreaterThan(0);
         expect(multiply[plate]).toBeGreaterThan(0);
         expect(min[plate]).toBeLessThanOrEqual(ALPHA_MAX[plate]);
         expect(multiply[plate]).toBeLessThanOrEqual(ALPHA_MAX[plate]);
       });
-    });
-
-    it('lists the key tints among the colours the caps are checked against', () => {
-      const colours = plateColours(inks, MAX_TINT);
-      expect(colours.k).toContainEqual(KEY);
-      expect(colours.k).toContainEqual(mixRgb(KEY, CYAN, MAX_TINT));
-      expect(colours.c).toEqual([CYAN]);
     });
   });
 
@@ -554,33 +726,6 @@ describe('contrast caps (text on the paper stays AA)', () => {
     expect(parseCssColor(' #FFF ')).toEqual([1, 1, 1]);
     expect(parseCssColor('transparent')).toBeNull();
     expect(parseCssColor('rgb(300, 0, 0)')).toBeNull();
-  });
-});
-
-describe('edges and pointer', () => {
-  it('keeps the centre calm but not empty, and fades the field towards the corners', () => {
-    const centre = vignette(0, 0, VIGNETTE);
-    expect(centre).toBeCloseTo(VIGNETTE.calm);
-    expect(centre).toBeGreaterThan(0.5);
-    expect(vignette(0.7, 0, VIGNETTE)).toBe(1);
-    expect(vignette(1, 1, VIGNETTE)).toBeLessThan(0.2);
-    expect(vignette(1, 1, VIGNETTE)).toBeLessThan(centre);
-    // Past the calm centre it only falls towards the corners.
-    let previous = 1;
-    for (let r = 0.6; r <= 1.0; r += 0.05) {
-      const value = vignette(r, r, VIGNETTE);
-      expect(value).toBeLessThanOrEqual(previous + 1e-12);
-      expect(value).toBeGreaterThanOrEqual(0);
-      previous = value;
-    }
-  });
-
-  it('maps the pointer to NDC with y up', () => {
-    expect(toNdc(500, 300, 1000, 600)).toEqual([0, 0]);
-    expect(toNdc(0, 0, 1000, 600)).toEqual([-1, 1]);
-    expect(toNdc(1000, 600, 1000, 600)).toEqual([1, -1]);
-    expect(toNdc(-50, 900, 1000, 600)).toEqual([-1, -1]);
-    expect(toNdc(10, 10, 0, 0)).toEqual([0, 0]);
   });
 });
 
@@ -602,42 +747,10 @@ describe('drawing budget', () => {
   });
 });
 
-describe('arch glyph', () => {
-  it('is one unit wide, centred, and fully triangulated', () => {
-    const glyph = glyphShape(ARCH, 3);
-    const xs: number[] = [];
-    const ys: number[] = [];
-    glyph.position.forEach((value, i) => (i % 2 === 0 ? xs : ys).push(value));
-    expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(1, 6);
-    expect(Math.max(...xs) + Math.min(...xs)).toBeCloseTo(0, 6);
-    expect(Math.max(...ys) + Math.min(...ys)).toBeCloseTo(0, 6);
-
-    const x = (i: number): number => xs[i] ?? NaN;
-    const y = (i: number): number => ys[i] ?? NaN;
-    // Outline area (shoelace) equals the area of the triangles: they tile it exactly.
-    let outline = 0;
-    for (let i = 0; i < xs.length; i++) {
-      const j = (i + 1) % xs.length;
-      outline += x(i) * y(j) - x(j) * y(i);
-    }
-    expect(glyph.index.length % 3).toBe(0);
-    let triangles = 0;
-    for (let t = 0; t < glyph.index.length; t += 3) {
-      const [a = 0, b = 0, c = 0] = glyph.index.slice(t, t + 3);
-      const area = (x(b) - x(a)) * (y(c) - y(a)) - (y(b) - y(a)) * (x(c) - x(a));
-      // Every triangle faces the viewer (counter-clockwise).
-      expect(area).toBeGreaterThanOrEqual(0);
-      triangles += area;
-    }
-    expect(outline).toBeGreaterThan(0);
-    expect(triangles).toBeCloseTo(outline, 6);
-  });
-});
-
 describe('low-end density', () => {
   const capable = { cores: 8, memory: 8, coarse: false, width: 1440 };
 
-  it('keeps the full grid on capable devices and when the browser says nothing', () => {
+  it('keeps every braid on capable devices and when the browser says nothing', () => {
     expect(densityFactor(capable)).toBe(1);
     expect(densityFactor({ cores: undefined, memory: undefined, coarse: false, width: 1440 })).toBe(
       1,
@@ -646,82 +759,40 @@ describe('low-end density', () => {
     expect(densityFactor({ ...capable, coarse: true, width: 1024 })).toBe(1);
   });
 
-  it('thins the grid on any low-end hint', () => {
+  it('thins the lines on any low-end hint', () => {
     expect(densityFactor({ ...capable, cores: 4 })).toBe(LOW_END_DENSITY);
     expect(densityFactor({ ...capable, memory: 2 })).toBe(LOW_END_DENSITY);
     expect(densityFactor({ ...capable, coarse: true, width: 390 })).toBe(LOW_END_DENSITY);
     expect(LOW_END_DENSITY).toBeGreaterThan(0.5);
     expect(LOW_END_DENSITY).toBeLessThan(0.7);
   });
-
-  it('draws about that share of the glyphs, still covering the sheet', () => {
-    [
-      [390, 844],
-      [1440, 900],
-      [2560, 1440],
-    ].forEach(([w = 0, h = 0]) => {
-      const frame = sheetFrame(w, h, FOV, TILT);
-      const full = gridFor(frame, w, GRID);
-      const thin = gridFor(frame, w, GRID, LOW_END_DENSITY);
-      expect(thin.count).toBeLessThan(full.count * 0.75);
-      expect(thin.count).toBeGreaterThan(full.count * 0.45);
-      expect(thin.count).toBeLessThanOrEqual(GRID.maxInstances * LOW_END_DENSITY);
-      expect(thin.rowStart * thin.pitch).toBeLessThanOrEqual(frame.vBottom);
-      expect((thin.rowStart + thin.rows) * thin.pitch).toBeGreaterThanOrEqual(frame.vTop);
-    });
-  });
 });
 
-describe('matrices', () => {
-  /** Column-major 4×4 times (x, y, z, 1). */
-  const apply = (m: Float32Array, x: number, y: number, z: number): number[] =>
-    [0, 1, 2, 3].map(
-      (r) => (m[r] ?? 0) * x + (m[r + 4] ?? 0) * y + (m[r + 8] ?? 0) * z + (m[r + 12] ?? 0),
-    );
+describe('braids per screen', () => {
+  const capable = { cores: 8, memory: 8, coarse: false };
 
-  it('projects the viewport edges at the camera distance onto NDC ±1', () => {
-    const [w, h] = [1440, 900];
-    const d = h / 2 / Math.tan((FOV * Math.PI) / 360);
-    const p = perspectiveMatrix(new Float32Array(16), FOV, w / h, d * 0.05, d * 8);
-    const top = apply(p, 0, h / 2, -d);
-    const right = apply(p, w / 2, 0, -d);
-    expect((top[1] ?? 0) / (top[3] ?? 1)).toBeCloseTo(1, 5);
-    expect((right[0] ?? 0) / (right[3] ?? 1)).toBeCloseTo(1, 5);
-    const near = apply(p, 0, 0, -d * 0.05);
-    const far = apply(p, 0, 0, -d * 8);
-    expect((near[2] ?? 0) / (near[3] ?? 1)).toBeCloseTo(-1, 4);
-    expect((far[2] ?? 0) / (far[3] ?? 1)).toBeCloseTo(1, 4);
+  it('draws two braids on desktops and tablets, one on phones', () => {
+    expect(braidCount({ ...capable, width: 1440 }, BRAIDS)).toBe(2);
+    expect(braidCount({ ...capable, coarse: true, width: 820 }, BRAIDS)).toBe(2);
+    expect(braidCount({ ...capable, coarse: true, width: 390 }, BRAIDS)).toBe(1);
+    expect(braidCount({ ...capable, width: 599 }, BRAIDS)).toBe(1);
+    expect(braidCount({ ...capable, width: 600 }, BRAIDS)).toBe(2);
+    expect(braidCount({ ...capable, width: 1023 }, BRAIDS)).toBe(2);
+    expect(braidCount({ ...capable, width: 1024 }, BRAIDS)).toBe(2);
   });
 
-  it('tilts the top of the sheet away and turns its right side back', () => {
-    const tilted = sheetMatrix(new Float32Array(16), TILT, 0, -1000);
-    const up = apply(tilted, 0, 100, 0);
-    expect(up[1]).toBeCloseTo(100 * Math.cos(TILT), 3);
-    expect(up[2]).toBeLessThan(-1000);
-    const turned = sheetMatrix(new Float32Array(16), 0, 0.1, 0);
-    const right = apply(turned, 100, 0, 0);
-    expect(right[0]).toBeCloseTo(100 * Math.cos(0.1), 3);
-    expect(right[2]).toBeLessThan(0);
-  });
-
-  it('keeps the rotation rigid (no scaling or shear)', () => {
-    const m = sheetMatrix(new Float32Array(16), -0.9, 0.06, -500);
-    [0, 4, 8].forEach((c) => {
-      const length = Math.hypot(m[c] ?? 0, m[c + 1] ?? 0, m[c + 2] ?? 0);
-      expect(length).toBeCloseTo(1, 5);
+  it('draws fewer or as many on low-end devices, and never none', () => {
+    [1440, 820, 390].forEach((width) => {
+      const full = braidCount({ ...capable, width }, BRAIDS);
+      const low = { cores: 4, memory: 2, coarse: true, width };
+      const density = densityFactor(low);
+      expect(density).toBeLessThan(1);
+      const thin = braidCount(low, BRAIDS, density);
+      expect(thin).toBeGreaterThanOrEqual(1);
+      expect(thin).toBeLessThanOrEqual(full);
     });
-    const dot = (m[0] ?? 0) * (m[4] ?? 0) + (m[1] ?? 0) * (m[5] ?? 0) + (m[2] ?? 0) * (m[6] ?? 0);
-    expect(dot).toBeCloseTo(0, 5);
-  });
-
-  it('agrees with the sheet frame: the top row it reports lands on the top edge', () => {
-    const [w, h] = [1440, 900];
-    const frame = sheetFrame(w, h, FOV, TILT);
-    const p = perspectiveMatrix(new Float32Array(16), FOV, w / h, 1, frame.distance * 8);
-    const mv = sheetMatrix(new Float32Array(16), TILT, 0, -frame.distance);
-    const eye = apply(mv, 0, frame.vTop, 0);
-    const clip = apply(p, eye[0] ?? 0, eye[1] ?? 0, eye[2] ?? 0);
-    expect((clip[1] ?? 0) / (clip[3] ?? 1)).toBeCloseTo(1, 5);
+    expect(braidCount({ ...capable, width: 1440 }, BRAIDS, 0)).toBe(1);
+    expect(braidCount({ ...capable, width: 390 }, { ...BRAIDS, phone: 0 })).toBe(1);
   });
 });
 
@@ -738,14 +809,36 @@ describe('start-up scheduling', () => {
 // Dark theme: light ink on dark paper
 // ------------------------------------------------------------------------------------------------
 
-// The scene's dark ceilings (scene.ts INK_CEILINGS.dark.caps) and theme.ts PALETTE.dark.
-const DARK_CAPS_CEILING = { k: 0.08, c: 0.15, m: 0.14, y: 0.12 };
+// The scene's dark caps ceilings and theme.ts PALETTE.dark.
+const DARK_CAPS_CEILING: InkCaps = { k: 0.08, c: 0.15, m: 0.14, y: 0.12 };
 const DARK_PAPER = hexToRgb('#141311');
 const DARK_KEY = hexToRgb('#F2EFE8');
 const DARK_TEXTS = [hexToRgb('#F26A5B'), hexToRgb('#ADA89F'), DARK_KEY];
 /** Dark mode prints yellow paler (scene.ts DARK_YELLOW). */
 const DARK_YELLOW_INK = hexToRgb('#FFF59A');
 const DARK_INKS: Record<Plate, Rgb> = { k: DARK_KEY, c: CYAN, m: MAGENTA, y: DARK_YELLOW_INK };
+
+/** Both themes as the scene prints them: paper, inks, texts, caps ceilings, line ceilings. */
+const THEMES = [
+  {
+    name: 'light',
+    paper: PAPER,
+    inks: INKS,
+    texts: TEXTS,
+    ceilings: ALPHA_MAX,
+    lines: LINE_CEILING.light,
+    blends: ['min', 'multiply'] as InkBlend[],
+  },
+  {
+    name: 'dark',
+    paper: DARK_PAPER,
+    inks: DARK_INKS,
+    texts: DARK_TEXTS,
+    ceilings: DARK_CAPS_CEILING,
+    lines: LINE_CEILING.dark,
+    blends: ['max', 'screen'] as InkBlend[],
+  },
+];
 
 describe('MIN and MAX', () => {
   it('keeps the lighter value per channel under MAX, the darker under MIN', () => {
@@ -804,21 +897,13 @@ describe('MIN and MAX', () => {
 });
 
 describe('dark-mode contrast caps (light text on the dark paper stays AA)', () => {
-  const plates: Plate[] = ['k', 'c', 'm', 'y'];
-  const shades = (plate: Plate): Rgb[] =>
-    plate === 'k'
-      ? [0, 0.25, 0.5, 0.75, 1].flatMap((f) =>
-          [CYAN, MAGENTA, DARK_YELLOW_INK].map((ink) => mixRgb(DARK_KEY, ink, MAX_TINT * f)),
-        )
-      : [DARK_INKS[plate]];
-
   it('starts from readable text on the bare dark paper', () => {
     DARK_TEXTS.forEach((text) => {
       expect(contrastRatio(text, DARK_PAPER)).toBeGreaterThan(MIN_CONTRAST);
     });
   });
 
-  (['max', 'screen'] as GlyphBlend[]).forEach((blend) => {
+  (['max', 'screen'] as InkBlend[]).forEach((blend) => {
     it(`keeps every dark text colour ≥ ${MIN_CONTRAST} on every pair at the caps (${blend})`, () => {
       const caps = inkCaps(
         DARK_PAPER,
@@ -826,20 +911,15 @@ describe('dark-mode contrast caps (light text on the dark paper stays AA)', () =
         DARK_TEXTS,
         DARK_CAPS_CEILING,
         MIN_CONTRAST,
-        MAX_TINT,
         blend,
       );
-      plates.forEach((p) => {
+      PLATES.forEach((p) => {
         expect(caps[p]).toBeGreaterThan(0);
         expect(caps[p]).toBeLessThanOrEqual(DARK_CAPS_CEILING[p]);
-        plates.forEach((q) => {
-          shades(p).forEach((a) => {
-            shades(q).forEach((b) => {
-              const pair = printPair(DARK_PAPER, a, caps[p], b, caps[q], blend);
-              DARK_TEXTS.forEach((text) => {
-                expect(contrastRatio(text, pair)).toBeGreaterThanOrEqual(MIN_CONTRAST);
-              });
-            });
+        PLATES.forEach((q) => {
+          const pair = printPair(DARK_PAPER, DARK_INKS[p], caps[p], DARK_INKS[q], caps[q], blend);
+          DARK_TEXTS.forEach((text) => {
+            expect(contrastRatio(text, pair)).toBeGreaterThanOrEqual(MIN_CONTRAST);
           });
         });
       });
@@ -850,38 +930,14 @@ describe('dark-mode contrast caps (light text on the dark paper stays AA)', () =
     const muted = hexToRgb('#ADA89F');
     const red = hexToRgb('#F26A5B');
     const weakest = contrastRatio(red, DARK_PAPER) < contrastRatio(muted, DARK_PAPER) ? red : muted;
-    const caps = inkCaps(
-      DARK_PAPER,
-      DARK_INKS,
-      DARK_TEXTS,
-      DARK_CAPS_CEILING,
-      MIN_CONTRAST,
-      0,
-      'max',
-    );
-    const alone = inkCaps(
-      DARK_PAPER,
-      DARK_INKS,
-      [weakest],
-      DARK_CAPS_CEILING,
-      MIN_CONTRAST,
-      0,
-      'max',
-    );
+    const caps = inkCaps(DARK_PAPER, DARK_INKS, DARK_TEXTS, DARK_CAPS_CEILING, MIN_CONTRAST, 'max');
+    const alone = inkCaps(DARK_PAPER, DARK_INKS, [weakest], DARK_CAPS_CEILING, MIN_CONTRAST, 'max');
     expect(caps).toEqual(alone);
   });
 
   it('prints yellow paler in dark mode, and caps it for that colour', () => {
     expect(relativeLuminance(DARK_YELLOW_INK)).toBeGreaterThan(relativeLuminance(YELLOW));
-    const caps = inkCaps(
-      DARK_PAPER,
-      DARK_INKS,
-      DARK_TEXTS,
-      DARK_CAPS_CEILING,
-      MIN_CONTRAST,
-      MAX_TINT,
-      'max',
-    );
+    const caps = inkCaps(DARK_PAPER, DARK_INKS, DARK_TEXTS, DARK_CAPS_CEILING, MIN_CONTRAST, 'max');
     DARK_TEXTS.forEach((text) => {
       const printed = printLight(DARK_PAPER, DARK_YELLOW_INK, caps.y);
       expect(contrastRatio(text, printed)).toBeGreaterThanOrEqual(MIN_CONTRAST);
@@ -889,9 +945,8 @@ describe('dark-mode contrast caps (light text on the dark paper stays AA)', () =
   });
 
   it('keeps the light-paper caps as they were (the lightest text still binds there)', () => {
-    const inks = { k: KEY, c: CYAN, m: MAGENTA, y: YELLOW };
-    const all = inkCaps(PAPER, inks, TEXTS, ALPHA_MAX, MIN_CONTRAST, MAX_TINT);
-    const red = inkCaps(PAPER, inks, [RED], ALPHA_MAX, MIN_CONTRAST, MAX_TINT);
+    const all = inkCaps(PAPER, INKS, TEXTS, ALPHA_MAX, MIN_CONTRAST);
+    const red = inkCaps(PAPER, INKS, [RED], ALPHA_MAX, MIN_CONTRAST);
     expect(all).toEqual(red);
   });
 });
@@ -996,427 +1051,94 @@ describe('text-aware ceiling', () => {
     const half = textMaskAt(306, 130, rects, feather);
     expect(half).toBeGreaterThan(0);
     expect(half).toBeLessThan(1);
-    // Grown by a glyph's reach: a glyph centred just outside still counts as on the text.
+    // Grown by a line's reach: a line just outside still counts as on the text.
     expect(textMaskAt(310, 130, rects, feather, 10)).toBe(1);
     // All: the caps everywhere (reduced motion, no slots).
     expect(textMaskAt(800, 800, [], feather, 0, true)).toBe(1);
   });
 
-  it('prints exactly at the cap on text and at the design ceiling away from it', () => {
+  it('prints exactly its inside alpha on text and the design ceiling away from it', () => {
     const open = 0.55;
-    const cap = 0.095;
-    expect(inkAlpha(open, cap, textMaskAt(200, 130, rects, feather))).toBe(cap);
-    expect(inkAlpha(open, cap, textMaskAt(900, 130, rects, feather))).toBe(open);
-    let previous = cap;
+    const inside = 0.095;
+    expect(inkAlpha(open, inside, 1)).toBe(inside);
+    expect(inkAlpha(open, inside, 0)).toBe(open);
+    expect(inkAlpha(open, inside, textMaskAt(200, 130, rects, feather))).toBe(inside);
+    expect(inkAlpha(open, inside, textMaskAt(900, 130, rects, feather))).toBe(open);
+    let previous = inside;
     for (let x = 300; x <= 300 + feather; x += 1) {
-      const a = inkAlpha(open, cap, textMaskAt(x, 130, rects, feather));
+      const a = inkAlpha(open, inside, textMaskAt(x, 130, rects, feather));
       expect(a).toBeGreaterThanOrEqual(previous - 1e-12);
       expect(a).toBeLessThanOrEqual(open);
       previous = a;
     }
   });
 
-  it('never prints above the caps anywhere on text, for any ceiling', () => {
-    const inks = { k: KEY, c: CYAN, m: MAGENTA, y: YELLOW };
-    const caps = inkCaps(PAPER, inks, TEXTS, ALPHA_MAX, MIN_CONTRAST, MAX_TINT);
-    const plateCeiling = { k: 0.35, c: 0.55, m: 0.55, y: 0.55 };
-    (['k', 'c', 'm', 'y'] as const).forEach((p) => {
-      for (let x = 100; x <= 300; x += 25) {
-        for (let y = 100; y <= 160; y += 15) {
-          const a = inkAlpha(plateCeiling[p], caps[p], textMaskAt(x, y, rects, feather));
-          expect(a).toBeLessThanOrEqual(caps[p]);
-        }
-      }
-      expect(plateCeiling[p]).toBeGreaterThan(caps[p]);
-    });
-  });
-});
-
-// ------------------------------------------------------------------------------------------------
-// Floating plates
-// ------------------------------------------------------------------------------------------------
-
-// The scene's tuning (scene.ts PLATES, PLATE_BUDGET, PLATE_FOG).
-const PLATE_TUNING: PlateTuning = {
-  depth: { near: 0.55, far: 2.6 },
-  size: { min: 0.07, max: 0.2 },
-  unit: { heightRatio: 1.3, min: 520 },
-  bleed: 0.04,
-  slack: 32,
-  drift: { x: 0.03, y: 0.02, speedMin: 0.07, speedMax: 0.19 },
-  spin: { min: 0.04, max: 0.15, tilt: 0.5 },
-};
-const PLATE_BUDGET: PlateBudget = {
-  desktop: 10,
-  tablet: 7,
-  phone: 5,
-  phoneWidth: 600,
-  tabletWidth: 1024,
-  lowEnd: 0.6,
-  spare: 1.2,
-};
-const PLATE_FOG = { from: 1.3, to: 2.6, floor: 0.55 };
-
-const viewFor = (width: number, height: number): PlateView => ({
-  width,
-  height,
-  unit: viewUnit(width, height, PLATE_TUNING),
-});
-
-describe('plate pool', () => {
-  it('spreads the depths over the whole range, one slice per plate', () => {
-    const n = 12;
-    const specs = plateSpecs(n, PLATE_TUNING);
-    expect(specs).toHaveLength(n);
-    const { near, far } = PLATE_TUNING.depth;
-    const depths = specs.map((s) => s.depth).sort((a, b) => a - b);
-    depths.forEach((d, i) => {
-      expect(d).toBeGreaterThanOrEqual(near + ((far - near) * i) / n);
-      expect(d).toBeLessThanOrEqual(near + ((far - near) * (i + 1)) / n);
-    });
-    // Some pass in front of the page, some lie far behind it.
-    expect(depths[0]).toBeLessThan(1);
-    expect(depths[n - 1]).toBeGreaterThan(2);
-  });
-
-  it('prints in all four inks, small to large, the same on every visit', () => {
-    const specs = plateSpecs(12, PLATE_TUNING);
-    (['c', 'm', 'y', 'k'] as const).forEach((ink) => {
-      expect(specs.filter((s) => s.ink === ink)).toHaveLength(3);
-    });
-    specs.forEach((s) => {
-      expect(s.size).toBeGreaterThanOrEqual(PLATE_TUNING.size.min);
-      expect(s.size).toBeLessThanOrEqual(PLATE_TUNING.size.max);
-      expect(s.phase).toBeGreaterThanOrEqual(0);
-      expect(s.phase).toBeLessThan(1);
-    });
-    // The same plate looks over four times larger in front of the page than far behind it.
-    const [first] = specs;
-    if (!first) throw new Error('no plates');
-    const nearest = apparentWidth({ ...first, depth: PLATE_TUNING.depth.near }, 1170);
-    const farthest = apparentWidth({ ...first, depth: PLATE_TUNING.depth.far }, 1170);
-    expect(nearest / farthest).toBeGreaterThan(4);
-    expect(plateSpecs(12, PLATE_TUNING)).toEqual(specs);
-    expect(INK_INDEX).toEqual({ k: 0, c: 1, m: 2, y: 3 });
-  });
-
-  it('keeps about 8–12 plates in view on desktop, 4–6 on phones, fewer on low-end', () => {
-    const capable = { cores: 8, memory: 8 };
-    const desktop = visiblePlates({ ...capable, coarse: false, width: 1440 }, PLATE_BUDGET);
-    const phone = visiblePlates({ ...capable, coarse: true, width: 390 }, PLATE_BUDGET);
-    const lowEnd = visiblePlates({ cores: 4, memory: 8, coarse: false, width: 1440 }, PLATE_BUDGET);
-    const lowPhone = visiblePlates({ cores: 4, memory: 2, coarse: true, width: 390 }, PLATE_BUDGET);
-    expect(desktop).toBe(10);
-    expect(phone).toBe(5);
-    expect(lowEnd).toBeLessThan(desktop);
-    expect(lowPhone).toBeLessThan(phone);
-    expect(lowPhone).toBeGreaterThanOrEqual(2);
-
-    /** Average plates in view while scrolling through a long page. */
-    const averageInView = (width: number, height: number, visible: number): number => {
-      const view = viewFor(width, height);
-      const specs = plateSpecs(poolSize(visible, PLATE_BUDGET), PLATE_TUNING);
-      let total = 0;
-      let samples = 0;
-      for (let scroll = 0; scroll < 24_000; scroll += 37) {
-        specs.forEach((spec) => {
-          const pose = freePose(spec, scroll, scroll / 400, view, PLATE_TUNING);
-          if (Math.abs(pose.y - height / 2) <= height / 2 + pose.width * 0.25) total++;
-        });
-        samples++;
-      }
-      return total / samples;
-    };
-    const onDesktop = averageInView(1440, 900, desktop);
-    expect(onDesktop).toBeGreaterThanOrEqual(7.5);
-    expect(onDesktop).toBeLessThanOrEqual(12.5);
-    const onPhone = averageInView(390, 844, phone);
-    expect(onPhone).toBeGreaterThanOrEqual(3.5);
-    expect(onPhone).toBeLessThanOrEqual(6.5);
-    expect(averageInView(1440, 900, lowEnd)).toBeLessThan(onDesktop);
-  });
-});
-
-describe('plate parallax', () => {
-  const view = viewFor(1440, 900);
-  const specs = plateSpecs(12, PLATE_TUNING);
-
-  it('maps depth to parallax: near plates faster than the page, far ones slower', () => {
-    expect(parallaxRate(1)).toBe(1);
-    expect(parallaxRate(0.55)).toBeGreaterThan(1.75);
-    expect(parallaxRate(2.6)).toBeLessThan(0.4);
-    for (let d = 0.6; d < 2.6; d += 0.1) {
-      expect(parallaxRate(d + 0.1)).toBeLessThan(parallaxRate(d));
-    }
-  });
-
-  it('moves every plate up by its own rate as the page scrolls down (reversibly)', () => {
-    specs.forEach((spec) => {
-      const scroll = 5000;
-      const cycle = plateCycle(spec, scroll, view, PLATE_TUNING);
-      const before = freePose(spec, scroll, 3, view, PLATE_TUNING, cycle);
-      const after = freePose(spec, scroll + 10, 3, view, PLATE_TUNING, cycle);
-      expect(before.y - after.y).toBeCloseTo(10 * parallaxRate(spec.depth), 6);
-      expect(after.x).toBe(before.x);
-      // Scrolling back gives back the same pose.
-      expect(freePose(spec, scroll, 3, view, PLATE_TUNING)).toEqual(
-        freePose(spec, scroll, 3, view, PLATE_TUNING),
-      );
-    });
-  });
-
-  it('places plates through the whole page height, looping out of sight', () => {
-    specs.forEach((spec) => {
-      const { margin } = loopBand(spec, view, PLATE_TUNING);
-      const bob = spec.drift.ay * view.unit;
-      const reach = apparentWidth(spec, view.unit) * 0.6;
-      let previous = plateCycle(spec, 0, view, PLATE_TUNING);
-      const cycles = new Set<number>([previous]);
-      for (let scroll = 1; scroll < 12_000; scroll++) {
-        const cycle = plateCycle(spec, scroll, view, PLATE_TUNING);
-        const pose = freePose(spec, scroll, 7, view, PLATE_TUNING);
-        expect(pose.y).toBeGreaterThanOrEqual(-margin - bob - 1e-6);
-        expect(pose.y).toBeLessThanOrEqual(view.height + margin + bob + 1e-6);
-        if (cycle !== previous) {
-          // It leaves at the top and comes back at the bottom, both out of view.
-          const out = freePose(spec, scroll - 1, 7, view, PLATE_TUNING);
-          expect(out.y + reach).toBeLessThan(0);
-          expect(pose.y - reach).toBeGreaterThan(view.height);
-          cycles.add(cycle);
-          previous = cycle;
-        }
-      }
-      // Many passes over a long page, each at its own place across it.
-      expect(cycles.size).toBeGreaterThan(3);
-    });
-  });
-
-  it('prints far plates lighter', () => {
-    expect(depthFade(0.6, PLATE_FOG)).toBe(1);
-    expect(depthFade(2.6, PLATE_FOG)).toBeCloseTo(PLATE_FOG.floor);
-    expect(depthFade(2, PLATE_FOG)).toBeLessThan(1);
-    expect(depthFade(2, PLATE_FOG)).toBeGreaterThan(PLATE_FOG.floor);
-  });
-});
-
-describe('plates in the world', () => {
-  /** Column-major 4×4 times (x, y, z, 1). */
-  const apply = (m: Float32Array, x: number, y: number, z: number): number[] =>
-    [0, 1, 2, 3].map(
-      (r) => (m[r] ?? 0) * x + (m[r + 4] ?? 0) * y + (m[r + 8] ?? 0) * z + (m[r + 12] ?? 0),
-    );
-
-  it('puts every pose where the camera sees it at that screen place, at any depth', () => {
-    const [w, h] = [1440, 900];
-    const d = h / 2 / Math.tan((FOV * Math.PI) / 360);
-    const p = perspectiveMatrix(new Float32Array(16), FOV, w / h, d * 0.05, d * 8);
-    [0.55, 1, 1.7, 2.6].forEach((depth) => {
-      [
-        [100, 80],
-        [720, 450],
-        [1300, 860],
-      ].forEach(([sx = 0, sy = 0]) => {
-        const [x, y, z] = toWorld(sx, sy, depth, w, h, d);
-        const clip = apply(p, x, y, z);
-        const ndcX = (clip[0] ?? 0) / (clip[3] ?? 1);
-        const ndcY = (clip[1] ?? 0) / (clip[3] ?? 1);
-        // Float32 matrices: about 1e-5 px of error.
-        expect((ndcX * 0.5 + 0.5) * w).toBeCloseTo(sx, 3);
-        expect((0.5 - ndcY * 0.5) * h).toBeCloseTo(sy, 3);
+  it('whispers on measured text: a share of the open ink, never above the cap', () => {
+    expect(insideAlpha(0.5, 0.2, TEXT_INSIDE, false)).toBeCloseTo(0.5 * TEXT_INSIDE, 12);
+    expect(insideAlpha(0.5, 0.05, TEXT_INSIDE, false)).toBe(0.05);
+    [0.01, 0.2, 0.55, 0.85].forEach((open) => {
+      [0.03, 0.09, 0.3].forEach((cap) => {
+        const inside = insideAlpha(open, cap, TEXT_INSIDE, false);
+        expect(inside).toBeLessThanOrEqual(cap);
+        expect(inside).toBeLessThanOrEqual(open * TEXT_INSIDE + 1e-12);
       });
     });
   });
 
-  it('writes a rigid turn, scaled, and the position', () => {
-    const out = new Float32Array(16);
-    plateRows(out, 0, 0, 0, 0, 120, 5, 6, -7);
-    // (+ 0 folds −0 into 0.)
-    expect(Array.from(out.slice(0, 12), (v) => v + 0)).toEqual([
-      120, 0, 0, 5, 0, 120, 0, 6, 0, 0, 120, -7,
-    ]);
-
-    plateRows(out, 4, 0.7, -1.2, 2.5, 3, 1, 2, 3);
-    const row = (r: number): number[] => [0, 1, 2].map((c) => (out[4 + r * 4 + c] ?? 0) / 3);
-    const dot = (a: number[], b: number[]): number =>
-      a.reduce((sum, v, i) => sum + v * (b[i] ?? 0), 0);
-    [0, 1, 2].forEach((r) => expect(dot(row(r), row(r))).toBeCloseTo(1, 5));
-    expect(dot(row(0), row(1))).toBeCloseTo(0, 5);
-    expect(dot(row(1), row(2))).toBeCloseTo(0, 5);
-    const [a = [], b = [], c = []] = [row(0), row(1), row(2)];
-    const det =
-      (a[0] ?? 0) * ((b[1] ?? 0) * (c[2] ?? 0) - (b[2] ?? 0) * (c[1] ?? 0)) -
-      (a[1] ?? 0) * ((b[0] ?? 0) * (c[2] ?? 0) - (b[2] ?? 0) * (c[0] ?? 0)) +
-      (a[2] ?? 0) * ((b[0] ?? 0) * (c[1] ?? 0) - (b[1] ?? 0) * (c[0] ?? 0));
-    expect(det).toBeCloseTo(1, 5);
-    expect([out[7], out[11], out[15]]).toEqual([1, 2, 3]);
-  });
-});
-
-describe('from the hero: the four plates of the mark', () => {
-  const b = boundsOf(sampleOutline(ARCH, 6));
-  const arch = { cx: (b.minX + b.maxX) / 2, cy: (b.minY + b.maxY) / 2, width: b.maxX - b.minX };
-  const mark = { x: 600, y: 320, scale: 0.55 };
-  const view = viewFor(1440, 900);
-
-  it('uses the hero art box and the mark viewBox of the hero', () => {
-    expect(HERO_ART_WIDTH).toBe(ART.width);
-    // Logo.astro `mark` viewBox: 690 50 840 205.
-    expect(HERO_MARK_CENTRE).toEqual({ x: 690 + 840 / 2, y: 50 + 205 / 2 });
-    const placed = markFromArt({ left: 100, top: 50, width: 900, height: 620 });
-    expect(placed).toEqual({ x: 550, y: 360, scale: 1 });
-  });
-
-  it('starts every plate at its ARCH_PLATES offset in the mark, one arch wide', () => {
-    const slots = markSlots(arch, ARCH_PLATES, mark);
-    expect(slots.map((s) => s.id)).toEqual(ARCH_PLATES.map((p) => p.id));
-    slots.forEach((slot, i) => {
-      const plate = ARCH_PLATES[i];
-      expect(slot.width).toBeCloseTo(arch.width * mark.scale, 9);
-      expect(slot.y).toBeCloseTo(mark.y + (arch.cy - HERO_MARK_CENTRE.y) * mark.scale, 9);
-      expect(slot.x).toBeCloseTo(
-        mark.x + (arch.cx + (plate?.x ?? NaN) - HERO_MARK_CENTRE.x) * mark.scale,
-        9,
-      );
-      const next = slots[i + 1];
-      const nextPlate = ARCH_PLATES[i + 1];
-      if (next && nextPlate && plate) {
-        expect(next.x - slot.x).toBeCloseTo((nextPlate.x - plate.x) * mark.scale, 9);
-      }
+  it('prints exactly the cap everywhere when the text is not measured (all)', () => {
+    [0.01, 0.2, 0.85].forEach((open) => {
+      expect(insideAlpha(open, 0.07, TEXT_INSIDE, true)).toBe(0.07);
+      const everywhere = textMaskAt(800, 800, [], feather, 0, true);
+      expect(inkAlpha(open, insideAlpha(open, 0.07, TEXT_INSIDE, true), everywhere)).toBe(0.07);
     });
-    // The ARCH outline sits where the path says: its box, shifted by the plate offset.
-    expect(arch.width).toBeCloseTo(1163 - 701, 6);
-    expect(b.maxY).toBeCloseTo(248, 6);
   });
 
-  it('is exactly the flat mark before it scatters, then takes its own depth and size', () => {
-    const [slot] = markSlots(arch, ARCH_PLATES, mark);
-    const spec = plateSpecs(4, PLATE_TUNING, 8)[0];
-    if (!slot || !spec) throw new Error('missing plate');
-    const travel = { x: -0.3, y: -0.12, depth: 0.72, grow: 1.35 };
-    [0, 250].forEach((since) => {
-      const pose = travellerPose(slot, spec, travel, 0, since, 9.5, view);
-      expect(pose.x).toBeCloseTo(slot.x, 9);
-      expect(pose.y).toBeCloseTo(slot.y, 9);
-      expect(pose.width).toBeCloseTo(slot.width, 9);
-      expect(pose.depth).toBe(1);
-      [pose.rx, pose.ry, pose.rz].forEach((r) => expect(r).toBeCloseTo(0, 12));
-    });
-    const out = travellerPose(slot, spec, travel, 1, 400, 9.5, view);
-    expect(out.depth).toBeCloseTo(travel.depth, 9);
-    expect(out.width).toBeCloseTo(slot.width * travel.grow, 9);
-    // Nearer than the page: it moves faster than the page (the slot scrolls with the page).
-    expect(out.y).toBeLessThan(slot.y + travel.y * view.height + spec.drift.ay * view.unit);
-    // Halfway, it is between the two.
-    const half = travellerPose(slot, spec, travel, 0.5, 0, 9.5, view);
-    expect(half.depth).toBeGreaterThan(travel.depth);
-    expect(half.depth).toBeLessThan(1);
-  });
-});
-
-describe('plates drifting into register', () => {
-  const timing = { in: 2.8, hold: 2.4, out: 2.8 };
-
-  it('drifts in, holds and parts again', () => {
-    expect(registerEnvelope(-1, timing)).toBe(0);
-    expect(registerEnvelope(0, timing)).toBe(0);
-    expect(registerEnvelope(1.4, timing)).toBeGreaterThan(0);
-    expect(registerEnvelope(1.4, timing)).toBeLessThan(1);
-    expect(registerEnvelope(3, timing)).toBe(1);
-    expect(registerEnvelope(5, timing)).toBe(1);
-    expect(registerEnvelope(8, timing)).toBe(0);
-    expect(registerEnvelope(20, timing)).toBe(0);
-  });
-
-  it('picks nearby plates of different inks at a similar depth', () => {
-    const candidates: RegisterCandidate[] = [
-      { index: 0, ink: 'c', x: 700, y: 440, depth: 1.2 },
-      { index: 1, ink: 'c', x: 720, y: 450, depth: 1.2 },
-      { index: 2, ink: 'm', x: 800, y: 500, depth: 1.4 },
-      { index: 3, ink: 'y', x: 650, y: 400, depth: 2.5 },
-      { index: 4, ink: 'k', x: 900, y: 300, depth: 1.1 },
-      { index: 5, ink: 'y', x: 1400, y: 800, depth: 1.2 },
-    ];
-    const group = pickRegisterGroup(candidates, { x: 720, y: 450 }, 3, 0.7, 380);
-    expect(group).toEqual([1, 2, 4]);
-    expect(pickRegisterGroup(candidates, { x: 720, y: 450 }, 2, 0.7, 380)).toEqual([1, 2]);
-    expect(pickRegisterGroup(candidates.slice(0, 2), { x: 720, y: 450 }, 3, 0.7, 380)).toBeNull();
-    expect(pickRegisterGroup([], { x: 0, y: 0 }, 3, 0.7, 380)).toBeNull();
-  });
-
-  it('lays the group exactly on top of itself at full weight (overprint), unchanged at 0', () => {
-    const poses: PlatePose[] = [
-      { x: 600, y: 400, width: 140, depth: 1.1, rx: 0.3, ry: 12.4, rz: -3 },
-      { x: 720, y: 480, width: 110, depth: 1.5, rx: -2, ry: 0.1, rz: 7 },
-      { x: 660, y: 350, width: 160, depth: 1.3, rx: 1, ry: -5, rz: 0.5 },
-    ];
-    const target = registerTarget(poses);
-    if (!target) throw new Error('no target');
-    expect(target.x).toBeCloseTo(660);
-    expect(target.depth).toBeCloseTo(1.3);
-    const met = poses.map((p) => blendPose(p, target, 1));
-    met.forEach((p) => {
-      expect(p.x).toBeCloseTo(target.x, 9);
-      expect(p.y).toBeCloseTo(target.y, 9);
-      expect(p.width).toBeCloseTo(target.width, 9);
-      expect(p.depth).toBeCloseTo(target.depth, 9);
-      [
-        [p.rx, target.rx],
-        [p.ry, target.ry],
-        [p.rz, target.rz],
-      ].forEach(([a = 0, t = 0]) => expect(wrapAngle(a - t)).toBeCloseTo(0, 9));
-    });
-    poses.forEach((p) => expect(blendPose(p, target, 0)).toEqual(p));
-    // Turning the short way: never more than half a turn per axis.
-    const second = poses[1];
-    if (!second) throw new Error('missing pose');
-    const halfway = blendPose(second, target, 0.5);
-    expect(Math.abs(halfway.rz - second.rz)).toBeLessThanOrEqual(Math.PI / 2 + 1e-9);
-    expect(registerTarget([])).toBeNull();
-  });
-
-  it('folds angles into (−π, π]', () => {
-    [-10, -Math.PI, -1, 0, 1, Math.PI, 4, 25].forEach((a) => {
-      const w = wrapAngle(a);
-      expect(w).toBeGreaterThan(-Math.PI - 1e-12);
-      expect(w).toBeLessThanOrEqual(Math.PI + 1e-12);
-      expect(Math.cos(w)).toBeCloseTo(Math.cos(a), 9);
-      expect(Math.sin(w)).toBeCloseTo(Math.sin(a), 9);
+  THEMES.forEach((theme) => {
+    theme.blends.forEach((blend) => {
+      it(`keeps every line under the caps on text (${theme.name}, ${blend})`, () => {
+        const caps = inkCaps(
+          theme.paper,
+          theme.inks,
+          theme.texts,
+          theme.ceilings,
+          MIN_CONTRAST,
+          blend,
+        );
+        PLATES.forEach((plate) => {
+          const open = theme.lines[plate];
+          const cap = caps[plate];
+          // Away from text the lines print stronger than they ever may on it.
+          expect(open).toBeGreaterThan(cap);
+          const inside = insideAlpha(open, cap, TEXT_INSIDE, false);
+          expect(inside).toBeGreaterThan(0);
+          expect(inside).toBeLessThanOrEqual(cap);
+          expect(inside).toBeLessThanOrEqual(open * TEXT_INSIDE + 1e-12);
+          for (let x = 100; x <= 300; x += 25) {
+            for (let y = 100; y <= 160; y += 15) {
+              const a = inkAlpha(open, inside, textMaskAt(x, y, rects, feather));
+              expect(a).toBeLessThanOrEqual(cap);
+              // Accent weights and the spread along the line only ever lower it.
+              [BALANCED, ...Object.values(ACCENT_WEIGHTS)].forEach((weights) => {
+                [0, 0.5, 1].forEach((spread) => {
+                  expect(weights[plate] * lineInk(spread, LINES.openInk) * a).toBeLessThanOrEqual(
+                    cap,
+                  );
+                });
+              });
+            }
+          }
+        });
+      });
     });
   });
 });
 
-describe('plates and the pointer', () => {
-  it('moves plates near the pointer most', () => {
-    expect(pointerInfluence(0, 0, 300)).toBe(1);
-    expect(pointerInfluence(300, 0, 300)).toBeCloseTo(Math.exp(-1));
-    expect(pointerInfluence(100, 0, 300)).toBeGreaterThan(pointerInfluence(200, 0, 300));
-    expect(pointerInfluence(100, 0, 0)).toBe(0);
-  });
+// ------------------------------------------------------------------------------------------------
+// Where a braid's lines meet
+// ------------------------------------------------------------------------------------------------
 
-  it('settles on its springs at any frame rate', () => {
-    [1 / 30, 1 / 60, 1 / 144].forEach((dt) => {
-      let [x, v] = [0, 0];
-      for (let t = 0; t < 3; t += dt) [x, v] = springStep(x, v, 0.4, 36, 7.5, dt);
-      expect(x).toBeCloseTo(0.4, 3);
-      expect(Math.abs(v)).toBeLessThan(1e-2);
-    });
-    // A long frame stays stable.
-    const [x] = springStep(0, 0, 1, 36, 7.5, 5);
-    expect(Number.isFinite(x)).toBe(true);
-    expect(Math.abs(x)).toBeLessThan(2);
-  });
-});
-
-describe('three and four inks on one pixel (registering groups, plates over a glyph)', () => {
-  const plates: Plate[] = ['k', 'c', 'm', 'y'];
-  /** Key in every tint the caps are checked with (math.ts TINT_STEPS), and pure. */
-  const keyShades = (inks: Record<Plate, Rgb>): Rgb[] => [
-    inks.k,
-    ...[0.25, 0.5, 0.75, 1].flatMap((f) =>
-      [inks.c, inks.m, inks.y].map((ink) => mixRgb(inks.k, ink, MAX_TINT * f)),
-    ),
-  ];
-  /** Every set of three or four different plates. */
+describe("three and four inks on one pixel (where a braid's lines meet)", () => {
+  /** Every set of three or four different inks. */
   const groups: Plate[][] = [
     ['k', 'c', 'm', 'y'],
     ['c', 'm', 'y'],
@@ -1424,26 +1146,8 @@ describe('three and four inks on one pixel (registering groups, plates over a gl
     ['k', 'c', 'y'],
     ['k', 'm', 'y'],
   ];
-  const themes = [
-    {
-      name: 'light',
-      paper: PAPER,
-      inks: { k: KEY, c: CYAN, m: MAGENTA, y: YELLOW } as Record<Plate, Rgb>,
-      texts: TEXTS,
-      ceilings: ALPHA_MAX,
-      blends: ['min', 'multiply'] as GlyphBlend[],
-    },
-    {
-      name: 'dark',
-      paper: DARK_PAPER,
-      inks: DARK_INKS,
-      texts: DARK_TEXTS,
-      ceilings: DARK_CAPS_CEILING,
-      blends: ['max', 'screen'] as GlyphBlend[],
-    },
-  ];
 
-  themes.forEach((theme) => {
+  THEMES.forEach((theme) => {
     theme.blends.forEach((blend) => {
       it(`keeps every text readable where three or four inks meet (${theme.name}, ${blend})`, () => {
         const caps = inkCaps(
@@ -1452,20 +1156,17 @@ describe('three and four inks on one pixel (registering groups, plates over a gl
           theme.texts,
           theme.ceilings,
           MIN_CONTRAST,
-          MAX_TINT,
           blend,
         );
-        plates.forEach((p) => expect(caps[p]).toBeGreaterThan(0));
-        keyShades(theme.inks).forEach((key) => {
-          groups.forEach((group) => {
-            const printed = printAll(
-              theme.paper,
-              group.map((p) => ({ ink: p === 'k' ? key : theme.inks[p], alpha: caps[p] })),
-              blend,
-            );
-            theme.texts.forEach((text) => {
-              expect(contrastRatio(text, printed)).toBeGreaterThanOrEqual(MIN_CONTRAST);
-            });
+        PLATES.forEach((p) => expect(caps[p]).toBeGreaterThan(0));
+        groups.forEach((group) => {
+          const printed = printAll(
+            theme.paper,
+            group.map((p) => ({ ink: theme.inks[p], alpha: caps[p] })),
+            blend,
+          );
+          theme.texts.forEach((text) => {
+            expect(contrastRatio(text, printed)).toBeGreaterThanOrEqual(MIN_CONTRAST);
           });
         });
       });
@@ -1479,7 +1180,6 @@ describe('three and four inks on one pixel (registering groups, plates over a gl
         theme.texts,
         theme.ceilings,
         MIN_CONTRAST,
-        MAX_TINT,
         blend,
       );
       const red = theme.texts[0] ?? RED;

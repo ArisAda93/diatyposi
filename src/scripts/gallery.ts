@@ -131,6 +131,8 @@ export const initGallery = (root: HTMLElement): void => {
 
   const dialog = root.querySelector<HTMLDialogElement>('[data-lightbox]');
   const stage = dialog?.querySelector<HTMLElement>('[data-lb-stage]');
+  // The picture goes in the print, which sits on the stage and carries the stand-in chip.
+  const print = stage?.querySelector<HTMLElement>('[data-lb-print]');
   const titleEl = dialog?.querySelector<HTMLElement>('[data-lb-title]');
   const categoryEl = dialog?.querySelector<HTMLElement>('[data-lb-category]');
   const counterEl = dialog?.querySelector<HTMLElement>('[data-lb-counter]');
@@ -143,6 +145,7 @@ export const initGallery = (root: HTMLElement): void => {
   if (
     !dialog ||
     !stage ||
+    !print ||
     !titleEl ||
     !categoryEl ||
     !counterEl ||
@@ -187,7 +190,7 @@ export const initGallery = (root: HTMLElement): void => {
     image.alt = data.alt ?? '';
     image.srcset = data.largeSrcset ?? '';
     image.src = data.largeSrc ?? tile.href;
-    if (!image.isConnected) stage.append(image);
+    if (!image.isConnected) print.append(image);
 
     const title = data.title ?? '';
     const position = { n: current + 1, total: visible.length };
@@ -246,7 +249,8 @@ export const initGallery = (root: HTMLElement): void => {
   });
 
   // A click on the empty area around the picture closes, as on most photo viewers.
-  const emptyAreas = new Set<EventTarget>([dialog, stage]);
+  // The print is sized to the picture; it is listed in case a browser leaves a sliver beside it.
+  const emptyAreas = new Set<EventTarget>([dialog, stage, print]);
   if (stage.parentElement) emptyAreas.add(stage.parentElement);
   if (dialog.firstElementChild) emptyAreas.add(dialog.firstElementChild);
   dialog.addEventListener('click', (event) => {

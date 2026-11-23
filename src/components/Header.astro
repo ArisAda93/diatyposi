@@ -394,13 +394,16 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
         background-color var(--dur-fast) linear,
         color var(--dur-fast) linear;
     }
-    :global(.icon-btn:hover) {
-      background-color: var(--color-key);
-      color: var(--color-paper);
-    }
-    :global(.on-ink .icon-btn:hover) {
-      background-color: var(--color-paper);
-      color: var(--color-key);
+    /* Hover fill only where the pointer can hover (a tap must not leave it filled). */
+    @media (hover: hover) {
+      :global(.icon-btn:hover) {
+        background-color: var(--color-key);
+        color: var(--color-paper);
+      }
+      :global(.on-ink .icon-btn:hover) {
+        background-color: var(--color-paper);
+        color: var(--color-key);
+      }
     }
     .menu-btn {
       display: inline-flex;
@@ -414,6 +417,58 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
       font-family: var(--font-display);
       font-weight: 700;
       cursor: pointer;
+    }
+
+    /*
+     * Page changes (global.css): the bar is its own view-transition layer, so it stays in place
+     * and cross-fades while the page below lifts away and settles. Not during the theme's
+     * circular reveal (`html.theme-vt`), which must cover the bar with the rest of the page.
+     */
+    @media (prefers-reduced-motion: no-preference) {
+      .site-header {
+        view-transition-name: site-header;
+      }
+      :global(html.theme-vt) .site-header {
+        view-transition-name: none;
+      }
+    }
+
+    /* Forced colours drop gradients and backgrounds: draw the rules in the system's text colour. */
+    @media (forced-colors: active) {
+      .nav-link::after,
+      .nav-link[aria-current='page']::after {
+        background: CanvasText;
+      }
+      .menu-link[aria-current='page'] .menu-link-text {
+        text-decoration: underline;
+        text-decoration-thickness: 0.08em;
+        text-underline-offset: 0.15em;
+      }
+    }
+
+    /*
+     * Print: the logo alone heads the first page. The actions, the scroll hairline and the nav
+     * mean nothing on paper; the home bar, fixed over the hero on screen, must not repeat on
+     * every printed page.
+     */
+    @media print {
+      .site-header,
+      .site-header[data-over-hero] {
+        position: absolute;
+        background: none !important;
+        border-bottom-color: transparent !important;
+        box-shadow: none !important;
+        -webkit-backdrop-filter: none !important;
+        backdrop-filter: none !important;
+      }
+      .site-header:not([data-over-hero]) {
+        position: relative;
+      }
+      .header-nav,
+      .header-actions,
+      .header-progress {
+        display: none !important;
+      }
     }
 
     /* ---------------------------------------------------------------------------------------- */
@@ -745,7 +800,12 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
       // the middle of a wipe: drop that wipe's timer and listener so a quick re-open is not cut.
       settleClose();
       openBtn.setAttribute('aria-expanded', 'false');
-      openBtn.focus();
+      // Focus returns to the menu button; after a resize to the desktop layout that button is
+      // hidden, so the logo link (first in the header) takes it instead of the page losing it.
+      const target = openBtn.getClientRects().length
+        ? openBtn
+        : header?.querySelector<HTMLElement>('.site-header-logo');
+      target?.focus();
     });
     // A link navigates away (or to the current page): close at once, no wipe to wait for.
     menu.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => menu.close()));

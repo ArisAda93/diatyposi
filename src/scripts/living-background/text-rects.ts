@@ -1,13 +1,13 @@
 /**
- * Where the text is, so the living background can print with more presence everywhere else while
- * text keeps its AA contrast (scene.ts, shaders.ts `textMask`).
+ * Where the text is, so the living background's lines stay clear of it (scene.ts, shaders.ts
+ * `textMask`).
  *
  * The page's text elements are measured as block boxes, merged into a modest number of rectangles
  * in document space (they scroll with the page) plus a few in viewport space (text in fixed
  * layers such as the header over the hero), and every frame the ones in view are uploaded as
- * uniforms. Inside a rectangle the ink falls to the contrast-safe caps (math.ts inkCaps); outside
- * it rises to the design ceiling, over a short feather. Every rectangle covers its text with room
- * to spare: merging only ever grows them, and where text can move after it was measured (parallax
+ * uniforms. Inside a rectangle the lines fade to a whisper, never above the contrast-safe caps
+ * (math.ts inkCaps); outside they print at their design ceiling, over a soft feather. Every
+ * rectangle covers its text with room to spare: merging only ever grows them, and where text can move after it was measured (parallax
  * layers, depth entries, sticky blocks) the rectangle covers its whole range.
  *
  * The pure helpers at the top are covered by tests/living-background.test.ts; the measurement at
@@ -184,11 +184,19 @@ export const textMaskAt = (
 };
 
 /**
- * The ink alpha a glyph or plate prints with for a text mask: its design ceiling (`open`) away
- * from text, exactly its contrast-safe cap where the mask is 1 (shaders.ts: mix(open, cap, mask)).
+ * The ink alpha a line prints with for a text mask: its design ceiling (`open`) away from text,
+ * exactly `inside` where the mask is 1 (shaders.ts: mix(open, inside, mask)).
  */
-export const inkAlpha = (open: number, cap: number, mask: number): number =>
-  mask >= 1 ? cap : open + (cap - open) * mask;
+export const inkAlpha = (open: number, inside: number, mask: number): number =>
+  mask >= 1 ? inside : open + (inside - open) * mask;
+
+/**
+ * The alpha a line keeps on text. Where the text is measured, the lines all but vanish there:
+ * `share` of their open ink, and never above the contrast-safe cap. Where it is not (`all`: reduced
+ * motion, or too few uniforms, so the mask is 1 everywhere), the lines print at the cap everywhere.
+ */
+export const insideAlpha = (open: number, cap: number, share: number, all: boolean): number =>
+  all ? cap : Math.min(cap, open * share);
 
 export interface TextSlotOptions {
   /** Most rectangles the shaders take. */
@@ -201,9 +209,9 @@ export interface TextSlotOptions {
 }
 
 /**
- * How many rectangles the shaders can take on this GPU (one vec4 uniform each, in the glyph
- * vertex shader and the plate fragment shader): `max`, or what the uniform limits leave, or 0
- * when that is below `min` (then the ink stays at the caps everywhere).
+ * How many rectangles the shaders can take on this GPU (one vec4 uniform each; the line shaders
+ * hold them in the fragment shader, with `vertexReserve` 0): `max`, or what the uniform limits
+ * leave, or 0 when that is below `min` (then the lines print at the caps everywhere).
  */
 export const textSlots = (
   maxVertexVectors: number,
@@ -360,14 +368,4 @@ export const measureTextLayout = (o: MeasureOptions): TextLayout => {
     }
   });
   return { doc: mergeRects(doc, o.gap), fixed: mergeRects(fixed, o.gap) };
-};
-
-/** The hero art box `[data-hero-art]` in document px, or null on pages without it. */
-export const measureHeroArt = (selector: string): Rect | null => {
-  const art = document.querySelector(selector);
-  if (!art) return null;
-  const box = art.getBoundingClientRect();
-  if (box.width <= 0 || box.height <= 0) return null;
-  const scrollY = window.scrollY;
-  return { left: box.left, top: box.top + scrollY, right: box.right, bottom: box.bottom + scrollY };
 };

@@ -173,6 +173,14 @@ const speeds = ['0', '-0.06', '0.02', '-0.05'];
     .work-link:focus-visible {
       outline-offset: 6px;
     }
+    /* Touch screens have no hover to reveal the arrow, so it shows at rest: the tile reads as a
+       link there too. */
+    @media (hover: none) {
+      .work-title :global(.work-title-arrow) {
+        opacity: 1;
+        transform: none;
+      }
+    }
 
     .work-pos-0 {
       --ar: 4 / 3;

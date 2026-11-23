@@ -25,9 +25,11 @@ const text = workText.el;
 
     <figure class="lightbox-figure">
       <div class="lightbox-stage" data-lb-stage>
-        <span class="lightbox-standin" data-lb-standin hidden>
-          {t('standInLabel')}
-        </span>
+        <div class="lightbox-print" data-lb-print>
+          <span class="lightbox-standin" data-lb-standin hidden>
+            {t('standInLabel')}
+          </span>
+        </div>
       </div>
       <figcaption class="lightbox-caption">
         <div>
@@ -111,9 +113,12 @@ const text = workText.el;
         background-color var(--dur-fast) linear,
         color var(--dur-fast) linear;
     }
-    .lb-btn:hover {
-      background-color: var(--color-paper);
-      color: var(--color-key);
+    /* Only where a pointer can hover: on touch screens a tapped arrow would stay filled. */
+    @media (hover: hover) {
+      .lb-btn:hover {
+        background-color: var(--color-paper);
+        color: var(--color-key);
+      }
     }
     @media (prefers-reduced-motion: no-preference) {
       .lb-btn {
@@ -157,6 +162,13 @@ const text = workText.el;
       justify-content: center;
       min-height: 12rem;
     }
+    /* The print: sized to the picture, so the stand-in chip sits on the picture's corner (as on
+       the gallery tiles) rather than at the edge of the stage. */
+    .lightbox-print {
+      position: relative;
+      max-width: 100%;
+      min-width: 0;
+    }
     .lightbox-stage :global(img) {
       width: auto;
       max-width: 100%;
@@ -169,6 +181,8 @@ const text = workText.el;
       position: absolute;
       top: 0.75rem;
       left: 0.75rem;
+      /* Above the picture, also while it prints in (its animation gives it a stacking context). */
+      z-index: 1;
       padding: 0.3rem 0.55rem;
       background-color: var(--color-yellow);
       color: var(--ink-fixed);

@@ -297,5 +297,12 @@ const { locale = defaultLocale } = Astro.props;
         background: CanvasText;
       }
     }
+
+    /* Print: a fixed index has nothing to point at on paper. */
+    @media print {
+      .section-rail {
+        display: none !important;
+      }
+    }
   }
 </style>

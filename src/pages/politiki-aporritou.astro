@@ -237,10 +237,15 @@ const dataAuthority = 'https://www.dpa.gr/';
     }
     .privacy-toc-link:hover > span:last-child,
     .privacy-toc-link:focus-visible > span:last-child {
-      transform: translateX(0.25rem);
       text-decoration: underline;
       text-decoration-thickness: 2px;
       text-underline-offset: 0.2em;
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .privacy-toc-link:hover > span:last-child,
+      .privacy-toc-link:focus-visible > span:last-child {
+        transform: translateX(0.25rem);
+      }
     }
 
     .privacy {

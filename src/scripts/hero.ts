@@ -26,9 +26,9 @@
  * WebGL scenes never start up at the same time.
  *
  * Hand-over: while the live scene runs it publishes the scroll hand-off and where its plates are
- * (`dt:hero-handoff`, hero-scene/handoff-signal.ts), so the living background's floating plates
- * can take over from the art box `[data-hero-art]`. It follows the theme (`dt:themechange`) on its
- * own (hero-scene/theme.ts).
+ * (`dt:hero-handoff`, hero-scene/handoff-signal.ts) for any layer that wants to follow them (none
+ * does since the living background became ink lines). It follows the theme (`dt:themechange`) on
+ * its own (hero-scene/theme.ts).
  */
 import type { HeroScene, SceneElements } from './hero-scene/scene';
 

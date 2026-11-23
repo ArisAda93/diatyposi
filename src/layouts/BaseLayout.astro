@@ -182,8 +182,18 @@ const jsonLd = structuredData ? JSON.stringify(buildLocalBusiness(siteUrl, local
     text-decoration: none;
     transform: translateY(-200%);
   }
-  .skip-link:focus-visible {
+  /*
+   * `:focus`, not `:focus-visible`: the link must show whenever it holds focus. The ring is the
+   * site's focus colour: it sits on the page around the key face (a yellow ring vanished on paper).
+   */
+  .skip-link:focus {
     transform: none;
-    outline-color: var(--color-yellow);
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+  }
+  @media print {
+    .skip-link {
+      display: none;
+    }
   }
 </style>

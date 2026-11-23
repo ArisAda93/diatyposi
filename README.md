@@ -2,7 +2,7 @@
 
 Static marketing website for **ΔΙΑΤΥΠΩΣΗ | Διαφήμιση – Εκτυπώσεις**. Greek only for now, structured for an English version later.
 
-Built with [Astro](https://astro.build) (static output), TypeScript (strict) and Tailwind CSS v4. The home hero and the site-wide living background are WebGL scenes built with [OGL](https://github.com/oframe/ogl), loaded after first paint, with static fallbacks. GSAP (with ScrollTrigger) drives the scroll-linked motion of the site-wide motion layer and the services pages. Both libraries are loaded on demand. No backend, no database, no analytics, no cookies.
+Built with [Astro](https://astro.build) (static output), TypeScript (strict) and Tailwind CSS v4. The home hero is a WebGL scene built with [OGL](https://github.com/oframe/ogl) and the site-wide living background (thin CMYK ink lines) is plain WebGL; both load after first paint, with static fallbacks. GSAP (with ScrollTrigger) drives the scroll-linked motion of the site-wide motion layer and the services pages. Both libraries are loaded on demand. No backend, no database, no analytics, no cookies.
 
 - Design system and page structure: [DESIGN.md](DESIGN.md)
 - Every Greek string written for the site, for approval: [CONTENT_REVIEW.md](CONTENT_REVIEW.md)
@@ -116,7 +116,7 @@ src/
   components/           Logo, Icon / PlateIcon (icon set in icons.ts), Header, Footer, …
   components/home/      home sections: hero, services showcase, idea journey, work, values, statement
   scripts/              client scripts: motion (site-wide motion layer, parallax), living-background/ (WebGL
-                        sheet), hero + hero-scene/ (WebGL plates), idea-journey, services-showcase,
+                        ink lines), hero + hero-scene/ (WebGL plates), idea-journey, services-showcase,
                         services-page, halftone-field (statement), gallery, quote form, map consent
   lib/                  pure helpers (links, quote, portfolio, seo, text), unit-tested in tests/
   pages/                one file per page; slugs in Latin: /ypiresies/, /erga/, /etaireia/, /epikoinonia/

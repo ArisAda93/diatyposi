@@ -8,7 +8,8 @@
  *   (Section.astro), set heavier here, so the header and the sections read as one system.
  * - The arches (decorative): drawn as four C/M/Y/K hairline outlines whose feet stand on the
  *   rule, right-aligned to where the hairline ends. They are sized from the title's type
- *   (7 × the display-l size, capped by the content width), so they scale with the h1.
+ *   (7 × the display-l size, capped by the hairline's length), so they scale with the h1 and
+ *   never stand on the colour bar. Phones show the bar's four solids only.
  * - Under the rule, at every width, hang the red spaced label, the h1, the optional intro and the
  *   default slot (chips, notes): the arches above the rule, the type below it.
  *
@@ -118,6 +119,9 @@ const hasExtra = Astro.slots.has('default');
       /* The registration mark at the end of the rule, and the gap before it. */
       --ph-reg: 18px;
       --ph-reg-gap: 0.75rem;
+      /* Width of the colour bar at the start of the rule (ColorBar.astro, 3 tints: four 1.75rem
+         solids, three 1rem tints, six 2px gaps), so the arches never stand on it. */
+      --ph-bar: 10.75rem;
       position: relative;
       overflow-x: clip;
       padding-top: clamp(2rem, 1rem + 3.5vw, 5rem);
@@ -138,10 +142,14 @@ const hasExtra = Astro.slots.has('default');
       min-width: 0;
     }
 
-    /* The arches: right-aligned to the end of the hairline, sized from the title's type. */
+    /* The arches: right-aligned to the end of the hairline, sized from the title's type, and never
+       wider than the hairline, so on narrow screens their feet stay off the colour bar. */
     .ph-mast {
       justify-self: end;
-      width: min(100% - var(--ph-reg) - var(--ph-reg-gap), var(--text-display-l) * 7);
+      width: min(
+        100% - var(--ph-bar) - var(--ph-reg-gap) * 2 - var(--ph-reg),
+        var(--text-display-l) * 7
+      );
       margin-right: calc(var(--ph-reg) + var(--ph-reg-gap));
       pointer-events: none;
     }
@@ -167,6 +175,16 @@ const hasExtra = Astro.slots.has('default');
     }
     .ph-rule :global(.ph-bar) {
       flex: none;
+    }
+    /* Phones: the bar keeps its four solids only (four 1.75rem patches, three 2px gaps), which
+       leaves the arches room on the hairline. */
+    @media (max-width: 35.99rem) {
+      .page-header {
+        --ph-bar: 7.375rem;
+      }
+      .ph-rule :global(.ph-bar > .colorbar-tint) {
+        display: none;
+      }
     }
     .ph-line {
       flex: 1;
