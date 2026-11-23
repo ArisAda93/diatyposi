@@ -266,7 +266,10 @@ const initQuote = (root: HTMLElement): void => {
   // The on-screen keyboard's “next” key sends Enter, which would submit the form from any
   // single-line field: move to the next field instead. Desktop keyboards keep Enter to submit.
   form.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter' || event.isComposing || !coarsePointer.matches) return;
+    // keyCode 229: WebKit sends the Enter that confirms an IME composition after compositionend,
+    // with isComposing already false; that Enter belongs to the IME, not to the form.
+    if (event.key !== 'Enter' || event.isComposing || event.keyCode === 229) return;
+    if (!coarsePointer.matches) return;
     if (event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) return;
     const target = event.target;
     if (!(target instanceof HTMLInputElement) || target.getAttribute('enterkeyhint') !== 'next') {

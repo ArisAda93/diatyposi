@@ -669,14 +669,19 @@ const text = contactText.el.form;
     .q-submit .btn {
       white-space: normal;
     }
-    /* The privacy link keeps its look but takes a 44px-tall hit area. */
+    /* The privacy link keeps its look but takes a hit area at least 44px tall, centred on the
+       link whatever its line box rounds to. */
     .q-privacy-link {
       position: relative;
     }
     .q-privacy-link::after {
       content: '';
       position: absolute;
-      inset: -0.75rem -0.25rem;
+      top: 50%;
+      right: -0.25rem;
+      left: -0.25rem;
+      height: max(2.75rem, 100%);
+      translate: 0 -50%;
     }
     .q-submit :global(.q-submit-arrow) {
       transition: transform var(--dur-base) var(--ease-out);

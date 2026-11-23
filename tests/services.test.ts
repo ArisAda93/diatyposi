@@ -3,8 +3,10 @@ import { services } from '../src/data/site';
 import { closestIndex, leadSentence, stepDirection } from '../src/scripts/services-showcase';
 import {
   centredScroll,
+  chipScrollBehavior,
   edgesAttr,
   indexState,
+  itemInView,
   plateInk,
   railGradient,
   scrollEdges,
@@ -164,6 +166,40 @@ describe('scrollEdges (which sides of a chip row hide chips)', () => {
   });
   it('hides nothing when every chip fits', () => {
     expect(scrollEdges(0, 900, 640)).toEqual({ start: false, end: false });
+  });
+});
+
+describe('chipScrollBehavior (how the chip row moves to the current chip)', () => {
+  it('jumps before the visitor has acted (deep link, scroll restoration), so nothing cuts it off', () => {
+    expect(chipScrollBehavior(false, false)).toBe('auto');
+  });
+  it('glides once the visitor has acted', () => {
+    expect(chipScrollBehavior(true, false)).toBe('smooth');
+  });
+  it('always jumps under reduced motion', () => {
+    expect(chipScrollBehavior(true, true)).toBe('auto');
+    expect(chipScrollBehavior(false, true)).toBe('auto');
+  });
+});
+
+describe('itemInView (is the current chip visible in the row)', () => {
+  // A 390 px row scrolled to 400, with 32 px fades: the clear band is 432–758.
+  it('is true for a chip wholly inside the clear band', () => {
+    expect(itemInView(500, 120, 400, 390, 32)).toBe(true);
+    expect(itemInView(432, 326, 400, 390, 32)).toBe(true);
+  });
+  it('is false for a chip under a fade or past either edge', () => {
+    expect(itemInView(420, 100, 400, 390, 32)).toBe(false);
+    expect(itemInView(700, 100, 400, 390, 32)).toBe(false);
+    expect(itemInView(1100, 100, 400, 390, 32)).toBe(false);
+    expect(itemInView(0, 100, 400, 390, 32)).toBe(false);
+  });
+  it('is false for the chip of a deep-linked chapter while the row still rests at the start', () => {
+    // Chip 07 sits about 1100 px in; the row has not moved.
+    expect(itemInView(1100, 180, 0, 390, 32)).toBe(false);
+  });
+  it('uses the full width without an inset', () => {
+    expect(itemInView(400, 390, 400, 390)).toBe(true);
   });
 });
 

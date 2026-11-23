@@ -7,6 +7,8 @@
  *   64rem, where the index is a sideways chip row, the current chip is scrolled to the middle of
  *   the row (the row's own scrollLeft: the page itself never scrolls), except while a finger is on
  *   the row, and the row's edges fade only on the sides that have more chips (`data-edges`).
+ *   Until the visitor acts the row jumps rather than glides (a deep link lands with its chip
+ *   centred), and whenever the page comes to rest a current chip left out of view is brought back.
  *   The chip-row helpers (`trackScrollEdges`, `centreInRow`) are shared with the /erga/ filter
  *   chips (src/scripts/gallery.ts).
  * - With motion allowed, GSAP ScrollTrigger (loaded after the page has loaded) drives, scrubbed to
@@ -97,7 +99,7 @@ export const trackScrollEdges = (row: HTMLElement): (() => void) => {
     if (frame === 0) frame = requestAnimationFrame(update);
   };
   row.addEventListener('scroll', schedule, { passive: true });
-  if ('ResizeObserver' in window) {
+  if (typeof ResizeObserver === 'function') {
     const observer = new ResizeObserver(schedule);
     observer.observe(row);
     Array.from(row.children).forEach((child) => observer.observe(child));
@@ -110,6 +112,44 @@ export const trackScrollEdges = (row: HTMLElement): (() => void) => {
 };
 
 /**
+ * How the chip row moves to the current chip. Until the visitor has touched, clicked, scrolled
+ * with a wheel or pressed a key, every page scroll is the browser's own (the deep-link jump, scroll
+ * restoration, ScrollTrigger's refresh), and a smooth row scroll started under one of those can be
+ * cut off and left where it began: so it jumps. After that it glides, unless motion is reduced.
+ */
+export const chipScrollBehavior = (interacted: boolean, reduced: boolean): ScrollBehavior =>
+  interacted && !reduced ? 'smooth' : 'auto';
+
+/**
+ * Whether an item (offset `start`, width `size` in the scrolled content) shows whole in a
+ * sideways scroller at `scrollLeft`, clear of an `inset` (the edge fades) on both sides.
+ */
+export const itemInView = (
+  start: number,
+  size: number,
+  scrollLeft: number,
+  view: number,
+  inset = 0,
+): boolean => start >= scrollLeft + inset && start + size <= scrollLeft + view - inset;
+
+/** Offset of `item` from the start of `row`'s scrolled content (px). */
+const offsetInRow = (row: HTMLElement, item: HTMLElement): { start: number; size: number } => {
+  const rowBox = row.getBoundingClientRect();
+  const box = item.getBoundingClientRect();
+  return { start: box.left - rowBox.left - row.clientLeft + row.scrollLeft, size: box.width };
+};
+
+/**
+ * Whether `item` shows whole in the sideways `row`, clear of `inset` px at each edge (or the
+ * row does not scroll at all).
+ */
+export const shownInRow = (row: HTMLElement, item: HTMLElement, inset = 0): boolean => {
+  if (row.scrollWidth <= row.clientWidth) return true;
+  const { start, size } = offsetInRow(row, item);
+  return itemInView(start, size, row.scrollLeft, row.clientWidth, inset);
+};
+
+/**
  * Scrolls a sideways row (its own scrollLeft, never the page) so `item` sits in the middle, as
  * far as the row's scroll range allows.
  */
@@ -117,10 +157,8 @@ export const centreInRow = (row: HTMLElement, item: HTMLElement, smooth: boolean
   const view = row.clientWidth;
   const content = row.scrollWidth;
   if (content <= view) return;
-  const rowBox = row.getBoundingClientRect();
-  const box = item.getBoundingClientRect();
-  const start = box.left - rowBox.left - row.clientLeft + row.scrollLeft;
-  const left = centredScroll(start, box.width, view, content);
+  const { start, size } = offsetInRow(row, item);
+  const left = centredScroll(start, size, view, content);
   if (Math.abs(left - row.scrollLeft) < 1) return;
   row.scrollTo({ left, behavior: smooth ? 'smooth' : 'auto' });
 };
@@ -138,6 +176,12 @@ export const railGradient = (total: number): string => {
 
 /** How long a chip row stays the visitor's after the finger lifts (covers a fling). */
 const ROW_FLING_MS = 700;
+/** Quiet time after the last page scroll before the current chip's place is checked. */
+const PAGE_SETTLE_MS = 180;
+/** A row that scrolled this recently is still gliding: check it again later. */
+const ROW_QUIET_MS = 120;
+/** Edge fade of the chip row (2rem in ServiceIndex.astro): a chip under it is not in view. */
+const ROW_FADE_PX = 32;
 
 const loadGsap = async () => {
   try {
@@ -168,10 +212,17 @@ export const initServicesPage = (): void => {
     rail?.style.setProperty('--svcp-progress', value.toFixed(4));
   };
 
+  const chapterIndex = new Map(chapters.map((chapter, i): [string, number] => [chapter.id, i]));
+  const links = new Map<string, HTMLAnchorElement>();
+  rail?.querySelectorAll<HTMLAnchorElement>('a[href^="#"]').forEach((a) => {
+    links.set(a.hash.slice(1), a);
+  });
+
   // Below 64rem the chip row fades only where it hides chips. While a finger is on the row (and
   // for its fling afterwards) the row is the visitor's: the current chip is not pulled back.
   let rowHeld = false;
   let rowFreeAt = 0;
+  let rowScrolledAt = 0;
   if (chipRow) {
     trackScrollEdges(chipRow);
     const hold = (): void => {
@@ -184,22 +235,73 @@ export const initServicesPage = (): void => {
     chipRow.addEventListener('touchstart', hold, { passive: true });
     chipRow.addEventListener('touchend', release, { passive: true });
     chipRow.addEventListener('touchcancel', release, { passive: true });
+    chipRow.addEventListener(
+      'scroll',
+      () => {
+        rowScrolledAt = performance.now();
+      },
+      { passive: true },
+    );
   }
+
+  // Until the visitor acts, page scrolls are the browser's own: the row jumps to the chip.
+  let interacted = false;
+  const firstActs = ['pointerdown', 'keydown', 'wheel', 'touchstart'] as const;
+  const onFirstAct = (): void => {
+    interacted = true;
+    firstActs.forEach((type) => window.removeEventListener(type, onFirstAct, true));
+  };
+  firstActs.forEach((type) =>
+    window.addEventListener(type, onFirstAct, { capture: true, passive: true }),
+  );
+
+  let currentId = '';
+  const rowFree = (): boolean =>
+    Boolean(chipRow) && !desktop.matches && !rowHeld && performance.now() >= rowFreeAt;
 
   /** Below 64rem: bring the chip of the chapter in view to the middle of the chip row. */
   const revealChip = (link: HTMLAnchorElement | undefined): void => {
-    if (!link || !chipRow || desktop.matches) return;
-    if (rowHeld || performance.now() < rowFreeAt) return;
-    centreInRow(chipRow, link, !reduce.matches);
+    if (!link || !chipRow || !rowFree()) return;
+    centreInRow(chipRow, link, chipScrollBehavior(interacted, reduce.matches) === 'smooth');
   };
 
+  // Once the page has come to rest (and after load and the web fonts), make sure the current chip
+  // really is in view: a glide may have been cut off by a page scroll the browser ran itself, and
+  // the chips change width when the fonts arrive. Before the visitor acts it is centred outright;
+  // after that only a chip that is out of view (or under a fade) is brought back, so a row the
+  // visitor browsed is not pulled about on every pause.
+  let settleTimer = 0;
+  const checkChip = (): void => {
+    settleTimer = 0;
+    const link = links.get(currentId);
+    if (!chipRow || !link || !rowFree()) return;
+    if (performance.now() - rowScrolledAt < ROW_QUIET_MS) {
+      settleTimer = window.setTimeout(checkChip, ROW_QUIET_MS);
+      return;
+    }
+    if (interacted && shownInRow(chipRow, link, ROW_FADE_PX)) return;
+    centreInRow(chipRow, link, false);
+  };
+  const scheduleCheck = (delay: number): void => {
+    window.clearTimeout(settleTimer);
+    settleTimer = window.setTimeout(checkChip, delay);
+  };
+  if (chipRow) {
+    window.addEventListener('scroll', () => scheduleCheck(PAGE_SETTLE_MS), { passive: true });
+    if ('onscrollend' in window) {
+      window.addEventListener('scrollend', () => scheduleCheck(0), { passive: true });
+    }
+    const afterLoad = (): void => {
+      requestAnimationFrame(() => scheduleCheck(0));
+    };
+    if (document.readyState === 'complete') afterLoad();
+    else window.addEventListener('load', afterLoad, { once: true });
+    if ('fonts' in document) void document.fonts.ready.then(() => scheduleCheck(0));
+  }
+
   // Active chapter: the one crossing the band from 35% to 40% of the viewport height.
-  const chapterIndex = new Map(chapters.map((chapter, i): [string, number] => [chapter.id, i]));
-  const links = new Map<string, HTMLAnchorElement>();
-  rail?.querySelectorAll<HTMLAnchorElement>('a[href^="#"]').forEach((a) => {
-    links.set(a.hash.slice(1), a);
-  });
   const setCurrent = (id: string): void => {
+    currentId = id;
     activeIndex = chapterIndex.get(id) ?? -1;
     links.forEach((a, key) => {
       const state = indexState(chapterIndex.get(key) ?? -1, activeIndex);
