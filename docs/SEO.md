@@ -87,34 +87,34 @@ Rules used:
 
 ### 3.1 City names in Greek copy
 
-| City/area                                                            | Nominative (queries, GBP, address)                  | Locative for copy and titles                                                                               |
-| -------------------------------------------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Feminine, starting with a vowel or κ, π, τ, ξ, ψ, μπ, ντ, γκ, τσ, τζ | Αθήνα, Πάτρα, Καλλιθέα, Χαλκίδα (χ → no ν), Κέρκυρα | στην Αθήνα, στην Πάτρα, στην Καλλιθέα, **στη** Χαλκίδα, στην Κέρκυρα                                       |
-| Feminine, other first letters                                        | Θεσσαλονίκη, Λάρισα, Νέα Σμύρνη, Ρόδος              | στη Θεσσαλονίκη, στη Λάρισα, στη Νέα Σμύρνη, στη Ρόδο                                                      |
-| Neuter                                                               | Περιστέρι, Ηράκλειο, Αιγάλεω, Μαρούσι               | στο Περιστέρι, στο Ηράκλειο, στο Αιγάλεω, στο Μαρούσι                                                      |
-| Masculine                                                            | Πειραιάς, Εύοσμος, Βόλος                            | στον Πειραιά, στον Εύοσμο, στο Βόλο (many writers keep "στον Βόλο" for masculine nouns; both are accepted) |
-| Plural                                                               | Χανιά, Ιωάννινα, Γιαννιτσά                          | στα Χανιά, στα Ιωάννινα, στα Γιαννιτσά                                                                     |
+| City/area                                                                       | Nominative (queries, GBP, address)                  | Locative for copy and titles                                         |
+| ------------------------------------------------------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------- |
+| Feminine (την/στην), starting with a vowel or κ, π, τ, ξ, ψ, μπ, ντ, γκ, τσ, τζ | Αθήνα, Πάτρα, Καλλιθέα, Χαλκίδα (χ → no ν), Κέρκυρα | στην Αθήνα, στην Πάτρα, στην Καλλιθέα, **στη** Χαλκίδα, στην Κέρκυρα |
+| Feminine (την/στην), other first letters                                        | Θεσσαλονίκη, Λάρισα, Νέα Σμύρνη, Ρόδος              | στη Θεσσαλονίκη, στη Λάρισα, στη Νέα Σμύρνη, στη Ρόδο                |
+| Neuter                                                                          | Περιστέρι, Ηράκλειο, Αιγάλεω, Μαρούσι               | στο Περιστέρι, στο Ηράκλειο, στο Αιγάλεω, στο Μαρούσι                |
+| Masculine                                                                       | Πειραιάς, Εύοσμος, Βόλος                            | στον Πειραιά, στον Εύοσμο, στον Βόλο                                 |
+| Plural                                                                          | Χανιά, Ιωάννινα, Γιαννιτσά                          | στα Χανιά, στα Ιωάννινα, στα Γιαννιτσά                               |
 
-The final -ν of την/τον stays before a vowel and before κ, π, τ, ξ, ψ, μπ, ντ, γκ, τσ, τζ; it drops before other consonants. `site.address.locative` holds the whole phrase ("στην Αθήνα"), so no code has to inflect.
+Only the feminine article την/στην (like δεν and μην) drops its final -ν: it keeps it before a vowel and before κ, π, τ, ξ, ψ, μπ, ντ, γκ, τσ, τζ, and drops it before other consonants. The masculine τον/στον always keeps the -ν (στον Βόλο, στον Πειραιά). `site.address.locative` holds the whole phrase ("στην Αθήνα"), so no code has to inflect.
 
 ### 3.2 Compact table
 
-| URL                                          | Primary query                              | Recommended title (before " \| ΔΙΑΤΥΠΩΣΗ")       | Recommended h1                                                 |
-| -------------------------------------------- | ------------------------------------------ | ------------------------------------------------ | -------------------------------------------------------------- |
-| `/`                                          | τυπογραφείο {Πόλη}                         | Τυπογραφείο, εκτυπώσεις & διαφήμιση              | Keep the owner's "Η ιδέα σας… γίνεται δημιουργία!" (see note)  |
-| `/ypiresies/`                                | εκτυπώσεις και διαφήμιση {Πόλη}            | Υπηρεσίες εκτύπωσης & διαφήμισης                 | Υπηρεσίες εκτύπωσης και διαφήμισης                             |
-| `/ypiresies/diafimistika-dora/`              | διαφημιστικά δώρα                          | Διαφημιστικά & προσωποποιημένα δώρα              | Διαφημιστικά δώρα με λογότυπο και προσωποποιημένα δώρα         |
-| `/ypiresies/mplouzakia-rouxismos/`           | στάμπες σε μπλουζάκια                      | Στάμπες σε μπλουζάκια & επαγγελματικός ρουχισμός | Μπλουζάκια με στάμπα και ρούχα εργασίας με λογότυπο            |
-| `/ypiresies/grafistikos-sxediasmos/`         | σχεδιασμός λογοτύπου                       | Σχεδιασμός λογοτύπου & εταιρική ταυτότητα        | Σχεδιασμός λογοτύπου και εταιρικής ταυτότητας                  |
-| `/ypiresies/banners-afises-mousamades/`      | μουσαμάς διαφημιστικός / roll up banner    | Μουσαμάδες, roll up banners & αφίσες             | Διαφημιστικοί μουσαμάδες, banners και αφίσες                   |
-| `/ypiresies/epigrafes-aftokollita-vitrines/` | επιγραφές καταστημάτων                     | Επιγραφές καταστημάτων & αυτοκόλλητα βιτρίνας    | Επιγραφές καταστημάτων, αυτοκόλλητα και βιτρίνες               |
-| `/ypiresies/social-media/`                   | σχεδιασμός αναρτήσεων για social media     | Σχεδιασμός αναρτήσεων για social media           | Σχεδιασμός αναρτήσεων και stories για Facebook και Instagram   |
-| `/ypiresies/psifiakes-offset-ektyposeis/`    | ψηφιακές εκτυπώσεις                        | Ψηφιακές & offset εκτυπώσεις, τυπογραφείο        | Ψηφιακές και offset εκτυπώσεις                                 |
-| `/ypiresies/kartes-fylladia-entypa/`         | επαγγελματικές κάρτες                      | Επαγγελματικές κάρτες, φυλλάδια & έντυπα         | Επαγγελματικές κάρτες, φυλλάδια και έντυπα                     |
-| `/ypiresies/prosklitiria-kartes/`            | προσκλητήρια γάμου                         | Προσκλητήρια γάμου, βάπτισης & ευχετήριες κάρτες | Προσκλητήρια γάμου και βάπτισης, κάρτες και ειδικές κατασκευές |
-| `/erga/`                                     | ΔΙΑΤΥΠΩΣΗ έργα / δείγματα εργασιών         | Έργα: κάρτες, επιγραφές, στάμπες & έντυπα        | Τι μπορούμε να φτιάξουμε για εσάς (keep)                       |
-| `/etaireia/`                                 | ΔΙΑΤΥΠΩΣΗ / διατύπωση εκτυπώσεις           | Η εταιρεία: διαφήμιση & εκτυπώσεις               | Από την ιδέα στο χαρτί, μαζί σας (keep)                        |
-| `/epikoinonia/`                              | ΔΙΑΤΥΠΩΣΗ τηλέφωνο / τυπογραφείο κοντά μου | Επικοινωνία & προσφορά για εκτυπώσεις            | Επικοινωνία και αίτημα προσφοράς                               |
+| URL                                          | Primary query                              | Recommended title (before " \| ΔΙΑΤΥΠΩΣΗ")       | Recommended h1                                                |
+| -------------------------------------------- | ------------------------------------------ | ------------------------------------------------ | ------------------------------------------------------------- |
+| `/`                                          | τυπογραφείο {Πόλη}                         | Τυπογραφείο, εκτυπώσεις & διαφήμιση              | Keep the owner's "Η ιδέα σας… γίνεται δημιουργία!" (see note) |
+| `/ypiresies/`                                | εκτυπώσεις και διαφήμιση {Πόλη}            | Υπηρεσίες εκτύπωσης & διαφήμισης                 | Υπηρεσίες εκτύπωσης και διαφήμισης                            |
+| `/ypiresies/diafimistika-dora/`              | διαφημιστικά δώρα                          | Διαφημιστικά & προσωποποιημένα δώρα              | Διαφημιστικά δώρα με λογότυπο και προσωποποιημένα δώρα        |
+| `/ypiresies/mplouzakia-rouxismos/`           | στάμπες σε μπλουζάκια                      | Στάμπες σε μπλουζάκια & επαγγελματικός ρουχισμός | Μπλουζάκια με στάμπα και ρούχα εργασίας με λογότυπο           |
+| `/ypiresies/grafistikos-sxediasmos/`         | σχεδιασμός λογοτύπου                       | Σχεδιασμός λογοτύπου & εταιρική ταυτότητα        | Σχεδιασμός λογοτύπου, εταιρικής ταυτότητας και εντύπων        |
+| `/ypiresies/banners-afises-mousamades/`      | μουσαμάς διαφημιστικός / roll up banner    | Μουσαμάδες, roll up banners, πανό & αφίσες       | Διαφημιστικοί μουσαμάδες, banners και αφίσες                  |
+| `/ypiresies/epigrafes-aftokollita-vitrines/` | επιγραφές καταστημάτων                     | Επιγραφές καταστημάτων & αυτοκόλλητα βιτρίνας    | Επιγραφές καταστημάτων, αυτοκόλλητα βιτρίνας και οχημάτων     |
+| `/ypiresies/social-media/`                   | σχεδιασμός αναρτήσεων για social media     | Σχεδιασμός αναρτήσεων για social media           | Σχεδιασμός αναρτήσεων και stories για Facebook και Instagram  |
+| `/ypiresies/psifiakes-offset-ektyposeis/`    | ψηφιακές εκτυπώσεις                        | Ψηφιακές & offset εκτυπώσεις, τυπογραφείο        | Ψηφιακές και offset εκτυπώσεις στο τυπογραφείο μας            |
+| `/ypiresies/kartes-fylladia-entypa/`         | επαγγελματικές κάρτες                      | Επαγγελματικές κάρτες, φυλλάδια & έντυπα         | Επαγγελματικές κάρτες και φυλλάδια: σχεδιασμός και εκτύπωση   |
+| `/ypiresies/prosklitiria-kartes/`            | προσκλητήρια γάμου                         | Προσκλητήρια γάμου, βάπτισης & ευχετήριες κάρτες | Προσκλητήρια γάμου και βάπτισης, ευχετήριες κάρτες            |
+| `/erga/`                                     | ΔΙΑΤΥΠΩΣΗ έργα / δείγματα εργασιών         | Έργα: κάρτες, επιγραφές, στάμπες & έντυπα        | Τι μπορούμε να φτιάξουμε για εσάς (keep)                      |
+| `/etaireia/`                                 | ΔΙΑΤΥΠΩΣΗ / διατύπωση εκτυπώσεις           | Η εταιρεία: διαφήμιση & εκτυπώσεις               | Από την ιδέα στο χαρτί, μαζί σας (keep)                       |
+| `/epikoinonia/`                              | ΔΙΑΤΥΠΩΣΗ τηλέφωνο / τυπογραφείο κοντά μου | Επικοινωνία & προσφορά για εκτυπώσεις            | Επικοινωνία και αίτημα προσφοράς                              |
 
 ### 3.3 Details per URL
 
@@ -124,7 +124,7 @@ The final -ν of την/τον stays before a vowel and before κ, π, τ, ξ, �
 - **Secondary / long tail:** εκτυπώσεις {Πόλη}; τυπογραφείο κοντά μου; εκτυπώσεις κοντά μου; διαφημιστική εταιρεία {Πόλη} / διαφημιστικό γραφείο {Πόλη}; ψηφιακές εκτυπώσεις κοντά μου; ΔΙΑΤΥΠΩΣΗ / Διατύπωση εκτυπώσεις; diatyposi (brand, Greeklish); typografeio (Greeklish, mapped to Greek by Google)
 - **Intent:** local commercial and navigational (find a print/advertising shop nearby, or find this one by name).
 - **Title:** "Τυπογραφείο, εκτυπώσεις & διαφήμιση" (35). On the home page Google recommends the full site name; brand-first ("ΔΙΑΤΥΠΩΣΗ | Τυπογραφείο, εκτυπώσεις & διαφήμιση {στην Πόλη}") or brand-last are both fine. Keep the home title consistent with the `WebSite` name.
-- **h1:** the h1 is the owner's headline "Η ιδέα σας… γίνεται δημιουργία!" (owner copy, verbatim). It carries no search term. Recommendation, in order of preference: (a) keep it, and make sure the line directly above or below it visibly reads "Διαφήμιση – Εκτυπώσεις {στην Πόλη}" and the owner's intro (which already says "διαφήμισης, εκτύπωσης και προβολής") stays the first paragraph; (b) if the owner agrees, put the descriptor inside the h1 as a small first line: "ΔΙΑΤΥΠΩΣΗ, διαφήμιση και εκτυπώσεις {στην Πόλη}: Η ιδέα σας… γίνεται δημιουργία!". Option (a) needs no owner approval.
+- **h1:** the owner's headline "Η ιδέα σας… γίνεται δημιουργία!" (owner copy, verbatim; it carries no search term). Shipped as option (a): the red label directly above the h1 reads "ΔΙΑΦΗΜΙΣΗ – ΕΚΤΥΠΩΣΕΙΣ" and, once `site.address.locative` is set, adds the city in capitals ("ΔΙΑΦΗΜΙΣΗ – ΕΚΤΥΠΩΣΕΙΣ ΣΤΗΝ ΑΘΗΝΑ"); the owner's intro, which already says "διαφήμισης, εκτύπωσης και προβολής", stays the first paragraph. Option (b), putting the descriptor inside the h1 ("ΔΙΑΤΥΠΩΣΗ, διαφήμιση και εκτυπώσεις {στην Πόλη}: Η ιδέα σας… γίνεται δημιουργία!"), needs the owner's approval and was not done.
 - **Meta description (145):** "Τυπογραφείο ΔΙΑΤΥΠΩΣΗ: ψηφιακές και offset εκτυπώσεις, κάρτες, banners, επιγραφές, στάμπες σε μπλουζάκια και διαφημιστικά δώρα. Ζητήστε προσφορά."
 
 #### `/ypiresies/` Υπηρεσίες (hub)
@@ -133,8 +133,8 @@ The final -ν of την/τον stays before a vowel and before κ, π, τ, ξ, �
 - **Secondary:** υπηρεσίες τυπογραφείου; διαφημιστικό υλικό; διαφημιστικά και εκτυπώσεις; εκτυπώσεις {Πόλη}; ψηφιακές εκτυπώσεις {Πόλη}
 - **Intent:** commercial investigation; the hub that links to the nine service pages.
 - **Title (32):** "Υπηρεσίες εκτύπωσης & διαφήμισης"
-- **h1:** "Υπηρεσίες εκτύπωσης και διαφήμισης" (today's "Ό,τι χρειάζεται η εικόνα σας, σε ένα μέρος" can stay as the intro line under it).
-- **Meta (149):** "Όλες οι υπηρεσίες της ΔΙΑΤΥΠΩΣΗΣ: εκτυπώσεις, κάρτες και έντυπα, banners, επιγραφές, ρουχισμός, δώρα, λογότυπα και υλικό για social media. Δείτε τις."
+- **h1:** "Υπηρεσίες εκτύπωσης και διαφήμισης" (shipped; the former heading "Ό,τι χρειάζεται η εικόνα σας, σε ένα μέρος." now opens the intro under it).
+- **Meta (159):** "Όλες οι υπηρεσίες της ΔΙΑΤΥΠΩΣΗΣ: εκτυπώσεις, κάρτες και έντυπα, banners, επιγραφές, ρουχισμός, δώρα, λογότυπα και υλικό για social media. Δείτε τι φτιάχνουμε."
 - **Note:** once service pages exist, each chapter on /ypiresies/ should be a short summary that links to its page ("Περισσότερα για …"), not a copy of the service page text, so the two never compete for the same query.
 
 #### `/ypiresies/diafimistika-dora/`
@@ -144,7 +144,7 @@ The final -ν of την/τον stays before a vowel and before κ, π, τ, ξ, �
 - **Intent:** commercial (businesses ordering branded giveaways; individuals ordering one personalised gift).
 - **Title (35):** "Διαφημιστικά & προσωποποιημένα δώρα"
 - **h1:** "Διαφημιστικά δώρα με λογότυπο και προσωποποιημένα δώρα"
-- **Meta (148):** "Κούπες, ποτήρια, στυλό, μπλοκ, ημερολόγια και υφασμάτινες τσάντες με το λογότυπό σας, και προσωποποιημένα δώρα για κάθε περίσταση. Ζητήστε προσφορά."
+- **Meta (148):** "Διαφημιστικά δώρα με το λογότυπό σας: κούπες, ποτήρια, στυλό, μπλοκ, ημερολόγια, υφασμάτινες τσάντες και προσωποποιημένα δώρα. Ζητήστε μας προσφορά."
 
 #### `/ypiresies/mplouzakia-rouxismos/`
 
@@ -153,7 +153,7 @@ The final -ν of την/τον stays before a vowel and before κ, π, τ, ξ, �
 - **Intent:** commercial, strongly local ("μαγαζί για στάμπες σε μπλουζάκια").
 - **Title (48):** "Στάμπες σε μπλουζάκια & επαγγελματικός ρουχισμός"
 - **h1:** "Μπλουζάκια με στάμπα και ρούχα εργασίας με λογότυπο"
-- **Meta (149):** "Τυπωμένα μπλουζάκια για ομάδες και εκδηλώσεις, ρούχα εργασίας, φούτερ, καπέλα και ποδιές με το λογότυπό σας. Στείλτε μας το σχέδιο, ζητήστε προσφορά."
+- **Meta (153):** "Στάμπες σε μπλουζάκια για ομάδες, εκδηλώσεις και επιχειρήσεις, ρούχα εργασίας, φούτερ, καπέλα και ποδιές με λογότυπο. Στείλτε μας το σχέδιο για προσφορά."
 - **Do not:** mention κέντημα (embroidery). Mention μεταξοτυπία or any other method only after the owner confirms it (the current μεταξοτυπία photo is a stand-in).
 
 #### `/ypiresies/grafistikos-sxediasmos/`
@@ -162,17 +162,17 @@ The final -ν of την/τον stays before a vowel and before κ, π, τ, ξ, �
 - **Secondary:** δημιουργία λογοτύπου (επιχείρησης); γραφίστας για λογότυπο; γραφιστικό γραφείο {Πόλη}; εταιρική ταυτότητα (σχεδιασμός, τι περιλαμβάνει); ανανέωση λογοτύπου; σχεδιασμός φυλλαδίου; σχεδιασμός μενού εστιατορίου; σχεδιασμός συσκευασίας; σχεδιασμός λογοτύπου {Πόλη}
 - **Intent:** commercial investigation (also informational: "τι περιλαμβάνει η εταιρική ταυτότητα"). Many "δωρεάν/online/ai" logo-maker searches exist; do not target them.
 - **Title (41):** "Σχεδιασμός λογοτύπου & εταιρική ταυτότητα"
-- **h1:** "Σχεδιασμός λογοτύπου και εταιρικής ταυτότητας"
-- **Meta (146):** "Σχεδιάζουμε λογότυπο, εταιρική ταυτότητα, έντυπα και συσκευασίες, και παραδίδουμε αρχεία έτοιμα για εκτύπωση. Πείτε μας την ιδέα σας και ξεκινάμε."
+- **h1:** "Σχεδιασμός λογοτύπου, εταιρικής ταυτότητας και εντύπων"
+- **Meta (144):** "Σχεδιασμός λογοτύπου και εταιρικής ταυτότητας, εντύπων και συσκευασιών, με αρχεία έτοιμα για εκτύπωση. Πείτε μας την ιδέα σας και ξεκινάμε μαζί."
 
 #### `/ypiresies/banners-afises-mousamades/`
 
 - **Primary:** μουσαμάς διαφημιστικός (a Greek-specific term) together with roll up banner
 - **Secondary:** μουσαμάδες εκτύπωση; εκτύπωση μουσαμά {Πόλη}; roll up banner; roll up banner διαστάσεις; πανό για εκθέσεις / πανό εκτύπωση; εκτύπωση αφίσας (α3, α2, α1, α0); αφίσες εκτύπωση {Πόλη}; εκτυπώσεις μεγάλου μεγέθους; banner εκτύπωση
 - **Intent:** commercial, often urgent (event, opening, exhibition).
-- **Title (36):** "Μουσαμάδες, roll up banners & αφίσες"
+- **Title (42):** "Μουσαμάδες, roll up banners, πανό & αφίσες"
 - **h1:** "Διαφημιστικοί μουσαμάδες, banners και αφίσες"
-- **Meta (145):** "Μουσαμάδες για προσόψεις και εκδηλώσεις, roll up banners, πανό για εκθέσεις και αφίσες κάθε μεγέθους, που φαίνονται από μακριά. Ζητήστε προσφορά."
+- **Meta (152):** "Διαφημιστικοί μουσαμάδες για προσόψεις και εκδηλώσεις, roll up banners, πανό για εκθέσεις και αφίσες. Στείλτε μας το σχέδιο ή την ιδέα σας για προσφορά."
 
 #### `/ypiresies/epigrafes-aftokollita-vitrines/`
 
@@ -180,8 +180,8 @@ The final -ν of την/τον stays before a vowel and before κ, π, τ, ξ, �
 - **Secondary:** επιγραφές καταστημάτων {Πόλη}; αυτοκόλλητα βιτρίνας (εκπτώσεων, χριστουγεννιάτικα, black friday — seasonal); βιτρίνα καταστήματος; αυτοκόλλητα οχημάτων / αυτοκόλλητα αυτοκινήτου με λογότυπο; ετικέτες προϊόντων / αυτοκόλλητες ετικέτες; ετικέτες για βάζα / ετικέτες κρασιού
 - **Intent:** commercial, local (sign must be made and fitted nearby).
 - **Title (45):** "Επιγραφές καταστημάτων & αυτοκόλλητα βιτρίνας"
-- **h1:** "Επιγραφές καταστημάτων, αυτοκόλλητα και βιτρίνες"
-- **Meta (149):** "Επιγραφές καταστημάτων, αυτοκόλλητα βιτρίνας και οχημάτων, ετικέτες προϊόντων: σχεδιάζουμε και κατασκευάζουμε την πρώτη σας εικόνα. Ζητήστε προσφορά."
+- **h1:** "Επιγραφές καταστημάτων, αυτοκόλλητα βιτρίνας και οχημάτων"
+- **Meta (148):** "Επιγραφές καταστημάτων, αυτοκόλλητα βιτρίνας και οχημάτων, ετικέτες προϊόντων, σχεδιασμένα για να σας προσέχουν από τον δρόμο. Ζητήστε μας προσφορά."
 - **Do not:** claim φωτεινές επιγραφές, full vehicle wraps ("ντύσιμο αυτοκινήτου"), installation or permit handling unless the owner confirms.
 
 #### `/ypiresies/social-media/`
@@ -191,7 +191,7 @@ The final -ν of την/τον stays before a vowel and before κ, π, τ, ξ, �
 - **Intent:** commercial; Greek demand looks small (no autocomplete completions), so this page mostly supports customers already in contact and cross-sells from κάρτες / προσκλητήρια / λογότυπο.
 - **Title (38):** "Σχεδιασμός αναρτήσεων για social media"
 - **h1:** "Σχεδιασμός αναρτήσεων και stories για Facebook και Instagram"
-- **Meta (146):** "Αναρτήσεις, stories, εικόνες εξωφύλλου και ψηφιακές προσκλήσεις για Facebook και Instagram, με την ίδια εικόνα με τα έντυπά σας. Ζητήστε προσφορά."
+- **Meta (143):** "Σχεδιασμός αναρτήσεων για social media: posts, stories, εικόνες εξωφύλλου και ψηφιακές προσκλήσεις, στο ύφος των εντύπων σας. Ζητήστε προσφορά."
 - **Do not:** imply account management, posting, ads or follower growth. The service is design.
 
 #### `/ypiresies/psifiakes-offset-ektyposeis/`
@@ -200,8 +200,8 @@ The final -ν of την/τον stays before a vowel and before κ, π, τ, ξ, �
 - **Secondary:** ψηφιακές εκτυπώσεις {Πόλη}; offset εκτυπώσεις; ψηφιακές εκτυπώσεις offset; εκτυπώσεις κοντά μου; τυπογραφείο {Πόλη}; ψηφιακή ή offset εκτύπωση; εκτυπώσεις μικρών ποσοτήτων; ektyposeis (Greeklish)
 - **Intent:** commercial, local; this page is the best non-home target for "τυπογραφείο {Πόλη}".
 - **Title (41):** "Ψηφιακές & offset εκτυπώσεις, τυπογραφείο"
-- **h1:** "Ψηφιακές και offset εκτυπώσεις"
-- **Meta (141):** "Ψηφιακή εκτύπωση για μικρές ποσότητες και offset για μεγάλα τιράζ, με επιλογή χαρτιού και φινιρίσματος και έλεγχο χρώματος. Ζητήστε προσφορά."
+- **h1:** "Ψηφιακές και offset εκτυπώσεις στο τυπογραφείο μας"
+- **Meta (144):** "Ψηφιακές εκτυπώσεις για μικρές ποσότητες και offset για μεγάλα τιράζ, με επιλογή χαρτιού και φινιρίσματος και έλεγχο χρώματος. Ζητήστε προσφορά."
 
 #### `/ypiresies/kartes-fylladia-entypa/`
 
@@ -209,7 +209,7 @@ The final -ν of την/τον stays before a vowel and before κ, π, τ, ξ, �
 - **Secondary:** επαγγελματικές κάρτες εκτύπωση; επαγγελματικές κάρτες {Πόλη}; επαγγελματικές κάρτες διπλής όψης; επαγγελματικές κάρτες με QR code; εκτύπωση φυλλαδίων / φυλλάδια Α5; τρίπτυχο φυλλάδιο; flyers; εκτύπωση μενού εστιατορίου; κατάλογοι; επιστολόχαρτα και φάκελοι
 - **Intent:** commercial (national online printers dominate "επαγγελματικές κάρτες" alone; win "+ {Πόλη}" and the question long tail).
 - **Title (40):** "Επαγγελματικές κάρτες, φυλλάδια & έντυπα"
-- **h1:** "Επαγγελματικές κάρτες, φυλλάδια και έντυπα"
+- **h1:** "Επαγγελματικές κάρτες και φυλλάδια: σχεδιασμός και εκτύπωση"
 - **Meta (151):** "Επαγγελματικές κάρτες, φυλλάδια και flyers, κατάλογοι, μενού, επιστολόχαρτα, φάκελοι και μπλοκ, σχεδιασμένα και τυπωμένα με φροντίδα. Ζητήστε προσφορά."
 - **Do not:** mention ανάγλυφες κάρτες, special papers or finishes the owner has not listed.
 
@@ -219,7 +219,7 @@ The final -ν of την/τον stays before a vowel and before κ, π, τ, ξ, �
 - **Secondary:** προσκλητήρια βάπτισης (για αγόρι / για κορίτσι); προσκλητήρια γάμου και βάπτισης; προσκλητήρια γάμου {Πόλη}; ευχετήριες κάρτες (εταιρικές, χριστουγέννων); μενού γάμου εκτύπωση; καρτελάκια τραπεζιού; προσκλητήρια γάμου κείμενο
 - **Intent:** commercial with a long research phase (ideas, wording, timing). Seasonal: weddings and baptisms peak in spring–summer, greeting cards before Christmas.
 - **Title (48):** "Προσκλητήρια γάμου, βάπτισης & ευχετήριες κάρτες"
-- **h1:** "Προσκλητήρια γάμου και βάπτισης, κάρτες και ειδικές κατασκευές"
+- **h1:** "Προσκλητήρια γάμου και βάπτισης, ευχετήριες κάρτες"
 - **Meta (146):** "Προσκλητήρια γάμου και βάπτισης, ευχετήριες κάρτες, μενού και καρτελάκια τραπεζιού, σχεδιασμένα μαζί σας για να μείνουν ενθύμιο. Ζητήστε προσφορά."
 
 #### `/erga/` Έργα
@@ -238,7 +238,7 @@ The final -ν of την/τον stays before a vowel and before κ, π, τ, ξ, �
 - **Secondary:** diatyposi; τυπογραφείο {Πόλη}; διαφημιστικό γραφείο {Πόλη}
 - **Intent:** navigational / trust.
 - **Title (34):** "Η εταιρεία: διαφήμιση & εκτυπώσεις"
-- **h1:** keep "Από την ιδέα στο χαρτί, μαζί σας"; make sure the first paragraph names "ΔΙΑΤΥΠΩΣΗ", "διαφήμιση και εκτυπώσεις" and {στην Πόλη}.
+- **h1:** keep "Από την ιδέα στο χαρτί, μαζί σας"; the first paragraph (owner copy) already names "ΔΙΑΤΥΠΩΣΗ" and "διαφήμισης, εκτύπωσης". The city is added only when the owner edits that copy; nothing inserts it automatically on this page.
 - **Meta (147):** "Η ΔΙΑΤΥΠΩΣΗ δίνει μορφή στις ιδέες σας με λύσεις διαφήμισης, εκτύπωσης και προβολής, με ποιότητα, συνέπεια και προσωπική εξυπηρέτηση. Γνωρίστε μας."
 
 #### `/epikoinonia/` Επικοινωνία
@@ -247,8 +247,8 @@ The final -ν of την/τον stays before a vowel and before κ, π, τ, ξ, �
 - **Secondary:** τυπογραφείο κοντά μου; εκτυπώσεις κοντά μου; προσφορά για εκτυπώσεις; τυπογραφείο {Πόλη} ωράριο
 - **Intent:** navigational / transactional (call, visit, request a quote).
 - **Title (37):** "Επικοινωνία & προσφορά για εκτυπώσεις"
-- **h1:** "Επικοινωνία και αίτημα προσφοράς" (today's "Πείτε μας τι έχετε στο μυαλό σας." can stay as the intro line).
-- **Meta (149):** "Τηλέφωνο, e-mail, Viber, WhatsApp, διεύθυνση και ωράριο της ΔΙΑΤΥΠΩΣΗΣ. Πείτε μας τι χρειάζεστε από τη φόρμα και ζητήστε προσφορά για τη δουλειά σας."
+- **h1:** "Επικοινωνία και αίτημα προσφοράς" (shipped; "Πείτε μας τι έχετε στο μυαλό σας." now opens the intro).
+- **Meta (148):** "Τηλέφωνο, email, Viber, WhatsApp, διεύθυνση και ωράριο της ΔΙΑΤΥΠΩΣΗΣ. Πείτε μας τι χρειάζεστε από τη φόρμα και ζητήστε προσφορά για τη δουλειά σας."
 - **Note:** show the full address as text (street, number, ΤΚ, municipality/neighbourhood), written exactly as in GBP, plus a line on how to find the shop (landmark, parking). This is the NAP anchor of the site.
 
 `/politiki-aporritou/` needs no keyword target; keep it indexable and linked from the footer.
@@ -259,9 +259,9 @@ The final -ν of την/τον stays before a vowel and before κ, π, τ, ξ, �
 
 General rules for all nine pages:
 
-- **Length and structure:** a lead paragraph (1–3 sentences) that contains the primary query and {στην Πόλη} once; 2–4 sections with h2s; 6–8 FAQs (the template's type allows 4–6 for the page and FAQ markup; pick the strongest from the candidates below); 2–3 related services. Aim for roughly 500–900 words of real content per page. Every page must be distinct; no shared boilerplate paragraphs.
+- **Length and structure:** a lead paragraph (1–3 sentences) that contains the primary query and the `{loc}` token once, right after a word (see City below); 2–4 sections with h2s; 6–8 FAQs (the template's type allows 4–6 for the page and FAQ markup; pick the strongest from the candidates below); 2–3 related services. Aim for roughly 500–900 words of real content per page. Every page must be distinct; no shared boilerplate paragraphs.
 - **Language:** natural Greek with τόνοι and final ς. Use singular and plural naturally (μουσαμάς / μουσαμάδες, επιγραφή / επιγραφές, κάρτα / κάρτες); Google understands inflection. Do not repeat the keyword mechanically; do not add Greeklish or accentless variants.
-- **City:** mention the city or municipality in the lead and once more where it is natural (e.g. "Περάστε από το κατάστημά μας {στην Πόλη}"). No separate pages per city or suburb (doorway pages).
+- **City:** the city is inserted automatically in three places only: the `{loc}` token in each service intro (filled with " στην <Πόλη>" from `site.address.locative`, empty until it is set), every service and home title (`withLocality`), and the home hero label. Do not write the city anywhere else in the body copy; a second in-body mention (e.g. "Περάστε από το κατάστημά μας {στην Πόλη}") waits until the owner edits the copy with the real city. No separate pages per city or suburb (doorway pages).
 - **Claims:** only services and products in `src/data/site.ts`. No prices, no delivery or turnaround times, no minimum quantities, no years in business, no "best/cheapest", no embroidery, no techniques the owner has not confirmed. Where customers ask about price or time, answer how it is decided ("εξαρτάται από την ποσότητα, το υλικό και το μέγεθος· στείλτε μας τι χρειάζεστε και θα σας δώσουμε προσφορά") rather than giving figures.
 - **Owner must confirm before writers state it:** printing methods for textiles (μεταξοτυπία, DTF, θερμομεταφορά); whether single pieces / small runs are possible per product; whether customers can bring their own garments; whether the shop installs signs and vinyl; outdoor materials offered; poster sizes and roll-up sizes stocked; number of logo proposals and revisions; file formats delivered; proofs (δοκίμιο / μακέτα) before printing. Mark such answers "TODO(owner)" in the copy file rather than guessing.
 - **FAQ answers:** 1–3 short sentences that answer the question first, then add the detail. These are the parts AI answers and "People also ask" quote.

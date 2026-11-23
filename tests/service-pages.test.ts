@@ -16,14 +16,14 @@ describe('service pages (content contract)', () => {
       expect(copy.h1.trim()).not.toBe('');
     });
 
-    it('keeps the meta title to 60 characters at most', () => {
+    it('keeps the meta title to 50 characters at most', () => {
       expect(copy.metaTitle.trim()).not.toBe('');
-      expect(copy.metaTitle.length).toBeLessThanOrEqual(60);
+      expect(copy.metaTitle.length).toBeLessThanOrEqual(50);
     });
 
-    it('keeps the meta description between 110 and 170 characters', () => {
-      expect(copy.metaDescription.length).toBeGreaterThanOrEqual(110);
-      expect(copy.metaDescription.length).toBeLessThanOrEqual(170);
+    it('keeps the meta description between 130 and 160 characters', () => {
+      expect(copy.metaDescription.length).toBeGreaterThanOrEqual(130);
+      expect(copy.metaDescription.length).toBeLessThanOrEqual(160);
     });
 
     it('has two to four body sections', () => {
@@ -36,7 +36,7 @@ describe('service pages (content contract)', () => {
       expect(copy.faq.length).toBeLessThanOrEqual(6);
       for (const { q, a } of copy.faq) {
         // U+003B; the Greek question mark U+037E normalises to it.
-        expect(q.trim()).toMatch(/[;;]$/u);
+        expect(q.trim()).toMatch(/[;\u037e]$/u);
         expect(a.trim()).not.toBe('');
       }
     });
@@ -44,12 +44,13 @@ describe('service pages (content contract)', () => {
     it('uses the {loc} locality token at most once, and only in the intro', () => {
       expect((copy.intro.match(/\{loc\}/g) ?? []).length).toBeLessThanOrEqual(1);
       expect(copy.intro).not.toMatch(/ \{loc\}/);
-      const { intro: _intro, ...rest } = copy;
-      expect(JSON.stringify(rest)).not.toContain('{');
+      expect(JSON.stringify({ ...copy, intro: '' })).not.toContain('{loc}');
     });
 
-    it('relates only to other existing services', () => {
-      expect(copy.related.length).toBeGreaterThan(0);
+    it('relates to two or three other existing services, each once', () => {
+      expect(copy.related.length).toBeGreaterThanOrEqual(2);
+      expect(copy.related.length).toBeLessThanOrEqual(3);
+      expect(new Set(copy.related).size).toBe(copy.related.length);
       for (const related of copy.related) {
         expect(slugs).toContain(related);
         expect(related).not.toBe(slug);

@@ -104,6 +104,10 @@ Hover: buttons get a CMY plate shadow that collapses into register on press; lin
 
 Page header (h1, short intro). Desktop: a slim sticky rail index of the nine services with CMYK reading-progress fill. Beside it, nine calm chapters on paper (round 2, §7). Each chapter has: a plate-colour rule; a folio with icon and number; h2 (owner's title); the photo in a crop-marked 3D frame that straightens on scroll; a giant number behind, tinted and outlined in the chapter's ink (round 5); the description at lead size; “Συνήθεις εργασίες” as tag chips; “Ζητήστε προσφορά για αυτό”, which pre-selects the service in the form, and “Περισσότερα για την υπηρεσία”, which opens the service's own page. Mobile: the index becomes a horizontal chip row.
 
+### Μία υπηρεσία (`/ypiresies/<slug>/`)
+
+One page per service, nine from one template, each in the service's plate ink (its colour on Υπηρεσίες). A quiet breadcrumb trail under the header (Αρχική › Υπηρεσίες › the service, the current page as plain text). Page header: the service's short name as the label, the keyword-led h1 and a short intro. 01 the service: the owner's title as the h2; the photo in a crop-marked frame with a halftone under-plate beside the description, “Συνήθεις εργασίες” as tag chips and “Ζητήστε προσφορά”, which pre-selects the service; then two to four body sections, each a hairline, its h2 on the left and a reading column on the right (stacked on phones). 02 Συχνές ερωτήσεις: native expandable rows between hairlines, every answer in the page, a square plus marker that fills with the page's ink when open. 03 Σχετικές υπηρεσίες: two or three linked cards (ink rule, plate icon, short name, first sentence), with “Δείτε όλες τις υπηρεσίες” in the head. Contact band. No script of its own.
+
 ### Έργα
 
 Page header. Filter chips (Όλα + categories that have items), with `aria-pressed` and a live count. A varied grid (wide, tall, square tiles). Each tile opens an accessible lightbox (`<dialog>`, arrows, Esc, focus returns). Stand-in images carry a visible “Ενδεικτική εικόνα” chip driven by the data file.

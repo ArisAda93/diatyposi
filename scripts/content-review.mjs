@@ -2,7 +2,7 @@
  * Writes CONTENT_REVIEW.md: every visitor-facing Greek string that is NOT the owner's own wording,
  * so the owner can approve it. Run: npm run content-review
  */
-import { readdir, writeFile } from 'node:fs/promises';
+import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -79,6 +79,45 @@ out.push('');
 out.push('## Other new text');
 out.push('');
 out.push('- Share image (`public/og.jpg`): the logo and the owner’s tagline only.');
+out.push('');
+
+// Service pages: the `{loc}` token and the owner's open questions (TODO(owner) comments), so
+// the owner sees both here and not only in the code.
+const serviceFiles = files.filter((f) => f.startsWith('service-') && f !== 'service-detail.ts');
+const questions = [];
+for (const f of serviceFiles) {
+  const src = await readFile(join(pagesDir, f), 'utf8');
+  // A TODO(owner) comment runs on over the comment lines that follow it.
+  const todos = [];
+  let current = null;
+  for (const line of src.split('\n')) {
+    const comment = line.match(/^\s*\/\/\s?(.*)$/);
+    const todo = comment?.[1].match(/TODO\(owner\):\s*(.*)$/);
+    if (todo) {
+      current = [todo[1]];
+      todos.push(current);
+    } else if (comment && current) {
+      current.push(comment[1]);
+    } else {
+      current = null;
+    }
+  }
+  for (const todo of todos) questions.push(`- \`${f}\`: ${todo.join(' ').trim()}`);
+}
+out.push('');
+out.push('## Service pages: notes for the owner');
+out.push('');
+out.push(
+  'In each service page intro, `{loc}` is where the town goes: it is replaced with `site.address.locative` (e.g. “ στην Αθήνα”) once that is set in `src/data/site.ts`, and removed until then. Visitors never see `{loc}`.',
+);
+if (questions.length) {
+  out.push('');
+  out.push(
+    'Questions left out of the pages until you confirm them (each is a `TODO(owner)` comment in the file named). Answer them and the copy can say more:',
+  );
+  out.push('');
+  out.push(...questions);
+}
 out.push('');
 
 await writeFile(join(root, 'CONTENT_REVIEW.md'), out.join('\n'));
