@@ -280,7 +280,7 @@ export const initServicesPage = (): void => {
       return;
     }
     if (interacted && shownInRow(chipRow, link, ROW_FADE_PX)) return;
-    centreInRow(chipRow, link, false);
+    centreInRow(chipRow, link, chipScrollBehavior(interacted, reduce.matches) === 'smooth');
   };
   const scheduleCheck = (delay: number): void => {
     window.clearTimeout(settleTimer);
