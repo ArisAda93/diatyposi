@@ -6,20 +6,29 @@
  *
  * Desktop (from 64rem, JS on, motion allowed): two columns. Left, a sticky stage (CSS
  * `position: sticky`, nothing pinned) where one sample mark is sketched, printed plate by plate
- * and carried along an arc onto a card, a T-shirt, a shop front, a mug and a phone, scrubbed by
- * the scroll (src/scripts/idea-journey.ts). Right, the seven steps on one spine that fills in the
- * steps' plate inks up to the middle of the viewport, with a node per step; each title links to
- * its step. Otherwise (phones, reduced motion, no JS) each step shows its own still illustration
- * in its final state and nothing is hidden. The illustrations repeat what the steps say, so they
- * are hidden from assistive technology.
+ * and carried along an arc onto a card, a T-shirt, a shop front, a mug and a phone
+ * (src/scripts/idea-journey.ts). Scrolling only picks the step; the stage plays each change by
+ * itself. Each object arrives as a line sketch, and its hyper-realistic photograph
+ * (src/assets/journey/, generated from the sketch, same composition) then prints over it in
+ * halftone plates (src/scripts/journey-print/), holds, and flies into its slot on the contact sheet
+ * under the stage. A Sketch / Product switch (pointer) shows the step's sketch again. Right, the seven steps on
+ * one spine that fills in the steps' plate inks up to the middle of the viewport, with a node per
+ * step; each title links to its step. Otherwise (phones, reduced motion, no JS) each step shows
+ * its own still: the sketch with its photograph over it (journey/JourneyStill.astro); with motion
+ * allowed the photograph prints over the sketch as the step scrolls in, otherwise it is simply
+ * shown. The illustrations repeat what the steps say, so they are hidden from assistive
+ * technology.
  *
  * Closing block: toggle chips for the products in the story; the button links to the quote form
  * with every picked service pre-selected and counts them. Without JS the chips are hidden and the
  * button links to the plain quote form.
  */
+import type { ImageMetadata } from 'astro';
+import { getImage } from 'astro:assets';
 import Icon from '~/components/Icon.astro';
 import Section from '~/components/Section.astro';
 import JourneyArt from './journey/JourneyArt.astro';
+import JourneyStill from './journey/JourneyStill.astro';
 import { routes, serviceBySlug, services } from '~/data/site';
 import { homeText } from '~/i18n/pages/home';
 import { JOURNEY_STEPS, journeyChoices, journeyInk } from '~/scripts/idea-journey';
@@ -42,9 +51,19 @@ const choices = journeyChoices(services.map((service) => service.slug)).map((slu
   slug,
   label: copy.chooser.options[slug],
 }));
+/** Stage photographs (one per step, story order): one 1024 px WebP each, loaded by the stage. */
+const photoFiles = import.meta.glob<{ default: ImageMetadata }>('/src/assets/journey/*.jpg', {
+  eager: true,
+});
+const stagePhotos = await Promise.all(
+  JOURNEY_STEPS.map(async (step) => {
+    const file = photoFiles[`/src/assets/journey/${step.id}.jpg`];
+    if (!file) throw new Error(`Journey photo "src/assets/journey/${step.id}.jpg" is missing.`);
+    const image = await getImage({ src: file.default, width: 1024, format: 'webp', quality: 80 });
+    return image.src;
+  }),
+);
 const promiseInks = ['c', 'm', 'y'] as const;
-/** Readout swatches in print order. */
-const readoutInks = ['y', 'm', 'c', 'k'] as const;
 ---
 
 <Section
@@ -73,15 +92,34 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
     <div class="ij-grid" data-journey-grid data-motion="off">
       <div class="ij-stage-col" aria-hidden="true">
         <div class="ij-stage" data-journey-stage data-stage="blank">
-          <div class="ij-stage-art crop-frame" data-journey-art>
+          <div
+            class="ij-stage-art crop-frame"
+            data-journey-art
+            data-journey-photos={JSON.stringify(stagePhotos)}
+          >
+            <div class="ij-print" data-journey-print></div>
             <JourneyArt mode="stage" />
+            <div class="ij-view">
+              <button type="button" tabindex="-1" aria-pressed="false" data-journey-view="0">
+                {copy.view.sketch}
+              </button>
+              <button type="button" tabindex="-1" aria-pressed="true" data-journey-view="1">
+                {copy.view.product}
+              </button>
+            </div>
           </div>
           <div class="ij-readout">
-            <span class="ij-readout-inks">
-              {readoutInks.map((ink) => (
-                <span class={`ij-sw ij-sw-${ink}`} />
+            <ol class="ij-sheet" role="list">
+              {steps.map((step) => (
+                <li
+                  class="ij-slot"
+                  data-journey-slot={step.id}
+                  style={`--ij-ink: var(--color-${step.ink})`}
+                >
+                  <span class="ij-slot-num">{step.num}</span>
+                </li>
               ))}
-            </span>
+            </ol>
             <span class="ij-count" data-journey-count>
               01 / {total}
             </span>
@@ -102,7 +140,7 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
               style={`--ij-ink: var(--color-${step.ink})`}
             >
               <div class="ij-still" aria-hidden="true">
-                <JourneyArt mode="still" step={step.id} />
+                <JourneyStill step={step.id} />
               </div>
               <div class="ij-step-body">
                 <span class="ij-node" aria-hidden="true" data-journey-node />
@@ -173,8 +211,11 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
 
 <script>
   import { initIdeaJourney } from '~/scripts/idea-journey';
+  import { initJourneyStills } from '~/scripts/journey-stills';
 
   initIdeaJourney();
+  const journey = document.querySelector<HTMLElement>('[data-journey]');
+  if (journey) initJourneyStills(journey);
 </script>
 
 <style>
@@ -282,15 +323,14 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
       color: var(--color-key);
       text-decoration: none;
     }
-    .ij-step-link:hover .link {
-      background-size: 100% 2px;
-    }
     .ij-step-link :global(svg) {
       flex: none;
       transition: transform var(--dur-base) var(--ease-out);
     }
-    .ij-step-link:hover :global(svg) {
-      transform: translate(2px, -2px);
+    @media (prefers-reduced-motion: no-preference) {
+      .ij-step-link:is(:hover, :focus-visible) :global(svg) {
+        transform: translate(2px, -2px);
+      }
     }
 
     @media (min-width: 48rem) {
@@ -334,7 +374,8 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
         flex-direction: column;
         align-items: stretch;
         justify-content: center;
-        min-height: 68svh;
+        /* The stage plays each change by itself, so a step needs no extra scroll of its own. */
+        min-height: 70svh;
         padding-block: 2rem;
         padding-left: var(--ij-indent);
         border-bottom: 0;
@@ -396,17 +437,85 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
       top: calc(var(--header-h) + 2.5rem);
     }
     .ij-stage-art {
-      width: min(100% - 2.5rem, 100svh - var(--header-h) - 10rem);
+      /* Above the contact sheet, so a photograph flies over the slots into its own. */
+      position: relative;
+      z-index: 1;
+      width: min(100% - 2.5rem, 100svh - var(--header-h) - 14rem);
       margin-inline: auto;
       transform-origin: 50% 50%;
       will-change: transform;
+    }
+    /* The photographs, under the line art and the same square as its view box
+       (src/scripts/journey-print/). */
+    .ij-print {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .ij-print :global(.ij-print-canvas),
+    .ij-print :global(.ij-print-still) {
+      position: absolute;
+      inset: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .ij-print :global(.ij-print-still) {
+      object-fit: cover;
+      opacity: 0;
+    }
+    .ij-stage-art :global(.ij-art) {
+      position: relative;
+    }
+    /* Sketch / Product switch (pointer shortcut; idea-journey.ts un-prints and re-prints the shown
+       step). On the stage's corner, above the art. */
+    .ij-view {
+      display: none;
+    }
+    /* Only once photographs can be printed (idea-journey.ts adds .has-print). */
+    .ij.has-print .ij-view {
+      position: absolute;
+      top: 0.75rem;
+      left: 0.75rem;
+      z-index: 2;
+      display: flex;
+      padding: 3px;
+      gap: 2px;
+      background-color: color-mix(in srgb, var(--color-paper) 88%, transparent);
+      box-shadow: inset 0 0 0 1px var(--color-line);
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
+    }
+    .ij-view button {
+      min-height: 2rem;
+      padding: 0.25rem 0.75rem;
+      border: 0;
+      background: none;
+      color: var(--color-muted);
+      font-family: var(--font-display);
+      font-size: 0.8125rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition:
+        background-color var(--dur-fast) linear,
+        color var(--dur-fast) linear;
+    }
+    .ij-view button[aria-pressed='true'] {
+      background-color: var(--color-key);
+      color: var(--color-paper);
+    }
+    @media (hover: hover) {
+      .ij-view button[aria-pressed='false']:hover {
+        color: var(--color-key);
+      }
     }
     .ij-readout {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 1rem;
-      width: min(100% - 2.5rem, 100svh - var(--header-h) - 10rem);
+      width: min(100% - 2.5rem, 100svh - var(--header-h) - 14rem);
       margin: 1.75rem auto 0;
       font-family: var(--font-display);
       font-size: 0.875rem;
@@ -414,12 +523,63 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
       letter-spacing: 0.08em;
       font-variant-numeric: tabular-nums;
     }
-    .ij-readout-inks {
-      display: flex;
+    /* The contact sheet: a slot per step. Each fills with its product's photograph as the
+       photograph flies off the stage into it (idea-journey.ts adds .is-done and .is-current);
+       by the last step it holds the whole journey. Pointer users can click a slot to go there. */
+    .ij-sheet {
+      display: grid;
+      flex: 1;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
       gap: 0.375rem;
+      max-width: 26rem;
+    }
+    .ij-slot {
+      position: relative;
+      aspect-ratio: 1;
+      overflow: hidden;
+      background-color: var(--color-paper);
+      box-shadow: inset 0 0 0 1px var(--color-line);
+      cursor: pointer;
+      transition: box-shadow var(--dur-base) var(--ease-out);
+    }
+    .ij-slot-num {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-size: 0.6875rem;
+      letter-spacing: 0.04em;
+      color: var(--color-muted);
+    }
+    /* Added by idea-journey.ts once the step's photograph has loaded (or the slot fills). */
+    .ij-slot :global(.ij-slot-img) {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transform: scale(0.6);
+      transition:
+        opacity var(--dur-base) var(--ease-out),
+        transform var(--dur-base) var(--ease-snap);
+    }
+    .ij-slot.is-done :global(.ij-slot-img) {
+      opacity: 1;
+      transform: none;
+    }
+    .ij-slot.is-current {
+      box-shadow:
+        inset 0 0 0 2px var(--color-key),
+        0 3px 0 -1px var(--ij-ink);
+    }
+    @media (hover: hover) {
+      .ij-slot:hover {
+        box-shadow: inset 0 0 0 2px var(--color-key);
+      }
     }
 
-    /* Plate swatches (readout and promises). */
+    /* Plate swatches (promises). */
     .ij-sw {
       display: inline-block;
       flex: none;
@@ -440,22 +600,6 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
     .ij-sw-k {
       background-color: var(--color-key);
     }
-    /* The readout fills in print order when the mark is printed (as the plates on the stage). */
-    .ij-readout-inks .ij-sw-m {
-      transition-delay: 0.18s;
-    }
-    .ij-readout-inks .ij-sw-c {
-      transition-delay: 0.36s;
-    }
-    .ij-readout-inks .ij-sw-k {
-      transition-delay: 0.54s;
-    }
-    .ij-stage[data-stage='idea'] .ij-sw,
-    .ij-stage[data-stage='blank'] .ij-sw {
-      background-color: transparent;
-      transition-delay: 0s;
-    }
-
     /* Active step (idea-journey.ts adds .is-live, .is-active and .is-read). Muted stays AA. */
     .ij.is-live .ij-step:not(.is-active) .ij-step-title {
       color: var(--color-muted);
@@ -519,8 +663,12 @@ const readoutInks = ['y', 'm', 'c', 'k'] as const;
       height: 0.75rem;
       box-shadow: inset 0 0 0 1.5px currentColor;
     }
-    .ij-chip:hover {
-      background-color: var(--color-paper-2);
+    /* Hover-capable pointers only: on touch the hover sticks after a tap, and a chip just
+       switched off would keep a tint that reads as half pressed. */
+    @media (hover: hover) {
+      .ij-chip:hover {
+        background-color: var(--color-paper-2);
+      }
     }
     .ij-chip[aria-pressed='true'] {
       background-color: var(--color-key);

@@ -32,6 +32,15 @@ anyway. Every file was resized to 2000 px wide, converted to sRGB and re-encoded
 | `prosklitiria-01.jpg` | Wedding invitation suite with envelope, ribbon and dried grasses           | Micah & Sammie Chaffin | [Unsplash](https://unsplash.com/photos/wedding-stationery-suite-with-neutral-ribbon-and-dried-flowers-R3I0suktDrM)     | [Unsplash License](https://unsplash.com/license)  | Resized, converted to sRGB, re-encoded                        |
 | `social-01.jpg`       | Person designing a social media post in an image editor on a laptop        | Danik Prihodko         | [Pexels](https://www.pexels.com/photo/a-person-using-a-laptop-7455908/)                                                | [Pexels License](https://www.pexels.com/license/) | Resized, re-encoded                                           |
 
+## Journey product photographs
+
+The seven photographs in `src/assets/journey/` (home section 02, “Από την ιδέα στο αποτέλεσμα”)
+are AI-generated with OpenAI GPT Image 2.6 Sunburst (`openai/gpt-image-2.6-sunburst`, through
+OpenRouter), each from the step's own line drawing as a reference so the photo lines up with the
+sketch. They show the sample brand “Η επωνυμία σας”, not real work. Re-encoded as JPEG (quality
+88), 1024 × 1024. The phone (`social.jpg`) shows an Instagram-style feed post on an iPhone, as a mock-up of the social media service. To regenerate one, render the step's still drawing at 1024 px and use it as the
+reference image, keeping the composition and the light #FAFAF7 backdrop.
+
 ## Icons
 
 The Facebook, Instagram, WhatsApp and Viber brand glyphs come from

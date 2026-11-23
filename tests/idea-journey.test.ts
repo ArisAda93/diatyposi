@@ -14,10 +14,20 @@ import {
   activeStepAt,
   countText,
   easeOutBack,
+  fillFade,
+  flight,
+  heldSpan,
   journeyChoices,
   journeyInk,
   journeyPosition,
   journeyQuoteHref,
+  lineFade,
+  markFade,
+  parsePhotoUrls,
+  PLAY_RATE,
+  playStart,
+  playToward,
+  slotFilled,
   spineFill,
   spineGradient,
   stageFrame,
@@ -144,6 +154,7 @@ describe('stageFrame (one continuous stage)', () => {
   it('is blank paper before the journey starts', () => {
     const f = stageFrame(-1);
     expect(f.draw.every((d) => d === 0)).toBe(true);
+    expect(f.real.every((r) => r === 0)).toBe(true);
     expect(f.sketch).toBe(0);
     expect(f.sketchOpacity).toBe(0);
     expect(f.plates.every((p) => p.opacity === 0)).toBe(true);
@@ -157,6 +168,8 @@ describe('stageFrame (one continuous stage)', () => {
     expect(f.sketchOpacity).toBe(1);
     expect(f.plates.every((p) => p.opacity === 0)).toBe(true);
     expect(f.mark).toEqual({ ...at('idea'), r: 0 });
+    // The sketchbook's photograph is printed over the sketch by the time the step is read.
+    f.real.forEach((r, k) => expect(r).toBe(k === 0 ? 1 : 0));
   });
 
   it('holds exactly one object, fully drawn, with the mark in register on it, at each step', () => {
@@ -164,6 +177,7 @@ describe('stageFrame (one continuous stage)', () => {
       if (i === 0) return;
       const f = stageFrame(i);
       f.draw.forEach((d, k) => expect(d).toBe(k === i ? 1 : 0));
+      f.real.forEach((r, k) => expect(r).toBe(k === i ? 1 : 0));
       expect(f.sketchOpacity).toBe(0);
       for (const plate of f.plates) {
         expect(plate.opacity).toBe(1);
@@ -177,7 +191,7 @@ describe('stageFrame (one continuous stage)', () => {
   });
 
   it('prints the plates in order Y, M, C, K between the idea and the mark', () => {
-    const f = stageFrame(0.45);
+    const f = stageFrame(0.86);
     const [y, m, c, k] = f.plates.map((p) => p.opacity);
     expect(MARK_PLATES.map((p) => p.id)).toEqual(['y', 'm', 'c', 'k']);
     expect(y).toBeGreaterThan(m ?? 1);
@@ -185,8 +199,8 @@ describe('stageFrame (one continuous stage)', () => {
     expect(c).toBeGreaterThanOrEqual(k ?? 1);
   });
 
-  it('draws the outgoing object out while the incoming one draws in', () => {
-    const f = stageFrame(2.5);
+  it('flies the outgoing product off while the next sketch starts to draw', () => {
+    const f = stageFrame(2.4);
     expect(f.draw[2]).toBeGreaterThan(0);
     expect(f.draw[2]).toBeLessThan(1);
     expect(f.draw[3]).toBeGreaterThan(0);
@@ -198,11 +212,53 @@ describe('stageFrame (one continuous stage)', () => {
   it('moves the mark along an arc above the straight line, turning and back', () => {
     const from = at('card');
     const to = at('shirt');
-    const mid = stageFrame(2.5).mark;
+    const mid = stageFrame(2.45).mark;
     expect(mid.y).toBeLessThan((from.y + to.y) / 2);
     expect(Math.abs(mid.r)).toBeGreaterThan(1);
     // Rests on the object for the first part of the change.
-    expect(stageFrame(2.1).mark).toEqual(stageFrame(2).mark);
+    expect(stageFrame(2.25).mark).toEqual(stageFrame(2).mark);
+  });
+
+  it('shows each step as a finished sketch before its photograph prints', () => {
+    JOURNEY_STEPS.forEach((_, i) => {
+      const f = stageFrame(i - 0.38);
+      expect(f.draw[i]).toBe(1);
+      expect(f.real[i]).toBe(0);
+      if (i === 0) expect(f.sketch).toBe(1);
+    });
+  });
+
+  it('prints the photograph only over a drawn sketch, one product on the stage at a time', () => {
+    for (let t = -1; t <= last; t += 0.01) {
+      const f = stageFrame(t);
+      expect(f.real.filter((r) => r > 0).length).toBeLessThanOrEqual(1);
+      f.real.forEach((r, i) => {
+        if (r > 0 && f.exit[i] === 0) expect(f.draw[i]).toBe(1);
+      });
+    }
+  });
+
+  it('holds each product, then flies it off without turning it back into a sketch', () => {
+    JOURNEY_STEPS.forEach((_, i) => {
+      if (i === last) return;
+      for (const u of [-0.03, 0.05, 0.19]) {
+        const hold = stageFrame(i + u);
+        expect(hold.real[i]).toBe(1);
+        expect(hold.exit[i]).toBe(0);
+      }
+      // On its way to the slot it is still the full photograph, never a sketch again.
+      const flying = stageFrame(i + 0.32);
+      expect(flying.real[i]).toBe(1);
+      expect(flying.exit[i]).toBeGreaterThan(0);
+      expect(flying.exit[i]).toBeLessThan(1);
+      const gone = stageFrame(i + 0.5);
+      expect(gone.real[i]).toBe(0);
+      expect(gone.exit[i]).toBe(1);
+      expect(gone.draw[i]).toBe(0);
+    });
+    expect(stageFrame(last).real[last]).toBe(1);
+    expect(stageFrame(last + 2).real[last]).toBe(1);
+    expect(stageFrame(last + 2).exit[last]).toBe(0);
   });
 
   it('does not hop while the sketch is printed in place', () => {
@@ -229,6 +285,10 @@ describe('stageFrame (one continuous stage)', () => {
         expect(p.opacity).toBeGreaterThanOrEqual(0);
         expect(p.opacity).toBeLessThanOrEqual(1);
       }
+      for (const r of [...f.real, ...f.exit]) {
+        expect(r).toBeGreaterThanOrEqual(0);
+        expect(r).toBeLessThanOrEqual(1);
+      }
       expect(f.mark.s).toBeGreaterThan(0);
       expect(Number.isFinite(f.mark.x) && Number.isFinite(f.mark.y)).toBe(true);
     }
@@ -242,6 +302,162 @@ describe('stageFrame (one continuous stage)', () => {
       expect(place.y).toBeGreaterThan(0);
       expect(place.y).toBeLessThan(600);
     }
+  });
+});
+
+describe('playback (scroll picks the step, the stage plays it)', () => {
+  const last = JOURNEY_STEPS.length - 1;
+  /** Plays from `from` towards `to` in 16 ms frames; returns the positions and the time taken. */
+  const play = (from: number, to: number) => {
+    const seen: number[] = [from];
+    let t = from;
+    let ms = 0;
+    while (t !== to && ms < 120_000) {
+      t = playToward(t, to, 16);
+      seen.push(t);
+      ms += 16;
+    }
+    return { seen, ms };
+  };
+
+  it('arrives exactly on the picked step and stays there', () => {
+    const { seen } = play(2, 3);
+    expect(seen.at(-1)).toBe(3);
+    expect(playToward(3, 3, 16)).toBe(3);
+  });
+
+  it('plays one change of step at a calm pace, without the visitor scrolling', () => {
+    const { ms } = play(2, 3);
+    // The held stretch is skipped, the rest plays at PLAY_RATE.
+    expect(ms / 1000).toBeGreaterThan(2);
+    expect(ms / 1000).toBeLessThan(1 / PLAY_RATE + 0.1);
+  });
+
+  it('passes through every frame of the change (print, hold, flight, next print)', () => {
+    const { seen } = play(2, 3);
+    const frames = seen.map((t) => stageFrame(t));
+    expect(frames.some((f) => (f.exit[2] ?? 0) > 0.4 && (f.exit[2] ?? 0) < 0.6)).toBe(true);
+    expect(frames.some((f) => (f.real[3] ?? 0) > 0.4 && (f.real[3] ?? 0) < 0.6)).toBe(true);
+  });
+
+  it('moves monotonically towards the step, forwards and back', () => {
+    for (const [from, to] of [
+      [0, 4],
+      [5, 1],
+      [-1, 0],
+    ] as const) {
+      const { seen } = play(from, to);
+      for (let i = 1; i < seen.length; i += 1) {
+        const a = seen[i - 1] ?? 0;
+        const b = seen[i] ?? 0;
+        if (to > from) expect(b).toBeGreaterThanOrEqual(a);
+        else expect(b).toBeLessThanOrEqual(a);
+      }
+    }
+  });
+
+  it('fast-forwards a jump of several steps instead of queueing every change', () => {
+    const one = play(0, 1).ms;
+    const six = play(0, last).ms;
+    expect(six).toBeLessThan(one * 3);
+  });
+
+  it('starts with the last change before the picked step, or the whole first arrival', () => {
+    expect(playStart(-1)).toBe(-1);
+    expect(playStart(0)).toBe(-1);
+    const start = playStart(4);
+    expect(start).toBeGreaterThan(3);
+    expect(start).toBeLessThan(4);
+    // From there the outgoing product is still whole: it flies off as the visitor watches.
+    expect(stageFrame(start).real[3]).toBe(1);
+    expect(stageFrame(start).exit[3]).toBeCloseTo(0, 10);
+  });
+
+  it('handles a missing start and no time', () => {
+    expect(playToward(Number.NaN, 2, 16)).toBe(2);
+    expect(playToward(1.5, 3, 0)).toBe(1.5);
+  });
+});
+
+describe('contact sheet', () => {
+  const count = JOURNEY_STEPS.length;
+  const last = count - 1;
+
+  it('is empty before the journey and holds every product at the last step', () => {
+    JOURNEY_STEPS.forEach((_, i) => expect(slotFilled(-1, i, count)).toBe(false));
+    JOURNEY_STEPS.forEach((_, i) => expect(slotFilled(last, i, count)).toBe(true));
+  });
+
+  it('fills a slot as its product lands there, in story order', () => {
+    JOURNEY_STEPS.forEach((_, i) => {
+      if (i === last) return;
+      expect(slotFilled(i + 0.2, i, count)).toBe(false);
+      expect(slotFilled(i + 0.45, i, count)).toBe(true);
+      expect(slotFilled(i + 0.45, i + 1, count)).toBe(false);
+    });
+  });
+
+  it('flies the photograph from the stage into its slot, fading only as it lands', () => {
+    const to = { x: -120, y: 380, scale: 0.12 };
+    const start = flight(0, to);
+    expect(start.x).toBeCloseTo(0);
+    expect(start.y).toBeCloseTo(0);
+    expect(start.scale).toBe(1);
+    expect(start.rotate).toBeCloseTo(0);
+    expect(start.opacity).toBe(1);
+    const end = flight(1, to);
+    expect(end.x).toBeCloseTo(to.x);
+    expect(end.y).toBeCloseTo(to.y);
+    expect(end.scale).toBeCloseTo(to.scale);
+    expect(end.rotate).toBeCloseTo(0);
+    expect(end.opacity).toBe(0);
+    const mid = flight(0.5, to);
+    expect(Math.abs(mid.rotate)).toBeGreaterThan(1);
+    expect(mid.opacity).toBe(1);
+    expect(flight(-1, to)).toEqual(flight(0, to));
+    expect(flight(2, to)).toEqual(flight(1, to));
+  });
+});
+
+describe('sketch to photograph hand-over', () => {
+  it('keeps the sketch lines over the first inks and lifts them as the photo resolves', () => {
+    expect(lineFade(0)).toBe(1);
+    expect(lineFade(0.4)).toBe(1);
+    expect(lineFade(0.7)).toBeGreaterThan(0);
+    expect(lineFade(0.7)).toBeLessThan(1);
+    expect(lineFade(1)).toBe(0);
+  });
+
+  it("clears the sketch's paper for the photo's sheet early in the run", () => {
+    expect(fillFade(0)).toBe(1);
+    expect(fillFade(0.25)).toBe(0);
+  });
+
+  it('hands the vector mark over to the photographed one while the inks print', () => {
+    expect(markFade(0)).toBe(1);
+    expect(markFade(0.4)).toBe(1);
+    expect(markFade(1)).toBe(0);
+    for (let r = 0; r < 1; r += 0.05) {
+      expect(markFade(r + 0.05)).toBeLessThanOrEqual(markFade(r));
+      expect(lineFade(r + 0.05)).toBeLessThanOrEqual(lineFade(r));
+    }
+  });
+});
+
+describe('parsePhotoUrls', () => {
+  it('reads one URL per step', () => {
+    const urls = ['/a.webp', '/b.webp'];
+    expect(parsePhotoUrls(JSON.stringify(urls), 2)).toEqual(urls);
+  });
+
+  it('gives none for anything else, so the stage keeps its sketches', () => {
+    expect(parsePhotoUrls(undefined, 2)).toEqual([]);
+    expect(parsePhotoUrls('', 2)).toEqual([]);
+    expect(parsePhotoUrls('not json', 2)).toEqual([]);
+    expect(parsePhotoUrls('{"a":1}', 2)).toEqual([]);
+    expect(parsePhotoUrls(JSON.stringify(['/a.webp']), 2)).toEqual([]);
+    expect(parsePhotoUrls(JSON.stringify(['/a.webp', 3]), 2)).toEqual([]);
+    expect(parsePhotoUrls(JSON.stringify(['/a.webp', '']), 2)).toEqual([]);
   });
 });
 
@@ -314,5 +530,35 @@ describe('journey data', () => {
   it('has unique step ids', () => {
     const ids = JOURNEY_STEPS.map((step) => step.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
+describe('held stretches (playback skips only what does not change)', () => {
+  it('has none before the first step, so the sketchbook always draws in from blank paper', () => {
+    expect(heldSpan(-1)).toBeNull();
+    const first = playToward(-1, 0, 16);
+    expect(first).toBeLessThan(-0.99);
+    expect(stageFrame(first).draw[0]).toBe(0);
+  });
+
+  it("really is unchanged over every step's held stretch", () => {
+    JOURNEY_STEPS.forEach((_, i) => {
+      const span = heldSpan(i);
+      expect(span).not.toBeNull();
+      if (!span) return;
+      const [from, to] = span;
+      const start = stageFrame(from);
+      for (let t = from; t <= to; t += 0.01) {
+        const f = stageFrame(t);
+        expect(f.sketchOpacity).toBeCloseTo(start.sketchOpacity, 10);
+        f.draw.forEach((d, k) => expect(d).toBeCloseTo(start.draw[k] ?? 0, 10));
+        f.real.forEach((r, k) => expect(r).toBeCloseTo(start.real[k] ?? 0, 10));
+        f.plates.forEach((p, k) =>
+          expect(p.opacity).toBeCloseTo(start.plates[k]?.opacity ?? 0, 10),
+        );
+        expect(f.mark.x).toBeCloseTo(start.mark.x, 10);
+        expect(f.mark.y).toBeCloseTo(start.mark.y, 10);
+      }
+    });
   });
 });

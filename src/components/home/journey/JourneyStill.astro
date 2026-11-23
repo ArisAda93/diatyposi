@@ -1,0 +1,185 @@
+---
+/**
+ * One step of “Μία ιδέα. Παντού.” as a still (phones and tablets, reduced motion, no JS): the
+ * step's line drawing (JourneyArt, still mode) with the real product photo on top, drawn to the
+ * same composition. Decorative (the caller wraps it in `aria-hidden`; the photo's alt is empty).
+ *
+ * By default the photo simply shows; in light theme its edges fade into the paper over 7 % of
+ * each side (as the desktop stage's sheet does), in dark theme they stay crisp. With motion
+ * allowed and the desktop live stage off, src/scripts/journey-stills.ts (`initJourneyStills`)
+ * adds `is-reveal` and prints the photo over the sketch as it scrolls up the screen: a 45°
+ * halftone screen whose dots grow until they merge (`--ijs-dot`, on a `--ijs-cell` grid;
+ * `is-masked` while the dots are apart; in light theme the edge fade stays on throughout), faint
+ * cyan and magenta copies of the dots off register that snap back (`--ijs-ghost`; `is-ghost`),
+ * and the photo settling into register (`--ijs-offset`, `--ijs-scale`). `is-shown` is off until
+ * the first dots print, so the photo never paints early.
+ *
+ * Photos: src/assets/journey/{step}.jpg, square, composed to match the drawing.
+ */
+import type { ImageMetadata } from 'astro';
+import { Picture } from 'astro:assets';
+import JourneyArt from './JourneyArt.astro';
+import type { JourneyStepId } from '~/scripts/idea-journey';
+
+interface Props {
+  step: JourneyStepId;
+}
+
+const { step } = Astro.props;
+
+const photos = import.meta.glob<{ default: ImageMetadata }>('/src/assets/journey/*.jpg', {
+  eager: true,
+});
+const photo = photos[`/src/assets/journey/${step}.jpg`]?.default;
+if (!photo) {
+  throw new Error(
+    `Journey photo "${step}.jpg" not found in src/assets/journey/. ` +
+      'Each step needs a square photo named after its id.',
+  );
+}
+
+// The still is min(100%, 22rem) wide in the page column below 48rem, and the 5 ⁄ 12 column (at
+// most 26rem) from 48rem.
+const sizes = '(min-width: 48rem) min(26rem, 40vw), min(22rem, calc(100vw - 2rem))';
+const widths = [352, 528, 704, 1024].filter((w) => w <= photo.width);
+---
+
+<div class="ijs" data-journey-still>
+  <JourneyArt mode="still" step={step} />
+  <div class="ijs-print">
+    <Picture
+      src={photo}
+      alt=""
+      formats={['avif', 'webp']}
+      fallbackFormat="jpg"
+      widths={widths.length ? widths : [photo.width]}
+      sizes={sizes}
+      loading="lazy"
+      decoding="async"
+      class="ijs-photo"
+    />
+  </div>
+</div>
+
+<style>
+  @layer components {
+    .ijs {
+      position: relative;
+      aspect-ratio: 1 / 1;
+    }
+    .ijs-print {
+      position: absolute;
+      inset: 0;
+    }
+    .ijs-print :global(.ijs-photo) {
+      position: absolute;
+      inset: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    /* Light theme: the photo's backdrop fades into the paper over the outer 7 % of each side, as
+       the desktop stage's sheet does, so no square edge shows. Dark theme keeps crisp edges. */
+    .ijs-print :global(.ijs-photo) {
+      --ijs-fade-x: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
+      --ijs-fade-y: linear-gradient(to bottom, transparent, #000 7%, #000 93%, transparent);
+      -webkit-mask-image: var(--ijs-fade-x), var(--ijs-fade-y);
+      mask-image: var(--ijs-fade-x), var(--ijs-fade-y);
+      -webkit-mask-size: 100% 100%;
+      mask-size: 100% 100%;
+      -webkit-mask-position: 0 0;
+      mask-position: 0 0;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-composite: source-in;
+      mask-composite: intersect;
+    }
+    @media not print {
+      :global(html[data-theme='dark']) .ijs-print :global(.ijs-photo) {
+        -webkit-mask-image: none;
+        mask-image: none;
+      }
+    }
+
+    /* Printing (journey-stills.ts). Without `is-reveal` none of this applies. */
+    .ijs.is-reveal .ijs-print {
+      overflow: hidden;
+    }
+    .ijs.is-reveal:not(.is-shown) .ijs-print {
+      visibility: hidden;
+    }
+    .ijs.is-reveal .ijs-print :global(.ijs-photo) {
+      transform: translate(calc(var(--ijs-offset, 0) * 1.2%), calc(var(--ijs-offset, 0) * -0.8%))
+        scale(var(--ijs-scale, 1));
+    }
+    /* 45° screen: two upright dot grids, the second offset by half a cell. Light theme keeps the
+       edge fade: layers are listed top to bottom and each layer's operator combines it with the
+       result of the layers below it, so dots A add to dots B (their union), then the vertical and
+       the horizontal fades intersect that: fade-x ∩ fade-y ∩ (A ∪ B). The bottom layer's operator
+       is ignored. source-in / source-over are the -webkit- names for intersect / add. */
+    .ijs.is-reveal.is-masked .ijs-print :global(.ijs-photo) {
+      --ijs-dots: radial-gradient(
+        circle,
+        #000 calc(var(--ijs-dot) - 1px),
+        transparent var(--ijs-dot)
+      );
+      -webkit-mask-image: var(--ijs-fade-x), var(--ijs-fade-y), var(--ijs-dots), var(--ijs-dots);
+      mask-image: var(--ijs-fade-x), var(--ijs-fade-y), var(--ijs-dots), var(--ijs-dots);
+      -webkit-mask-size:
+        100% 100%,
+        100% 100%,
+        var(--ijs-cell) var(--ijs-cell),
+        var(--ijs-cell) var(--ijs-cell);
+      mask-size:
+        100% 100%,
+        100% 100%,
+        var(--ijs-cell) var(--ijs-cell),
+        var(--ijs-cell) var(--ijs-cell);
+      -webkit-mask-position:
+        0 0,
+        0 0,
+        0 0,
+        calc(var(--ijs-cell) / 2) calc(var(--ijs-cell) / 2);
+      mask-position:
+        0 0,
+        0 0,
+        0 0,
+        calc(var(--ijs-cell) / 2) calc(var(--ijs-cell) / 2);
+      -webkit-mask-repeat: no-repeat, no-repeat, repeat, repeat;
+      mask-repeat: no-repeat, no-repeat, repeat, repeat;
+      -webkit-mask-composite: source-in, source-in, source-over, source-over;
+      mask-composite: intersect, intersect, add, add;
+    }
+    /* Dark theme: the dots alone (their union), crisp edges, as when not masked. */
+    @media not print {
+      :global(html[data-theme='dark']) .ijs.is-reveal.is-masked .ijs-print :global(.ijs-photo) {
+        -webkit-mask-image: var(--ijs-dots), var(--ijs-dots);
+        mask-image: var(--ijs-dots), var(--ijs-dots);
+        -webkit-mask-size: var(--ijs-cell) var(--ijs-cell);
+        mask-size: var(--ijs-cell) var(--ijs-cell);
+        -webkit-mask-position:
+          0 0,
+          calc(var(--ijs-cell) / 2) calc(var(--ijs-cell) / 2);
+        mask-position:
+          0 0,
+          calc(var(--ijs-cell) / 2) calc(var(--ijs-cell) / 2);
+        -webkit-mask-repeat: repeat;
+        mask-repeat: repeat;
+        -webkit-mask-composite: source-over;
+        mask-composite: add;
+      }
+    }
+    /* A faint accent: off-register magenta and cyan copies of the printed dots, beneath them. */
+    .ijs.is-reveal.is-ghost .ijs-print {
+      filter: drop-shadow(
+          calc(var(--ijs-ghost) * 1.5px) calc(var(--ijs-ghost) * -1.2px) 0
+            color-mix(in srgb, var(--color-magenta) 28%, transparent)
+        )
+        drop-shadow(
+          calc(var(--ijs-ghost) * -1.2px) calc(var(--ijs-ghost) * 1.5px) 0
+            color-mix(in srgb, var(--color-cyan) 28%, transparent)
+        );
+    }
+  }
+</style>

@@ -12,7 +12,9 @@
  *   `idea`, the printed mark on its object for every other step. Nothing animates.
  *
  * Objects are drawn to real proportions: a 9 × 12 sketchbook, an 85 × 55 business card, a
- * T-shirt, a shop front, a mug and a generic 9 : 19.5 phone with a square post. The mark is drawn
+ * T-shirt, a shop front, a mug and a current iPhone (71.9 × 150 mm body, Dynamic Island) with a
+ * square post. Each drawing has a matching photograph (src/assets/journey/, same square, same
+ * composition) that the stage prints over it and the stills reveal over it. The mark is drawn
  * around (0, 0); MARK_AT (src/scripts/idea-journey.ts) places it on each object in the 600 × 600
  * view box.
  */
@@ -67,13 +69,44 @@ const SHIRT =
 // Mug: 180 wide, 214 tall (about 8 × 9.5 cm).
 const MUG_BODY = 'M200 200V414A90 18 0 0 0 380 414V200';
 const MUG_TOP = 'M200 200A90 18 0 1 0 380 200A90 18 0 1 0 200 200';
-// Phone: 180 × 390 (9 : 19.5), corners 24 (13 % of the width), a 6-unit bezel.
-const PHONE =
-  'M234 105H366A24 24 0 0 1 390 129V471A24 24 0 0 1 366 495H234A24 24 0 0 1 210 471V129A24 24 0 0 1 234 105Z';
-const SCREEN =
-  'M234 111H366A18 18 0 0 1 384 129V471A18 18 0 0 1 366 489H234A18 18 0 0 1 216 471V129A18 18 0 0 1 234 111Z';
-const HEART =
-  'M228 357C220 351.5 219.5 343 224.5 343C226.5 343 228 345 228 346.5C228 345 229.5 343 231.5 343C236.5 343 236 351.5 228 357Z';
+/** A rounded rectangle path (x, y, width, height, corner radius). */
+const roundRect = (x: number, y: number, w: number, h: number, r: number): string =>
+  `M${x + r} ${y}H${x + w - r}A${r} ${r} 0 0 1 ${x + w} ${y + r}V${y + h - r}` +
+  `A${r} ${r} 0 0 1 ${x + w - r} ${y + h}H${x + r}A${r} ${r} 0 0 1 ${x} ${y + h - r}` +
+  `V${y + r}A${r} ${r} 0 0 1 ${x + r} ${y}Z`;
+// Phone: a current iPhone body, 236 × 492 (71.9 × 150 mm, width 0.48 of the height), corners 36
+// (15 % of the width), a 7-unit bezel, the Dynamic Island, the action button and volume keys on
+// the left, the side button and camera control on the right.
+const PHONE = roundRect(182, 54, 236, 492, 36);
+const SCREEN = roundRect(189, 61, 222, 478, 29);
+const ISLAND = roundRect(263, 69, 74, 22, 11);
+/** A small heart (the post's like), its bottom point at (x, y). */
+const heart = (x: number, y: number): string =>
+  `M${x} ${y}C${x - 9} ${y - 6} ${x - 9.5} ${y - 16} ${x - 4} ${y - 16}C${x - 1.6} ${y - 16} ` +
+  `${x} ${y - 13.6} ${x} ${y - 12}C${x} ${y - 13.6} ${x + 1.6} ${y - 16} ${x + 4} ${y - 16}` +
+  `C${x + 9.5} ${y - 16} ${x + 9} ${y - 6} ${x} ${y}Z`;
+const HEART = heart(207, 400);
+/** Instagram-style screen furniture (line art; the photograph shows the real app). App bar: the
+    wordmark as a bold line, like and messages. */
+const IG_APP_BAR =
+  `${heart(372, 113).replace(/Z$/, '')}` + 'M388 99L404 106L388 113L391 106ZM391 106H404';
+/** Post header: avatar with its story ring, name, place, more. */
+const IG_POST_HEAD =
+  'M196 136A10 10 0 1 0 216 136A10 10 0 1 0 196 136M199 136A7 7 0 1 0 213 136A7 7 0 1 0 199 136' +
+  'M222 133H268M222 141H250';
+const IG_DOTS =
+  'M389 136A1.5 1.5 0 1 0 392 136A1.5 1.5 0 1 0 389 136ZM394.5 136A1.5 1.5 0 1 0 397.5 136' +
+  'A1.5 1.5 0 1 0 394.5 136ZM400 136A1.5 1.5 0 1 0 403 136A1.5 1.5 0 1 0 400 136Z';
+/** Action row: comment, share, save (the like is the pink HEART). */
+const IG_ACTIONS =
+  'M231 392A8 8 0 1 1 236 399L231 401L232 396A8 8 0 0 1 231 392' +
+  'M252 385L270 391L258 395ZM258 395L260 401L270 391' +
+  'M391 384H403V401L397 396L391 401Z';
+/** Tab bar: home, search, new post, reels, profile. */
+const IG_TABS =
+  'M203 519V511L211 505L219 511V519ZM246 512A7 7 0 1 0 260 512A7 7 0 1 0 246 512M258 517L262 521' +
+  'M293 505H307V519H293ZM300 509V515M297 512H303M338 505H352V519H338ZM338 509H352' +
+  'M389 512A7 7 0 1 0 403 512A7 7 0 1 0 389 512';
 
 // The mark: Y disc, M arch, C square, K wordmark (offsets in MARK_PLATES, print order).
 const ARCH_M = 'M-46 22A46 46 0 0 1 46 22H22A22 22 0 0 0 -22 22Z';
@@ -211,27 +244,30 @@ const sketchStroke = (k: number): string | undefined => (stage ? `--k:${k}` : un
   {show('social') && (
     <g class="ij-obj ij-obj-social" data-journey-obj="social">
       <path class="ij-paper" d={PHONE} />
-      <rect class="ij-tint" x="216" y="166" width="168" height="168" />
+      <rect class="ij-tint" x="189" y="152" width="222" height="222" />
       <path class="ij-line ij-draw" pathLength="1" d={PHONE} />
       <path class="ij-line ij-hair ij-draw" pathLength="1" d={SCREEN} />
-      <circle class="ij-ink" cx="300" cy="122" r="3.5" />
+      <path class="ij-ink" d={ISLAND} />
+      <path
+        class="ij-line ij-draw"
+        pathLength="1"
+        d="M180 150V170M180 192V226M180 238V272M420 182V244M420 330V362"
+      />
+      {/* Instagram-style feed: status bar, app bar, post header, square post, actions, caption,
+          tab bar. */}
       <path
         class="ij-line ij-hair ij-draw"
         pathLength="1"
-        d="M393 186V230M393 246V274M226 122H240M360 122H374"
+        d={`M206 80H232M370 80H392${IG_APP_BAR}${IG_POST_HEAD}M189 152H411M189 374H411${IG_ACTIONS}M198 428H384M198 440H330M198 454H286M189 500H411${IG_TABS}`}
       />
       <path
-        class="ij-line ij-hair ij-draw"
+        class="ij-line ij-bold ij-draw"
         pathLength="1"
-        d="M223 149A9 9 0 1 0 241 149A9 9 0 1 0 223 149M250 155H282M216 166H384M216 334H384"
+        d="M199 106H247M198 414H252M262 532H338"
       />
-      <path class="ij-line ij-bold ij-draw" pathLength="1" d="M250 144H302M282 478H318" />
+      <path class="ij-ink" d={IG_DOTS} />
       <path class="ij-m ij-overprint" d={HEART} />
-      <path
-        class="ij-line ij-hair ij-draw"
-        pathLength="1"
-        d={`${HEART}M243 343H258V352H250L246 356V352H243ZM222 374H372M222 386H342M222 398H296M216 458H384`}
-      />
+      <path class="ij-line ij-hair ij-draw" pathLength="1" d={HEART} />
     </g>
   )}
 
@@ -400,9 +436,30 @@ const sketchStroke = (k: number): string | undefined => (stage ? `--k:${k}` : un
       stroke-dashoffset: calc(1 - var(--draw, 0));
     }
     /* Fills arrive in the second half of the draw-in and leave in the first half of the
-       draw-out. */
+       draw-out. While the step's photograph prints under the art (idea-journey.ts), `--fill`
+       clears the paper for the photo's sheet and `--line` lifts the sketch's lines off it. */
     .ij-art-stage .ij-obj :is(.ij-paper, .ij-tint, .ij-ink, .ij-c, .ij-m, .ij-y, .ij-k) {
-      fill-opacity: clamp(0, calc(var(--draw, 0) * 2 - 0.8), 1);
+      fill-opacity: calc(clamp(0, calc(var(--draw, 0) * 2 - 0.8), 1) * var(--fill, 1));
+    }
+    .ij-art-stage .ij-obj .ij-line {
+      opacity: var(--line, 1);
+    }
+    /* Dark theme: the photo's sheet is light, so as it lands (`--fill` → 0) the light sketch
+       lines turn to the fixed key ink and stay readable over the first inks. */
+    @media not print {
+      :global(html[data-theme='dark']) .ij-art-stage .ij-obj .ij-line {
+        stroke: color-mix(in srgb, var(--color-key) calc(var(--fill, 1) * 100%), var(--ink-fixed));
+      }
+      :global(html[data-theme='dark']) .ij-art-stage .ij-sketch .ij-line {
+        stroke: color-mix(
+          in srgb,
+          var(--color-muted) calc(var(--fill, 1) * 100%),
+          var(--ink-fixed)
+        );
+      }
+      :global(html[data-theme='dark']) .ij-art-stage .ij-sketch-word {
+        fill: color-mix(in srgb, var(--color-muted) calc(var(--fill, 1) * 100%), var(--ink-fixed));
+      }
     }
 
     /* The sketch: four strokes in turn, each over 40 % of the sketch (`--k` is its start). */

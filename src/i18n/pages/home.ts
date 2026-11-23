@@ -28,6 +28,8 @@ export const homeText = {
       lead: 'Σχεδιάζουμε το σήμα σας και το τυπώνουμε σε ό,τι χρειάζεστε, από την κάρτα στην τσέπη ως τη βιτρίνα στον δρόμο. Ένας συνεργάτης, η ίδια εικόνα παντού.',
       /** Wordmark of the sample brand in the illustrations, so visitors picture their own name. */
       sampleName: 'Η επωνυμία σας',
+      /** Switch on the stage (pointer only): show the shown step as its sketch or as the product. */
+      view: { sketch: 'Σκίτσο', product: 'Προϊόν' },
       steps: {
         idea: {
           title: 'Η ιδέα σας',
