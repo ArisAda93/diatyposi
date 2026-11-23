@@ -13,7 +13,8 @@
  * halftone plates (src/scripts/journey-print/), holds, and flies into its slot on the contact sheet
  * under the stage. A Sketch / Product switch (pointer) shows the step's sketch again. Right, the seven steps on
  * one spine that fills in the steps' plate inks up to the middle of the viewport, with a node per
- * step; each title links to its step. Otherwise (phones, reduced motion, no JS) each step shows
+ * step; each title links to its step and each step links to its service's own page
+ * (/ypiresies/<slug>/). Otherwise (phones, reduced motion, no JS) each step shows
  * its own still: the sketch with its photograph over it (journey/JourneyStill.astro); with motion
  * allowed the photograph prints over the sketch as the step scrolls in, otherwise it is simply
  * shown. The illustrations repeat what the steps say, so they are hidden from assistive
@@ -29,7 +30,7 @@ import Icon from '~/components/Icon.astro';
 import Section from '~/components/Section.astro';
 import JourneyArt from './journey/JourneyArt.astro';
 import JourneyStill from './journey/JourneyStill.astro';
-import { routes, serviceBySlug, services } from '~/data/site';
+import { routes, serviceBySlug, serviceHref, services } from '~/data/site';
 import { homeText } from '~/i18n/pages/home';
 import { JOURNEY_STEPS, journeyChoices, journeyInk } from '~/scripts/idea-journey';
 
@@ -43,7 +44,7 @@ const steps = JOURNEY_STEPS.map((step, index) => ({
   anchor: `journey-${step.id}`,
   ink: journeyInk(index),
   text: copy.steps[step.id],
-  href: `${routes.services}#${step.service}`,
+  href: serviceHref(step.service),
   linkLabel: serviceBySlug(step.service)?.text.el.short ?? copy.steps[step.id].title,
 }));
 // Chips follow the owner's order of services (src/data/site.ts), not the order of the story.

@@ -2,7 +2,8 @@
 /**
  * One chapter of /ypiresies/, anchored by the service slug: a rule in the chapter's plate colour,
  * the folio (plate icon, number), the owner's title (h2), and below it a crop-marked photo beside
- * the description, the usual jobs as tag chips and the quote button that pre-selects this service.
+ * the description, the usual jobs as tag chips, the quote button that pre-selects this service and
+ * the link to the service's own page (/ypiresies/<slug>/).
  * A giant number, tinted and outlined in the chapter's ink, sits behind, and a halftone under-plate
  * in the chapter's ink peeks out from behind the photo on its outer side. `side` puts the photo left or right.
  *
@@ -19,7 +20,8 @@
 import Icon from '../Icon.astro';
 import PlateIcon from '../PlateIcon.astro';
 import Photo from '../Photo.astro';
-import { portfolio, quoteHref, type Service } from '~/data/site';
+import { portfolio, quoteHref, serviceHref, type Service } from '~/data/site';
+import { serviceDetailText } from '~/i18n/pages/service-detail';
 import { servicesText } from '~/i18n/pages/services';
 import { t } from '~/i18n/ui';
 import { capsEl } from '~/lib/text';
@@ -100,6 +102,13 @@ const sizes = '(min-width: 1024px) min(35vw, 520px), (min-width: 768px) 46vw, ca
           aria-describedby={titleId}
         >
           <span>{text.serviceQuoteCta}</span>
+          <Icon name="arrow-right" size={20} />
+        </a>
+        <a href={serviceHref(service.slug)} class="btn btn-secondary svcp-more">
+          <span>
+            {serviceDetailText.el.moreLink}
+            <span class="sr-only">{`: ${copy.short}`}</span>
+          </span>
           <Icon name="arrow-right" size={20} />
         </a>
       </div>
@@ -363,29 +372,37 @@ const sizes = '(min-width: 1024px) min(35vw, 520px), (min-width: 768px) 46vw, ca
       background-color: var(--svcp-ink);
       box-shadow: inset 0 0 0 1px var(--color-key);
     }
-    /* The quote button, set off from the tags by a hairline in the chapter's rhythm. */
+    /* The quote button and the link to the service's page, set off from the tags by a hairline
+       in the chapter's rhythm. They share a row where both fit and wrap otherwise. */
     .svcp-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
       margin-top: 2.25rem;
       padding-top: 1.75rem;
       border-top: 1px solid var(--color-line);
     }
-    .svcp-cta {
+    .svcp-cta,
+    .svcp-more {
       max-width: 100%;
       white-space: normal;
       text-align: left;
     }
     /* Phones: full width, as the hero and contact-band calls to action are. */
     @media (max-width: 47.99rem) {
-      .svcp-cta {
+      .svcp-cta,
+      .svcp-more {
         width: 100%;
         text-align: center;
       }
     }
-    .svcp-cta :global(svg) {
+    .svcp-cta :global(svg),
+    .svcp-more :global(svg) {
       transition: transform var(--dur-base) var(--ease-out);
     }
     @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-      .svcp-cta:hover :global(svg) {
+      .svcp-cta:hover :global(svg),
+      .svcp-more:hover :global(svg) {
         transform: translateX(3px);
       }
     }

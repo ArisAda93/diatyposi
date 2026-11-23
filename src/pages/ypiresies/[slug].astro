@@ -1,0 +1,116 @@
+---
+/**
+ * One page per service, /ypiresies/<slug>/ (the nine services of src/data/site.ts, built from
+ * this template). The service's own copy is src/i18n/pages/service-<slug>.ts, joined by slug in
+ * src/i18n/service-pages.ts; the template's own strings are src/i18n/pages/service-detail.ts.
+ *
+ * Top to bottom: the breadcrumb trail (Αρχική › Υπηρεσίες › the service), the page header (the
+ * service's short name as its label, the page's single h1 and the intro), then
+ * - 01 the service: the owner's title word for word as the h2, the photo beside the description,
+ *   the usual jobs and the quote button (ServiceOverview), then the body sections, each an h2
+ *   (ServiceSections);
+ * - 02 the questions, native <details> with every answer in the HTML (ServiceFaq);
+ * - 03 related services, linked cards (RelatedServices);
+ * - the contact band, and the section rail on wide screens.
+ * The page takes the service's plate ink (its colour on /ypiresies/) for the header's background
+ * tint, the under-plate, the chips and the question markers.
+ *
+ * Search: the title is the copy's metaTitle with the shop's locality when one is set
+ * (`withLocality`); BaseLayout adds the LocalBusiness, the BreadcrumbList built from the same
+ * crumbs as the visible trail, and the Service and FAQPage nodes passed here, in one graph.
+ * The page needs no script of its own: the site-wide motion layer picks up `.h2`, `.media` and
+ * `.btn`. /ypiresies/ (src/pages/ypiresies.astro) stays the overview and links here.
+ */
+import type { GetStaticPaths, InferGetStaticPropsType } from 'astro';
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import Breadcrumbs from '~/components/Breadcrumbs.astro';
+import PageHeader from '~/components/PageHeader.astro';
+import Section from '~/components/Section.astro';
+import ContactBand from '~/components/ContactBand.astro';
+import SectionRail from '~/components/SectionRail.astro';
+import ServiceOverview from '~/components/service-page/ServiceOverview.astro';
+import ServiceSections from '~/components/service-page/ServiceSections.astro';
+import ServiceFaq from '~/components/service-page/ServiceFaq.astro';
+import RelatedServices from '~/components/service-page/RelatedServices.astro';
+import { nav, routes, serviceHref, services } from '~/data/site';
+import { serviceDetailText } from '~/i18n/pages/service-detail';
+import { servicePageCopy } from '~/i18n/service-pages';
+import { buildFaqPage, buildServiceNode, fillLocality, withLocality, type Crumb } from '~/lib/seo';
+import { plateInk } from '~/scripts/services-page';
+
+export const getStaticPaths = (() =>
+  services.map((service, index) => ({
+    params: { slug: service.slug },
+    props: { service, index },
+  }))) satisfies GetStaticPaths;
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { service, index } = Astro.props;
+const copy = servicePageCopy(service.slug);
+const text = serviceDetailText.el;
+const name = service.text.el;
+const ink = plateInk(index);
+const path = serviceHref(service.slug);
+const siteUrl = Astro.site ?? new URL(Astro.url.origin);
+
+/** Navigation label of a top-level page, so the trail always says what the menu says. */
+const navLabel = (href: string): string => {
+  const item = nav.find((entry) => entry.href === href);
+  if (!item) throw new Error(`No navigation entry for ${href} in src/data/site.ts.`);
+  return item.label.el;
+};
+const crumbs: Crumb[] = [
+  { name: navLabel(routes.home), path: routes.home },
+  { name: navLabel(routes.services), path: routes.services },
+  { name: name.short, path },
+];
+
+const titleId = `${service.slug}-title`;
+---
+
+<BaseLayout
+  title={withLocality(copy.metaTitle)}
+  description={copy.metaDescription}
+  structuredData
+  breadcrumbs={crumbs}
+  jsonLd={[buildServiceNode(siteUrl, service, copy), buildFaqPage(siteUrl, path, copy.faq)]}
+>
+  <div class="wrap sd-crumbs">
+    <Breadcrumbs crumbs={crumbs} />
+  </div>
+
+  <PageHeader label={name.short} title={copy.h1} intro={fillLocality(copy.intro)} accent={ink} />
+
+  <Section
+    id="perigrafi"
+    index="01"
+    label={text.overviewLabel}
+    title={name.title}
+    titleId={titleId}
+    accent={ink}
+  >
+    <ServiceOverview service={service} ink={ink} titleId={titleId} />
+    <ServiceSections sections={copy.sections} ink={ink} idPrefix={`${service.slug}-enotita`} />
+  </Section>
+
+  <ServiceFaq faq={copy.faq} ink={ink} index="02" />
+
+  <RelatedServices slugs={copy.related} index="03" />
+
+  <ContactBand />
+  <SectionRail />
+</BaseLayout>
+
+<style>
+  @layer components {
+    /* The trail sits just under the header; the page header below it opens a little closer than
+       on pages without one, so trail, rule and title read as one block. */
+    .sd-crumbs {
+      padding-top: clamp(0.5rem, 0.25rem + 1vw, 1.25rem);
+    }
+    :global(.sd-crumbs + header.page-header) {
+      padding-top: clamp(1.25rem, 0.5rem + 2.5vw, 3.5rem);
+    }
+  }
+</style>

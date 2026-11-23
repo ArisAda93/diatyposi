@@ -1,0 +1,149 @@
+---
+/**
+ * Related services, a section of a service page in the shared shell (Section.astro), with the
+ * link to every service in its head. Each related service (copy.related) is one linked card to
+ * its own page: a rule in that service's plate ink (its colour on /ypiresies/), its plate icon,
+ * its short name (h3) and the first sentence of its description, and an arrow. Cards lift on
+ * hover and their icon separates into its plates (`.card-lift`, `.plate-hover`, global.css).
+ * One column on phones, two from 40rem, three from 64rem.
+ */
+import Section from '../Section.astro';
+import Icon from '../Icon.astro';
+import PlateIcon from '../PlateIcon.astro';
+import { routes, serviceHref, services } from '~/data/site';
+import { homeText } from '~/i18n/pages/home';
+import { serviceDetailText } from '~/i18n/pages/service-detail';
+import { plateInk } from '~/scripts/services-page';
+import { leadSentence } from '~/scripts/services-showcase';
+
+interface Props {
+  /** Slugs of the related services (src/data/site.ts). */
+  slugs: string[];
+  /** '02', '03'… */
+  index: string;
+}
+
+const { slugs, index } = Astro.props;
+const text = serviceDetailText.el;
+
+const cards = slugs.map((slug) => {
+  const position = services.findIndex((s) => s.slug === slug);
+  const service = services[position];
+  if (!service) throw new Error(`Related service "${slug}" is not in src/data/site.ts.`);
+  return {
+    slug,
+    href: serviceHref(slug),
+    icon: service.icon,
+    name: service.text.el.short,
+    lead: leadSentence(service.text.el.description),
+    ink: plateInk(position),
+  };
+});
+---
+
+<Section
+  id="sxetikes-ypiresies"
+  index={index}
+  label={text.relatedLabel}
+  title={text.relatedTitle}
+  link={{ href: routes.services, text: homeText.el.services.allLink }}
+>
+  <ul class="sdr">
+    {cards.map((card) => (
+      <li>
+        <a
+          href={card.href}
+          class="sdr-card card-lift plate-hover"
+          style={`--sdr-ink: var(--color-${card.ink})`}
+        >
+          <PlateIcon name={card.icon} size={40} />
+          <h3 class="h3 sdr-name">{card.name}</h3>
+          <p class="muted sdr-lead">{card.lead}</p>
+          <span class="sdr-arrow" aria-hidden="true">
+            <Icon name="arrow-right" size={20} />
+          </span>
+        </a>
+      </li>
+    ))}
+  </ul>
+</Section>
+
+<style>
+  @layer components {
+    .sdr {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--grid-gap);
+    }
+    @media (min-width: 40rem) {
+      .sdr {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (min-width: 64rem) {
+      .sdr {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+    .sdr > li {
+      display: flex;
+    }
+
+    /* A raised sheet with a rule in the service's plate ink across the top. */
+    .sdr-card {
+      position: relative;
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 1.75rem 1.5rem 1.5rem;
+      background-color: var(--color-paper-2);
+      box-shadow: inset 0 0 0 1px var(--color-line);
+      color: var(--color-key);
+      text-decoration: none;
+    }
+    .sdr-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background-color: var(--sdr-ink);
+    }
+    @media (hover: hover) {
+      .sdr-card:hover {
+        box-shadow:
+          inset 0 0 0 1px var(--color-key),
+          0 1.25rem 2rem -1.5rem rgb(34 31 32 / 0.35);
+      }
+    }
+    .sdr-card:focus-visible {
+      box-shadow: inset 0 0 0 1px var(--color-key);
+    }
+    .sdr-name {
+      margin-top: 0.25rem;
+    }
+    .sdr-lead {
+      max-width: 40ch;
+    }
+    /* The arrow sits at the card's foot and leads the way on hover and focus. */
+    .sdr-arrow {
+      display: inline-flex;
+      margin-top: auto;
+      padding-top: 0.5rem;
+      transition: transform var(--dur-base) var(--ease-out);
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .sdr-card:focus-visible .sdr-arrow {
+        transform: translateX(4px);
+      }
+    }
+    @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+      .sdr-card:hover .sdr-arrow {
+        transform: translateX(4px);
+      }
+    }
+  }
+</style>

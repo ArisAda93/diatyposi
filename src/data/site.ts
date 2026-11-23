@@ -21,7 +21,11 @@ export interface OpeningHours {
 }
 
 export interface Service {
-  /** Latin, Greek-friendly slug used as the anchor on /ypiresies/ and as the form value. */
+  /**
+   * Latin, Greek-friendly slug: the service page's path segment (/ypiresies/<slug>/, see
+   * `serviceHref`), the anchor on /ypiresies/ and the quote form value. Changing it changes a
+   * public URL, so add a redirect from the old one.
+   */
   slug: string;
   icon: IconName;
   /** File name inside src/assets/portfolio/. */
@@ -62,6 +66,11 @@ export const site = {
   name: 'ΔΙΑΤΥΠΩΣΗ',
   /** Mixed-case name as written under the logo's social icons. */
   displayName: 'Διατύπωση',
+  /**
+   * Other spellings people type when they search for the business (mixed case and Greeklish).
+   * Used as `alternateName` in the WebSite and LocalBusiness structured data.
+   */
+  alternateNames: ['Διατύπωση', 'Diatyposi', 'Diatiposi'],
   descriptor: { el: 'Διαφήμιση – Εκτυπώσεις' } satisfies Localized<string>,
   descriptorCaps: { el: 'ΔΙΑΦΗΜΙΣΗ – ΕΚΤΥΠΩΣΕΙΣ' } satisfies Localized<string>,
   tagline: {
@@ -99,6 +108,18 @@ export const site = {
     mapQuery: 'ΔΙΑΤΥΠΩΣΗ Διαφήμιση Εκτυπώσεις',
     // TODO(owner): shop coordinates (decimal degrees). Used for JSON-LD only.
     geo: { lat: 0, lng: 0 },
+    /**
+     * TODO(owner): the city in the Greek locative, with its article, e.g. 'στην Αθήνα',
+     * 'στο Περιστέρι', 'στη Θεσσαλονίκη'. Appended to the service pages' titles (`withLocality`
+     * in src/lib/seo.ts) so they match local searches. Empty = no locality in titles.
+     */
+    locative: '' as string,
+    /**
+     * TODO(owner): cities or areas the shop serves, in Greek (e.g. 'Αθήνα', 'Πειραιάς').
+     * Listed as `areaServed` in the structured data once `contactIsPlaceholder` is false.
+     * Empty = not stated (service pages then say the whole of Greece).
+     */
+    areaServed: [] as string[],
   },
 
   // TODO(owner): real opening hours.
@@ -156,6 +177,9 @@ export const routes = {
 /** Link to the quote form with one service pre-selected. */
 export const quoteHref = (slug?: string): string =>
   slug ? `/epikoinonia/?ypiresia=${encodeURIComponent(slug)}#prosfora` : routes.quote;
+
+/** Path of a service's own page (src/pages/ypiresies/[slug].astro). */
+export const serviceHref = (slug: string): string => `/ypiresies/${slug}/`;
 
 // ---------------------------------------------------------------------------------------------
 // Owner copy (verbatim)

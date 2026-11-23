@@ -19,7 +19,15 @@ import FloatingContact from '~/components/FloatingContact.astro';
 import LivingBackground from '~/components/LivingBackground.astro';
 import { site } from '~/data/site';
 import { defaultLocale, localeTags, t, type Locale } from '~/i18n/ui';
-import { buildLocalBusiness } from '~/lib/seo';
+import {
+  buildBreadcrumbs,
+  buildGraph,
+  buildLocalBusiness,
+  buildWebSite,
+  pageCrumbs,
+  type Crumb,
+  type Json,
+} from '~/lib/seo';
 import { THEME_COLORS, THEME_STORAGE_KEY } from '~/scripts/theme';
 
 interface Props {
@@ -32,6 +40,13 @@ interface Props {
   noindex?: boolean;
   /** Emit the LocalBusiness JSON-LD (home and contact). */
   structuredData?: boolean;
+  /**
+   * Breadcrumb trail for the BreadcrumbList JSON-LD, Home first. Omit to derive it from the
+   * navigation label (or the title) of the current page.
+   */
+  breadcrumbs?: Crumb[];
+  /** Extra JSON-LD nodes for this page (e.g. Service, FAQPage), added to the page's @graph. */
+  jsonLd?: Json[];
   /** Home only: the header sits over the full-screen hero and is part of its composition. */
   heroHeader?: boolean;
   locale?: Locale;
@@ -43,6 +58,8 @@ const {
   ogImage = '/og.jpg',
   noindex = false,
   structuredData = false,
+  breadcrumbs,
+  jsonLd = [],
   heroHeader = false,
   locale = defaultLocale,
 } = Astro.props;
@@ -53,7 +70,21 @@ const metaDescription = description ?? t('defaultDescription', locale);
 const siteUrl = Astro.site ?? new URL(Astro.url.origin);
 const canonical = new URL(Astro.url.pathname, siteUrl).href;
 const ogImageUrl = new URL(ogImage, siteUrl).href;
-const jsonLd = structuredData ? JSON.stringify(buildLocalBusiness(siteUrl, locale)) : null;
+
+// One JSON-LD document per page. Breadcrumbs only on indexable pages below Home; a trail needs
+// at least two steps to say anything.
+const isHome = Astro.url.pathname === '/';
+const crumbs =
+  isHome || noindex ? [] : (breadcrumbs ?? pageCrumbs(Astro.url.pathname, title, locale));
+const graphNodes: Json[] = [
+  ...(isHome ? [buildWebSite(siteUrl, locale)] : []),
+  ...(structuredData ? [buildLocalBusiness(siteUrl, locale)] : []),
+  ...(crumbs.length >= 2 ? [buildBreadcrumbs(siteUrl, crumbs)] : []),
+  ...jsonLd,
+];
+// `<` escaped as \u003c (still valid JSON) so no string can close the <script> element early.
+const graphJson =
+  graphNodes.length > 0 ? JSON.stringify(buildGraph(graphNodes)).replace(/</g, '\\u003c') : null;
 ---
 
 <!doctype html>
@@ -63,7 +94,19 @@ const jsonLd = structuredData ? JSON.stringify(buildLocalBusiness(siteUrl, local
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>{fullTitle}</title>
     <meta name="description" content={metaDescription} />
-    {noindex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical} />}
+    {noindex ? (
+      <meta name="robots" content="noindex" />
+    ) : (
+      <>
+        <link rel="canonical" href={canonical} />
+        <meta
+          name="robots"
+          content="max-image-preview:large, max-snippet:-1, max-video-preview:-1"
+        />
+        <link rel="alternate" hreflang={localeTags[locale].html} href={canonical} />
+        <link rel="alternate" hreflang="x-default" href={canonical} />
+      </>
+    )}
     <meta name="color-scheme" content="light" />
     <meta name="theme-color" content={THEME_COLORS.light} />
     <meta name="generator" content={Astro.generator} />
@@ -148,7 +191,7 @@ const jsonLd = structuredData ? JSON.stringify(buildLocalBusiness(siteUrl, local
     <meta name="twitter:description" content={metaDescription} />
     <meta name="twitter:image" content={ogImageUrl} />
 
-    {jsonLd && <script type="application/ld+json" set:html={jsonLd} />}
+    {graphJson && <script type="application/ld+json" set:html={graphJson} />}
     <slot name="head" />
   </head>
   <body class="flex min-h-dvh flex-col">

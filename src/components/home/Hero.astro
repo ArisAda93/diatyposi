@@ -45,6 +45,12 @@ const headline = ownerCopy.el.headline;
 const cut = headline.indexOf('… ');
 const lines = cut >= 0 ? [headline.slice(0, cut + 1), headline.slice(cut + 2)] : [headline];
 const ghosts = ['c', 'm', 'y'] as const;
+// The red label names the trade, and the town once the owner sets it (“… ΣΤΗΝ ΑΘΗΝΑ”), so the
+// first words of the page say what and where for visitors and search engines alike.
+const locative = site.address.locative.trim();
+const heroLabel = locative
+  ? `${site.descriptorCaps.el} ${capsEl(locative)}`
+  : site.descriptorCaps.el;
 ---
 
 <section class="hero" aria-labelledby="hero-title" data-hero data-bg-accent="cyan">
@@ -61,7 +67,7 @@ const ghosts = ['c', 'm', 'y'] as const;
 
       <div class="hero-copy" data-hero-copy>
         <span class="hero-sentinel" aria-hidden="true" data-hero-sentinel></span>
-        <p class="label hero-label">{site.descriptorCaps.el}</p>
+        <p class="label hero-label">{heroLabel}</p>
         <div class="hero-headline" data-motion="off">
           <h1 id="hero-title" class="display-xl hero-title hero-h1">
             {lines.map((line, i) => (

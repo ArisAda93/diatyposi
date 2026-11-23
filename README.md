@@ -48,6 +48,8 @@ Search the code for `TODO(owner)` to find each one. Most live in **`src/data/sit
 | Street, city, postcode                                                              | `site.address.street`, `city`, `postalCode`                           | `Οδός Παραδείγματος 1`, `Πόλη`, `00000`             |
 | Map search text                                                                     | `site.address.mapQuery`                                               | business name                                       |
 | Shop coordinates                                                                    | `site.address.geo`                                                    | `0, 0`                                              |
+| City for service-page titles (Greek locative with article, e.g. `στην Αθήνα`)       | `site.address.locative`                                               | empty (no city in titles)                           |
+| Areas served (Greek city or area names, for structured data)                        | `site.address.areaServed`                                             | empty (service pages say the whole of Greece)       |
 | Opening hours                                                                       | `site.hours`                                                          | `ΧΧ:ΧΧ – ΧΧ:ΧΧ`                                     |
 | Facebook page URL                                                                   | `site.social.facebook`                                                | `https://www.facebook.com/`                         |
 | Instagram profile URL                                                               | `site.social.instagram`                                               | `https://www.instagram.com/`                        |
@@ -57,7 +59,11 @@ Search the code for `TODO(owner)` to find each one. Most live in **`src/data/sit
 | Privacy policy: hosting provider                                                    | `src/pages/politiki-aporritou.astro` (“Γραμματοσειρές και φιλοξενία”) | not named                                           |
 | Privacy policy: final review of the whole text (then remove the review note)        | `src/i18n/pages/privacy.ts`                                           | draft, with a visible review note                   |
 
-When every contact value is real, set **`site.contactIsPlaceholder = false`**. That adds the phone, e-mail, address, hours, coordinates and social profiles to the `LocalBusiness` structured data that search engines read (they are left out while they are placeholders).
+When every contact value is real, set **`site.contactIsPlaceholder = false`**. That adds the phone, e-mail, address, hours, coordinates, map link, areas served and social profiles to the `LocalBusiness` structured data that search engines read (they are left out while they are placeholders).
+
+### Before launch: search engines
+
+The site is kept out of search results on purpose until launch: `public/_headers` sends `X-Robots-Tag: noindex` for every page. At launch, delete `public/_headers` (or remove its `X-Robots-Tag: noindex` line), otherwise Google will not index the site. The full launch checklist (Search Console, Google Business Profile, sitemap submission and more) is in [docs/SEO.md](docs/SEO.md).
 
 ## Editing content
 
@@ -119,11 +125,12 @@ src/
                         ink lines), hero + hero-scene/ (WebGL plates), idea-journey, services-showcase,
                         services-page, halftone-field (statement), gallery, quote form, map consent
   lib/                  pure helpers (links, quote, portfolio, seo, text), unit-tested in tests/
-  pages/                one file per page; slugs in Latin: /ypiresies/, /erga/, /etaireia/, /epikoinonia/
+  pages/                one file per page; slugs in Latin: /ypiresies/, /erga/, /etaireia/, /epikoinonia/;
+                        ypiresies/[slug].astro builds one page per service at /ypiresies/<slug>/
 public/                 fonts (self-hosted WOFF2), favicons, share image, manifest
 ```
 
 - **Fonts:** Commissioner (display), Inter (text) and Comfortaa (tagline), self-hosted, Greek and Latin subsets, `font-display: swap`.
 - **Motion:** every effect respects `prefers-reduced-motion` (the page then shows its composed final state) and turns off pointer effects on touch devices. Elements opt in with `data-reveal="depth"`, `data-tilt`, `data-halftone`, `data-parallax="<speed>"` or `data-bg-accent="<ink>"`, and opt out with `data-motion="off"`. Headings (`.h2`, `.display-l`), photos (`.media`), linked cards (`.card-lift`) and buttons (`.btn`) are picked up automatically.
 - **Privacy:** nothing loads from third parties until the visitor clicks “load map” on the contact page. The quote form sends nothing to a server; it prepares an e-mail, Viber or WhatsApp message that the visitor sends from their own app.
-- **Adding English later:** add `'en'` to `locales` in `src/i18n/ui.ts` and to `i18n.locales` in `astro.config.mjs`, add an `en` entry next to each `el` entry, and add `src/pages/en/` pages that pass `locale="en"`.
+- **Adding English later:** add `'en'` to `locales` in `src/i18n/ui.ts` and to `i18n.locales` in `astro.config.mjs`, add an `en` entry next to each `el` entry, and add `src/pages/en/` pages that pass `locale="en"`. Then extend the `hreflang` links in `BaseLayout.astro` (each page currently points `el` and `x-default` at itself) so every page lists its Greek and English versions, and add `en: 'en-GB'` (or `en-US`) to the sitemap's `i18n.locales` in `astro.config.mjs`.

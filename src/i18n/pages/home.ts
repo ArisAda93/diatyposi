@@ -7,8 +7,13 @@
  */
 export const homeText = {
   el: {
+    /**
+     * <title> text before the optional city (`withLocality`, e.g. " στην Αθήνα") and before
+     * " | ΔΙΑΤΥΠΩΣΗ". Leads with the main search term, «τυπογραφείο» (docs/SEO.md §3.3).
+     */
+    metaTitle: 'Τυπογραφείο, εκτυπώσεις & διαφήμιση',
     metaDescription:
-      'ΔΙΑΤΥΠΩΣΗ, διαφήμιση και εκτυπώσεις: σχεδιάζουμε και τυπώνουμε λογότυπα, κάρτες, έντυπα, banners, επιγραφές, ρουχισμό και διαφημιστικά δώρα για επαγγελματίες και ιδιώτες.',
+      'Τυπογραφείο ΔΙΑΤΥΠΩΣΗ: ψηφιακές και offset εκτυπώσεις, κάρτες, banners, επιγραφές, στάμπες σε μπλουζάκια και διαφημιστικά δώρα. Ζητήστε προσφορά.',
 
     services: {
       /** Small label above the owner's “Οι υπηρεσίες μας:” heading (shown in capitals). */

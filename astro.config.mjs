@@ -17,7 +17,7 @@ export default defineConfig({
   },
   integrations: [
     sitemap({
-      i18n: { defaultLocale: 'el', locales: { el: 'el-GR' } },
+      i18n: { defaultLocale: 'el', locales: { el: 'el' } },
     }),
   ],
   vite: {

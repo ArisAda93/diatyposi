@@ -1,0 +1,243 @@
+---
+/**
+ * The service at a glance, in section 01 of its page (src/pages/ypiresies/[slug].astro), under
+ * the owner's title: the service's photo in a crop-marked frame with a halftone under-plate in
+ * the page's plate ink, and beside it the description at lead size, the usual jobs as tag chips
+ * (as on the /ypiresies/ chapters) and the quote button that pre-selects this service.
+ *
+ * The photo sits well below the fold (under the page header and the section head), so it loads
+ * lazily and the h1 stays the page's largest first paint. It carries the “Ενδεικτική εικόνα” chip
+ * while it is a stand-in (decided by the portfolio entry with the same photo, as on /ypiresies/).
+ * `.media` lets the site-wide motion layer print the photo in. From 768px photo and text share a
+ * row; on phones they stack and the button runs full width.
+ */
+import Icon from '../Icon.astro';
+import Photo from '../Photo.astro';
+import { portfolio, quoteHref, type Service } from '~/data/site';
+import { serviceDetailText } from '~/i18n/pages/service-detail';
+import { servicesText } from '~/i18n/pages/services';
+import { t } from '~/i18n/ui';
+import { capsEl } from '~/lib/text';
+import type { PlateInk } from '~/scripts/services-page';
+
+interface Props {
+  service: Service;
+  ink: PlateInk;
+  /** id of the heading that names the service (the quote button's description). */
+  titleId: string;
+}
+
+const { service, ink, titleId } = Astro.props;
+const copy = service.text.el;
+const text = serviceDetailText.el;
+// Services carry no stand-in flag: take it from the portfolio entry that uses the same photo, so a
+// real photo marked `standIn: false` there drops the label here too. A photo with no portfolio
+// entry has no known provenance, so it stays labelled.
+const standIn = portfolio.find((p) => p.image === service.image)?.standIn ?? true;
+
+// Rendered photo width: the full width less the crop-mark room on phones; 7 of 12 parts of the
+// content width from 768px, capped by the 1440px wrap.
+const sizes = '(min-width: 90rem) 720px, (min-width: 48rem) 50vw, calc(100vw - 5rem)';
+---
+
+<div class:list={['sdo', `sdo-ink-${ink}`]}>
+  <div class="sdo-fig">
+    <span class="sdo-under" aria-hidden="true" data-parallax="0.08"></span>
+    <div class="sdo-frame crop-frame">
+      <div class="sdo-media media">
+        <Photo image={service.image} alt={copy.imageAlt} sizes={sizes} />
+        {standIn && <span class="sdo-standin">{t('standInLabel')}</span>}
+      </div>
+    </div>
+  </div>
+
+  <div class="sdo-body">
+    <p class="lead sdo-desc">{copy.description}</p>
+    <h3 class="label sdo-tags-heading">{capsEl(servicesText.el.productsHeading)}</h3>
+    <ul class="sdo-tags">
+      {copy.products.map((product) => (
+        <li>{product}</li>
+      ))}
+    </ul>
+    <div class="sdo-actions">
+      <a href={quoteHref(service.slug)} class="btn btn-primary sdo-cta" aria-describedby={titleId}>
+        <span>{text.quoteCta}</span>
+        <Icon name="arrow-right" size={20} />
+      </a>
+    </div>
+  </div>
+</div>
+
+<style>
+  @layer components {
+    /* `--sdo-dots` is the under-plate's strength, as on the /ypiresies/ chapters: yellow is light
+       on paper and stays strong, the darker inks are held back. */
+    .sdo-ink-cyan {
+      --sdo-ink: var(--color-cyan);
+      --sdo-dots: 0.5;
+    }
+    .sdo-ink-magenta {
+      --sdo-ink: var(--color-magenta);
+      --sdo-dots: 0.42;
+    }
+    .sdo-ink-yellow {
+      --sdo-ink: var(--color-yellow);
+      --sdo-dots: 1;
+    }
+    .sdo-ink-key {
+      --sdo-ink: var(--color-key);
+      --sdo-dots: 0.3;
+    }
+    @media not print {
+      :global(html[data-theme='dark']) .sdo-ink-cyan {
+        --sdo-dots: 0.42;
+      }
+      :global(html[data-theme='dark']) .sdo-ink-magenta {
+        --sdo-dots: 0.5;
+      }
+      :global(html[data-theme='dark']) .sdo-ink-yellow {
+        --sdo-dots: 0.4;
+      }
+    }
+
+    .sdo {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      row-gap: 1.75rem;
+    }
+
+    /* Room around the frame so the crop marks (20px outside it) and the under-plate never
+       overflow. */
+    .sdo-fig {
+      --sdo-py: 1.25rem;
+      --sdo-px: 1.5rem;
+      --sdo-off: 0.875rem;
+      position: relative;
+      isolation: isolate;
+      padding: var(--sdo-py) var(--sdo-px);
+    }
+    /* The under-plate: the frame's box in halftone of the page's ink, offset down and left. */
+    .sdo-under {
+      position: absolute;
+      z-index: -1;
+      top: calc(var(--sdo-py) + var(--sdo-off));
+      bottom: calc(var(--sdo-py) - var(--sdo-off));
+      left: calc(var(--sdo-px) - var(--sdo-off));
+      right: calc(var(--sdo-px) + var(--sdo-off));
+      color: var(--sdo-ink);
+      background-image: radial-gradient(circle at center, currentColor 0 1.5px, transparent 2.1px);
+      background-size: 9px 9px;
+      opacity: var(--sdo-dots);
+      pointer-events: none;
+    }
+    .sdo-media {
+      aspect-ratio: 4 / 3;
+      box-shadow: 0 1.75rem 3rem -2rem rgb(34 31 32 / 0.4);
+    }
+    @media not print {
+      :global(html[data-theme='dark']) .sdo-media {
+        box-shadow:
+          0 0 0 1px var(--color-line),
+          0 1.75rem 3rem -1.75rem rgb(0 0 0 / 0.65);
+      }
+    }
+    .sdo-media :global(picture) {
+      display: block;
+      height: 100%;
+    }
+    /* Stand-in chip, as on /erga/ and /ypiresies/: inside the frame, fixed ink on yellow. */
+    .sdo-standin {
+      position: absolute;
+      top: 0.75rem;
+      left: 0.75rem;
+      z-index: 1;
+      padding: 0.3rem 0.55rem;
+      background-color: var(--color-yellow);
+      color: var(--ink-fixed);
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      font-weight: 720;
+      line-height: 1.2;
+    }
+
+    .sdo-body {
+      min-width: 0;
+    }
+    .sdo-desc {
+      max-width: 42ch;
+    }
+    .sdo-tags-heading {
+      margin-top: 2.25rem;
+      margin-bottom: 0.875rem;
+    }
+    /* Usual jobs as square tag chips, each with a patch of the page's plate ink. */
+    .sdo-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .sdo-tags > li {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-height: 2.25rem;
+      max-width: 100%;
+      padding: 0.375rem 0.75rem 0.375rem 0.625rem;
+      background-color: var(--color-paper-2);
+      box-shadow: inset 0 0 0 1px var(--color-line);
+      font-size: 0.9375rem;
+      line-height: 1.3;
+      text-wrap: pretty;
+    }
+    .sdo-tags > li::before {
+      content: '';
+      flex: none;
+      width: 0.5rem;
+      height: 0.5rem;
+      background-color: var(--sdo-ink);
+      box-shadow: inset 0 0 0 1px var(--color-key);
+    }
+    .sdo-actions {
+      margin-top: 2.25rem;
+      padding-top: 1.75rem;
+      border-top: 1px solid var(--color-line);
+    }
+    .sdo-cta {
+      max-width: 100%;
+      white-space: normal;
+      text-align: left;
+    }
+    /* Phones: full width, as the hero and contact-band calls to action are. */
+    @media (max-width: 47.99rem) {
+      .sdo-cta {
+        width: 100%;
+        text-align: center;
+      }
+    }
+    .sdo-cta :global(svg) {
+      transition: transform var(--dur-base) var(--ease-out);
+    }
+    @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+      .sdo-cta:hover :global(svg) {
+        transform: translateX(3px);
+      }
+    }
+
+    /* From 768px the photo and the text share a row. */
+    @media (min-width: 48rem) {
+      .sdo {
+        grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+        column-gap: clamp(1.5rem, 3.5vw, 3.5rem);
+        align-items: start;
+      }
+      .sdo-fig {
+        --sdo-py: 1.5rem;
+        --sdo-px: 1.5rem;
+        --sdo-off: 1rem;
+      }
+      .sdo-body {
+        padding-top: 1.5rem;
+      }
+    }
+  }
+</style>

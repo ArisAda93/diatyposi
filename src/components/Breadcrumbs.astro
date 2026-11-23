@@ -1,0 +1,105 @@
+---
+/**
+ * Visible breadcrumb trail for pages below a section (the service pages): a quiet row of small
+ * text links, Home first, separated by chevrons, ending with the current page as plain text
+ * (`aria-current="page"`). The same trail goes into the page's BreadcrumbList structured data
+ * (BaseLayout's `breadcrumbs` prop), so pass the same `crumbs` to both.
+ *
+ * Each link has a 44px hit area; the rule draws in on hover and focus (`.link-draw`). The row
+ * wraps on narrow screens and a long current name wraps inside its own item. Colours are theme
+ * tokens, so it reads on paper and dark paper alike. Chevrons are decorative (aria-hidden).
+ */
+import Icon from './Icon.astro';
+import { serviceDetailText } from '~/i18n/pages/service-detail';
+import type { Crumb } from '~/lib/seo';
+
+interface Props {
+  /** The whole trail, Home first, the current page last. */
+  crumbs: Crumb[];
+  /** Accessible name of the trail. */
+  label?: string;
+  class?: string;
+}
+
+const { crumbs, label = serviceDetailText.el.breadcrumbLabel, class: className } = Astro.props;
+const last = crumbs.length - 1;
+---
+
+<nav class:list={['crumbs', className]} aria-label={label}>
+  <ol class="crumbs-list">
+    {crumbs.map((crumb, i) => (
+      <li class="crumbs-item">
+        {i > 0 && <Icon name="chevron-right" size={14} class="crumbs-sep" />}
+        {i === last ? (
+          <span class="crumbs-current" aria-current="page">
+            {crumb.name}
+          </span>
+        ) : (
+          <a href={crumb.path} class="crumbs-link">
+            <span class="link-draw">{crumb.name}</span>
+          </a>
+        )}
+      </li>
+    ))}
+  </ol>
+</nav>
+
+<style>
+  @layer components {
+    .crumbs-list {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      column-gap: 0.375rem;
+      font-size: var(--text-small);
+      line-height: var(--text-small--line-height);
+    }
+    .crumbs-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      min-width: 0;
+    }
+    .crumbs-item :global(.crumbs-sep) {
+      flex: none;
+      color: var(--color-muted);
+    }
+    /* 44px hit area; the drawn rule sits under the text, not at the foot of the box. */
+    .crumbs-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 2.75rem;
+      color: var(--color-muted);
+      text-decoration: none;
+      transition: color var(--dur-fast) linear;
+    }
+    .crumbs-link:focus-visible {
+      color: var(--color-key);
+    }
+    .crumbs-link:focus-visible > .link-draw {
+      background-position: 0 100%;
+      background-size: 100% 2px;
+    }
+    @media (hover: hover) {
+      .crumbs-link:hover {
+        color: var(--color-key);
+      }
+      .crumbs-link:hover > .link-draw {
+        background-position: 0 100%;
+        background-size: 100% 2px;
+      }
+    }
+    .crumbs-current {
+      min-width: 0;
+      padding-block: 0.6875rem;
+      color: var(--color-key);
+      font-weight: 600;
+      overflow-wrap: break-word;
+    }
+    @media print {
+      .crumbs {
+        display: none;
+      }
+    }
+  }
+</style>

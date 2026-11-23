@@ -1,0 +1,105 @@
+---
+/**
+ * The body sections of a service page (copy.sections, src/i18n/pages/service-<slug>.ts), under
+ * the overview in section 01: each its own <section> with an h2, its paragraphs and an optional
+ * list. Set like a printed spec sheet: a hairline over each section, the heading on the left
+ * (4 of 12 columns from 64rem) and a reading column of at most 62ch on the right; on phones and
+ * tablets they stack. List bullets are small squares in the page's plate ink.
+ */
+import type { ServicePageSection } from '~/i18n/service-page-types';
+import type { PlateInk } from '~/scripts/services-page';
+
+interface Props {
+  sections: ServicePageSection[];
+  ink: PlateInk;
+  /** Prefix for the headings' ids (unique on the page). */
+  idPrefix: string;
+}
+
+const { sections, ink, idPrefix } = Astro.props;
+---
+
+<div class="sds" style={`--sds-ink: var(--color-${ink})`}>
+  {sections.map((section, i) => {
+    const headingId = `${idPrefix}-${i + 1}`;
+    return (
+      <section class="sds-item" aria-labelledby={headingId}>
+        <h2 id={headingId} class="h3 sds-title">
+          {section.heading}
+        </h2>
+        <div class="sds-body">
+          {section.paragraphs.map((paragraph) => (
+            <p>{paragraph}</p>
+          ))}
+          {section.list && section.list.length > 0 && (
+            <ul class="sds-list">
+              {section.list.map((item) => (
+                <li>{item}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+    );
+  })}
+</div>
+
+<style>
+  @layer components {
+    .sds {
+      margin-top: clamp(3.5rem, 2rem + 5vw, 6.5rem);
+    }
+    .sds-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      row-gap: 1rem;
+      padding-block: clamp(1.75rem, 1.25rem + 2vw, 2.75rem);
+      border-top: 1px solid var(--color-line);
+    }
+    .sds-item:last-child {
+      padding-bottom: 0;
+    }
+    .sds-title {
+      max-width: 24ch;
+    }
+    .sds-body {
+      max-width: 62ch;
+      min-width: 0;
+    }
+    .sds-body > * + * {
+      margin-top: 1em;
+    }
+    /* Square bullets in the page's plate ink, key-edged so yellow still reads on paper. */
+    .sds-list {
+      display: grid;
+      gap: 0.5rem;
+    }
+    .sds-list > li {
+      position: relative;
+      padding-left: 1.375rem;
+    }
+    .sds-list > li::before {
+      content: '';
+      position: absolute;
+      top: calc(0.825em - 0.25rem);
+      left: 0;
+      width: 0.5rem;
+      height: 0.5rem;
+      background-color: var(--sds-ink);
+      box-shadow: inset 0 0 0 1px var(--color-key);
+    }
+
+    @media (min-width: 64rem) {
+      .sds-item {
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        column-gap: var(--grid-gap);
+      }
+      .sds-title {
+        grid-column: 1 / span 4;
+      }
+      .sds-body {
+        grid-column: 6 / span 7;
+      }
+    }
+  }
+</style>

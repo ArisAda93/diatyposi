@@ -9,7 +9,8 @@
  * plate ink (the same C, M, Y, K cycle as the chapters on /ypiresies/). Behind the plate a halftone
  * under-plate and two registration targets sit at their own scroll depths (`data-parallax`, run by
  * the motion layer). Right, the nine services as large typographic rows; each row is one link to
- * its chapter on /ypiresies/. Below 64rem: no plate; each row carries its own thumbnail and lead.
+ * the service's own page (/ypiresies/<slug>/). Below 64rem: no plate; each row carries its own
+ * thumbnail and lead.
  *
  * Behaviour lives in src/scripts/services-showcase.ts. Without JS, every link is there and the
  * plate shows the first service. The other plates wait in <template>s, so nothing loads until a
@@ -27,7 +28,7 @@ import Icon from '~/components/Icon.astro';
 import Photo from '~/components/Photo.astro';
 import PlateIcon from '~/components/PlateIcon.astro';
 import RegMark from '~/components/RegMark.astro';
-import { ownerCopy, portfolio, routes, services } from '~/data/site';
+import { ownerCopy, portfolio, routes, serviceHref, services } from '~/data/site';
 import { homeText } from '~/i18n/pages/home';
 import { t } from '~/i18n/ui';
 import { plateInk } from '~/scripts/services-page';
@@ -42,7 +43,7 @@ const items = services.map((service, index) => ({
   index,
   num: pad(index + 1),
   ink: plateInk(index),
-  href: `${routes.services}#${service.slug}`,
+  href: serviceHref(service.slug),
   lead: leadSentence(service.text.el.description),
   // Services carry no stand-in flag: take it from the portfolio entry that uses the same photo.
   // A photo with no portfolio entry has no known provenance, so it stays labelled.

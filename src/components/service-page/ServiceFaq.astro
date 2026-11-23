@@ -1,0 +1,162 @@
+---
+/**
+ * Questions about one service, a section of its page in the shared shell (Section.astro). Each
+ * question is a native <details>/<summary>: it opens with the keyboard and without JS, and every
+ * answer is in the HTML (search engines read it; the same questions go into the page's FAQPage
+ * structured data). An answer's "\n\n" splits it into paragraphs.
+ *
+ * Set as a list between hairlines. The marker is a square plus in the page's plate ink that turns
+ * into a minus when the answer is open; the summary is a 44px+ row. Hover only where the pointer
+ * can hover; transitions follow the site-wide reduced-motion rule.
+ */
+import Section from '../Section.astro';
+import type { ServicePageFaq } from '~/i18n/service-page-types';
+import { serviceDetailText } from '~/i18n/pages/service-detail';
+import type { PlateInk } from '~/scripts/services-page';
+
+interface Props {
+  faq: ServicePageFaq[];
+  ink: PlateInk;
+  /** '02', '03'… */
+  index: string;
+}
+
+const { faq, ink, index } = Astro.props;
+const text = serviceDetailText.el;
+const paragraphs = (answer: string): string[] =>
+  answer
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+---
+
+<Section
+  id="syxnes-erotiseis"
+  index={index}
+  label={text.faqLabel}
+  title={text.faqTitle}
+  accent={ink}
+>
+  <ul class={`sdf sdf-ink-${ink}`} style={`--sdf-ink: var(--color-${ink})`}>
+    {faq.map((item) => (
+      <li>
+        <details class="sdf-item">
+          <summary class="sdf-q">
+            <span class="sdf-q-text">{item.q}</span>
+            <span class="sdf-mark" aria-hidden="true"></span>
+          </summary>
+          <div class="sdf-a">
+            {paragraphs(item.a).map((p) => (
+              <p>{p}</p>
+            ))}
+          </div>
+        </details>
+      </li>
+    ))}
+  </ul>
+</Section>
+
+<style>
+  @layer components {
+    .sdf {
+      max-width: 60rem;
+      border-bottom: 1px solid var(--color-line);
+    }
+    .sdf > li {
+      border-top: 1px solid var(--color-line);
+    }
+
+    .sdf-q {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.25rem;
+      min-height: 3.5rem;
+      padding-block: 1.125rem;
+      font-family: var(--font-display);
+      font-size: clamp(1.0625rem, 1rem + 0.35vw, 1.3125rem);
+      font-weight: 720;
+      line-height: 1.3;
+      letter-spacing: -0.01em;
+      list-style: none;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .sdf-q::-webkit-details-marker {
+      display: none;
+    }
+    .sdf-q-text {
+      min-width: 0;
+      text-wrap: pretty;
+    }
+
+    /* The marker: a key-edged square with a plus (two bars); open, the upright bar folds away and
+       the square fills with the plate ink. */
+    .sdf-mark {
+      position: relative;
+      flex: none;
+      width: 1.75rem;
+      height: 1.75rem;
+      box-shadow: inset 0 0 0 2px var(--color-key);
+      transition:
+        background-color var(--dur-fast) linear,
+        transform var(--dur-base) var(--ease-snap);
+    }
+    .sdf-mark::before,
+    .sdf-mark::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0.75rem;
+      height: 2px;
+      margin: -1px 0 0 -0.375rem;
+      background-color: var(--color-key);
+      transition: transform var(--dur-base) var(--ease-out);
+    }
+    .sdf-mark::after {
+      transform: rotate(90deg);
+    }
+    .sdf-item[open] .sdf-mark {
+      background-color: var(--sdf-ink);
+    }
+    .sdf-item[open] .sdf-mark::after {
+      transform: rotate(90deg) scaleX(0);
+    }
+    @media (hover: hover) {
+      .sdf-q:hover .sdf-mark {
+        background-color: var(--sdf-ink);
+      }
+    }
+    /* On the key fill (the K plate) the bars take the paper colour, so the sign still reads. */
+    .sdf-ink-key .sdf-item[open] .sdf-mark::before,
+    .sdf-ink-key .sdf-item[open] .sdf-mark::after {
+      background-color: var(--color-paper);
+    }
+    @media (hover: hover) {
+      .sdf-ink-key .sdf-q:hover .sdf-mark::before,
+      .sdf-ink-key .sdf-q:hover .sdf-mark::after {
+        background-color: var(--color-paper);
+      }
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .sdf-q:active .sdf-mark {
+        transform: scale(0.92);
+      }
+    }
+
+    .sdf-a {
+      max-width: 62ch;
+      padding-bottom: 1.5rem;
+      padding-right: 3rem;
+    }
+    .sdf-a > * + * {
+      margin-top: 1em;
+    }
+    @media (max-width: 35.99rem) {
+      .sdf-a {
+        padding-right: 0;
+      }
+    }
+  }
+</style>
