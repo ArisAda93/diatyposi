@@ -4,43 +4,43 @@ Every Greek string on the site that is **not** the owner’s own wording, for th
 
 ## Shared interface — `src/i18n/ui.ts`
 
-| Key                  | Text                                                                                                                                                                     |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `skipLink`           | Μετάβαση στο περιεχόμενο                                                                                                                                                 |
-| `navLabel`           | Κύρια πλοήγηση                                                                                                                                                           |
-| `menuOpen`           | Μενού                                                                                                                                                                    |
-| `menuClose`          | Κλείσιμο                                                                                                                                                                 |
-| `menuDialogLabel`    | Μενού πλοήγησης                                                                                                                                                          |
-| `homeLinkLabel`      | ΔΙΑΤΥΠΩΣΗ, αρχική σελίδα                                                                                                                                                 |
-| `callUs`             | Καλέστε μας                                                                                                                                                              |
-| `callShort`          | Κλήση                                                                                                                                                                    |
-| `viber`              | Viber                                                                                                                                                                    |
-| `whatsapp`           | WhatsApp                                                                                                                                                                 |
-| `email`              | Email                                                                                                                                                                    |
-| `requestQuote`       | Ζητήστε προσφορά                                                                                                                                                         |
-| `ourServices`        | Οι υπηρεσίες μας                                                                                                                                                         |
-| `phoneLabel`         | Τηλέφωνο                                                                                                                                                                 |
-| `emailLabel`         | Email                                                                                                                                                                    |
-| `addressLabel`       | Διεύθυνση                                                                                                                                                                |
-| `hoursLabel`         | Ωράριο                                                                                                                                                                   |
-| `closed`             | Κλειστά                                                                                                                                                                  |
-| `followUs`           | Ακολουθήστε μας                                                                                                                                                          |
-| `facebookLabel`      | Η ΔΙΑΤΥΠΩΣΗ στο Facebook                                                                                                                                                 |
-| `instagramLabel`     | Η ΔΙΑΤΥΠΩΣΗ στο Instagram                                                                                                                                                |
-| `footerServices`     | Υπηρεσίες                                                                                                                                                                |
-| `footerContact`      | Επικοινωνία                                                                                                                                                              |
-| `footerPages`        | Σελίδες                                                                                                                                                                  |
-| `footerPrivacy`      | Πολιτική απορρήτου                                                                                                                                                       |
-| `copyright`          | Με επιφύλαξη παντός δικαιώματος.                                                                                                                                         |
-| `floatingLabel`      | Γρήγορη επικοινωνία                                                                                                                                                      |
-| `sectionNavLabel`    | Ενότητες σελίδας                                                                                                                                                         |
-| `themeToggle`        | Σκούρο θέμα                                                                                                                                                              |
-| `themeOn`            | Ενεργό                                                                                                                                                                   |
-| `themeOff`           | Ανενεργό                                                                                                                                                                 |
-| `newTab`             | (ανοίγει σε νέα καρτέλα)                                                                                                                                                 |
-| `standInLabel`       | Ενδεικτική εικόνα                                                                                                                                                        |
-| `defaultDescription` | ΔΙΑΤΥΠΩΣΗ, διαφημιστικό γραφείο και εκτυπώσεις: σχεδιάζουμε και τυπώνουμε κάρτες, έντυπα, banners, επιγραφές, ρούχα και διαφημιστικά δώρα για επαγγελματίες και ιδιώτες. |
-| `ogImageAlt`         | Το λογότυπο της ΔΙΑΤΥΠΩΣΗΣ με τις τέσσερις καμάρες σε κυανό, ματζέντα, κίτρινο και μαύρο                                                                                 |
+| Key                  | Text                                                                                                                                                      |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `skipLink`           | Μετάβαση στο περιεχόμενο                                                                                                                                  |
+| `navLabel`           | Κύρια πλοήγηση                                                                                                                                            |
+| `menuOpen`           | Μενού                                                                                                                                                     |
+| `menuClose`          | Κλείσιμο                                                                                                                                                  |
+| `menuDialogLabel`    | Μενού πλοήγησης                                                                                                                                           |
+| `homeLinkLabel`      | ΔΙΑΤΥΠΩΣΗ, αρχική σελίδα                                                                                                                                  |
+| `callUs`             | Καλέστε μας                                                                                                                                               |
+| `callShort`          | Κλήση                                                                                                                                                     |
+| `viber`              | Viber                                                                                                                                                     |
+| `whatsapp`           | WhatsApp                                                                                                                                                  |
+| `email`              | Email                                                                                                                                                     |
+| `requestQuote`       | Ζητήστε προσφορά                                                                                                                                          |
+| `ourServices`        | Οι υπηρεσίες μας                                                                                                                                          |
+| `phoneLabel`         | Τηλέφωνο                                                                                                                                                  |
+| `emailLabel`         | Email                                                                                                                                                     |
+| `addressLabel`       | Διεύθυνση                                                                                                                                                 |
+| `hoursLabel`         | Ωράριο                                                                                                                                                    |
+| `closed`             | Κλειστά                                                                                                                                                   |
+| `followUs`           | Ακολουθήστε μας                                                                                                                                           |
+| `facebookLabel`      | Η ΔΙΑΤΥΠΩΣΗ στο Facebook                                                                                                                                  |
+| `instagramLabel`     | Η ΔΙΑΤΥΠΩΣΗ στο Instagram                                                                                                                                 |
+| `footerServices`     | Υπηρεσίες                                                                                                                                                 |
+| `footerContact`      | Επικοινωνία                                                                                                                                               |
+| `footerPages`        | Σελίδες                                                                                                                                                   |
+| `footerPrivacy`      | Πολιτική απορρήτου                                                                                                                                        |
+| `copyright`          | Με επιφύλαξη παντός δικαιώματος.                                                                                                                          |
+| `floatingLabel`      | Γρήγορη επικοινωνία                                                                                                                                       |
+| `sectionNavLabel`    | Ενότητες σελίδας                                                                                                                                          |
+| `themeToggle`        | Σκούρο θέμα                                                                                                                                               |
+| `themeOn`            | Ενεργό                                                                                                                                                    |
+| `themeOff`           | Ανενεργό                                                                                                                                                  |
+| `newTab`             | (ανοίγει σε νέα καρτέλα)                                                                                                                                  |
+| `standInLabel`       | Ενδεικτική εικόνα                                                                                                                                         |
+| `defaultDescription` | ΔΙΑΤΥΠΩΣΗ, διαφημιστικό γραφείο: σχεδιάζουμε και τυπώνουμε κάρτες, έντυπα, banners, επιγραφές, ρούχα και διαφημιστικά δώρα για επαγγελματίες και ιδιώτες. |
+| `ogImageAlt`         | Το λογότυπο της ΔΙΑΤΥΠΩΣΗΣ με τις τέσσερις καμάρες σε κυανό, ματζέντα, κίτρινο και μαύρο                                                                  |
 
 ## Business data — `src/data/site.ts`
 
