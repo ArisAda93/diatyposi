@@ -10,11 +10,12 @@ with the label “Ενδεικτική εικόνα”. They were generated on 2
 The prompt for each image is in `scripts/service-images.mjs`; to regenerate one, run
 `OPENROUTER_API_KEY=… node scripts/service-images.mjs --only <file>` (each image costs money).
 The script centre-crops each image to 4:3, resizes it to 2000 × 1500 and re-encodes it as an sRGB
-JPEG (mozjpeg, quality 86) with all metadata removed. Small generated text was retouched out in four images: two specks on the flyer in `entypa-01.jpg`
+JPEG (mozjpeg, quality 86) with all metadata removed. Small generated text was retouched out in five images: two specks on the flyer in `entypa-01.jpg`
 and two marks on the inked sheet in `ektyposeis-01.jpg` (cloned from the plain surface beside
 them), a glass maker's mark on the van window in `epigrafes-02.jpg` (cloned from the blurred trees
 beside it), and the tiny numerals on the printer's front ruler in `ektyposeis-02.jpg` (softened
-with a feathered blur, like foreground depth of field). Each service uses two of them: `image` on the
+with a feathered blur, like foreground depth of field), and a line of fine print on the inner page edge of the flat menu in `kartes-02.jpg` (softened with a
+feathered blur). Each service uses two of them: `image` on the
 home page and /ypiresies/, `pageImage` on its own page.
 
 | File                   | Service (slug)                   | Subject                                                                 |
