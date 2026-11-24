@@ -434,7 +434,7 @@ Google ranks local results on **relevance, distance and prominence**; prominence
    - **Additional (choose 3–5 that are true):** Digital printing service; Commercial printer (if offset is done in-house); Sign shop; Advertising agency; Graphic designer; Promotional products supplier; Screen printer or a T-shirt / custom apparel printing category **only if** the shop does that printing itself. "Print shop", "Digital printing service" and "Commercial printer" are confirmed category names used by print shops ([GMB Everywhere](https://www.gmbeverywhere.com/categories/print-shop-google-business-profile)); the others must be confirmed in the picker.
 4. **Address and map pin:** exact street address (Greek), ΤΚ written "123 45", correct municipality; drag the pin onto the shop door. If customers do not visit (unlikely for this shop), use a service area instead.
 5. **Hours:** regular hours plus special hours for holidays (Χριστούγεννα, Πάσχα, 15 Αυγούστου, August closure if any). "ανοιχτό τώρα" queries filter on this.
-6. **Phone:** the mobile, 697 412 2163, as the primary number (the shop has no landline). Same number as the site.
+6. **Phone:** the mobile, 6974 122 163, as the primary number (the shop has no landline). Same number as the site.
 7. **Website:** `https://<domain>/`. Optional UTM for tracking in analytics: `https://<domain>/?utm_source=google&utm_medium=organic&utm_campaign=gbp` (the canonical tag makes the parameter harmless).
 8. **Services:** add all ten services with their titles and a 1–2 sentence description each, written from the page leads (no prices). Under **Products** (which allow a link), add the key items (Επαγγελματικές κάρτες, Μουσαμάδες, Roll-up banners, Αυτοκόλλητα βιτρίνας, Μπλουζάκια με στάμπα, Κούπες με λογότυπο, Προσκλητήρια γάμου…) each linking to its `/ypiresies/<slug>/` page.
 9. **Description (750 chars):** plain Greek: who the shop is, the main services, the city/area. No links, no keyword lists.
@@ -495,7 +495,7 @@ Not worth it: **11880.com** is a German directory ("Deutschlands größte Branch
 ### 5.7 Links between GBP and the site
 
 - GBP website → home page; GBP products/posts → the matching service pages; GBP booking/quote → `/epikoinonia/#prosfora`.
-- Site → GBP: the contact page's "open in Google Maps" link should open the verified place (it already uses the owner's share link, `site.address.mapUrl`, and the embedded map is pinned by `site.address.mapPlaceId`; check both still open the verified place once the profile is verified); a "Αφήστε μας κριτική" link to the GBP review URL can go on the contact page.
+- Site → GBP: the contact page's "open in Google Maps" link should open the verified place (today `site.address.mapUrl` and the embedded map point at the street address, Ελ. Βενιζέλου 205, because the owner's Google place still lists no. 226; once the profile shows 205, `mapUrl` can become the place's share link); a "Αφήστε μας κριτική" link to the GBP review URL can go on the contact page.
 
 ---
 
@@ -504,7 +504,7 @@ Not worth it: **11880.com** is a German directory ("Deutschlands größte Branch
 In order:
 
 1. **Domain:** done: `SITE_URL` in `astro.config.mjs` is `https://diatyposi.com` (no www). Redirect the other variants (http, `www.diatyposi.com`) to it with 301 in Cloudflare (a redirect rule on the zone).
-2. **Owner values:** fill every `TODO(owner)` left (`grep -rn "TODO(owner)" src astro.config.mjs`). Phone, e-mail, Viber, WhatsApp, street, city, postcode, the map (`mapQuery`, `mapPlaceId`, `mapUrl`) and hours are real now. Still open: `geo` (at least 5 decimals, per [Google](https://developers.google.com/search/docs/appearance/structured-data/local-business)), `locative` and `areaServed` (step 3), Facebook and Instagram URLs, the about photo and real work photos, privacy-policy legal details.
+2. **Owner values:** fill every `TODO(owner)` left (`grep -rn "TODO(owner)" src astro.config.mjs`). Phone, e-mail, Viber, WhatsApp, street, city, postcode, the map (`mapQuery`, `mapUrl`) and hours are real now. Still open: `geo` (at least 5 decimals, per [Google](https://developers.google.com/search/docs/appearance/structured-data/local-business)), `locative` and `areaServed` (step 3), Facebook and Instagram URLs, the about photo and real work photos, privacy-policy legal details.
 3. **Locality:** set `site.address.locative` (e.g. "στην Αθήνα", "στο Περιστέρι", "στη Θεσσαλονίκη"; see §3.1) and `site.address.areaServed` (the municipalities the shop really serves).
 4. **Structured data switch:** set `site.contactIsPlaceholder = false` only after steps 2–3 are real.
 5. **Copy:** the ten service pages approved by the owner (`npm run content-review`), no "TODO(owner)" left in visible text, stand-in labels still shown on any stand-in image.

@@ -86,7 +86,7 @@ export const site = {
   contact: {
     /** The owner's mobile, the shop's only phone (there is no landline). International, no spaces. */
     phone: '+306974122163',
-    phoneDisplay: '697 412 2163',
+    phoneDisplay: '6974 122 163',
     email: 'dafnomilispeter@gmail.com',
     /** Viber number (international, no spaces, no +). */
     viber: '306974122163',
@@ -95,17 +95,22 @@ export const site = {
   },
 
   address: {
-    street: 'Ελ. Βενιζέλου 226',
+    street: 'Ελ. Βενιζέλου 205',
     city: 'Γάζι Ηρακλείου',
     postalCode: '714 14',
     region: 'Κρήτη',
     country: 'GR',
-    /** Address as Google Maps knows it: the query of the embedded map. */
-    mapQuery: 'Ελ. Βενιζέλου 226, Γάζι 714 14',
-    /** Google's id of the shop's place (from the owner's share link): pins the business itself. */
-    mapPlaceId: '0x149a5715a9164429:0xe5509f386ea99da8',
-    /** The owner's Google Maps share link: opens the shop in the Google Maps app or site. */
-    mapUrl: 'https://maps.app.goo.gl/5qruSfzat3Tdy5386',
+    /**
+     * Address as Google Maps knows it: the query of the embedded map, which pins the street
+     * address. (The owner's Google place still lists no. 226, so the map does not pin the place.)
+     */
+    mapQuery: 'Ελ. Βενιζέλου 205, Γάζι 714 14',
+    /**
+     * Opens the address in the Google Maps app or site: a Google Maps URL search for `mapQuery`
+     * (https://developers.google.com/maps/documentation/urls/get-started).
+     */
+    mapUrl:
+      'https://www.google.com/maps/search/?api=1&query=%CE%95%CE%BB.%20%CE%92%CE%B5%CE%BD%CE%B9%CE%B6%CE%AD%CE%BB%CE%BF%CF%85%20205%2C%20%CE%93%CE%AC%CE%B6%CE%B9%20714%2014',
     // TODO(owner): shop coordinates (decimal degrees). Used for JSON-LD only.
     geo: { lat: 0, lng: 0 },
     /**

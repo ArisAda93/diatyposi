@@ -1,8 +1,9 @@
 ---
 /**
- * The shop on a Google map. The box holds Google's embed of the shop's place (pinned by its place
- * id), lazy-loaded and shown without JS. The whole box is one link to the owner's Google Maps
- * link (`site.address.mapUrl`): a new tab on desktop, the Google Maps app on phones. The map
+ * The shop on a Google map. The box holds Google's embed of the shop's street address
+ * (`site.address.mapQuery`), lazy-loaded and shown without JS. The whole box is one link to the
+ * same address in Google Maps (`site.address.mapUrl`): a new tab on desktop, the Google Maps app
+ * on phones. The map
  * itself is out of the way of keyboard and screen readers (`tabindex="-1"`, `aria-hidden`,
  * `inert`; the link lies over it), so the link is the box's only stop. A chip at the bottom
  * corner says what a tap does; hovering or focusing the box prints it in key and pulls its C/M
@@ -21,8 +22,8 @@ import { contactText } from '~/i18n/pages/contact';
 import { capsEl } from '~/lib/text';
 
 const text = contactText.el.map;
-const { street, postalCode, city, mapQuery, mapPlaceId, mapUrl } = site.address;
-const embedSrc = `https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&ftid=${mapPlaceId}&hl=el&z=17&output=embed`;
+const { street, postalCode, city, mapQuery, mapUrl } = site.address;
+const embedSrc = `https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&hl=el&z=17&output=embed`;
 const fullAddress = `${street}, ${postalCode} ${city}`;
 ---
 

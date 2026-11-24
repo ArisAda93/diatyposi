@@ -35,7 +35,7 @@ Open http://localhost:4321. Other commands:
 
 ## Before going live: values the owner must supply
 
-The domain (`https://diatyposi.com`, `SITE_URL` in `astro.config.mjs`) and the contact data (phone 697 412 2163, e-mail, Viber, WhatsApp, address, map, opening hours) are real as of 2026-11-23, and the Instagram profile (`https://www.instagram.com/diatyposi`) and Facebook page (`https://www.facebook.com/profile.php?id=61585943139657`) as of 2026-11-24. Search the code for `TODO(owner)` to find the rest. Most live in **`src/data/site.ts`**; the privacy-policy details are noted in the table.
+The domain (`https://diatyposi.com`, `SITE_URL` in `astro.config.mjs`) and the contact data (phone 6974 122 163, e-mail, Viber, WhatsApp, address, map, opening hours) are real as of 2026-11-23, and the Instagram profile (`https://www.instagram.com/diatyposi`) and Facebook page (`https://www.facebook.com/profile.php?id=61585943139657`) as of 2026-11-24. Search the code for `TODO(owner)` to find the rest. Most live in **`src/data/site.ts`**; the privacy-policy details are noted in the table.
 
 | Value                                                                               | Where                                                                 | Placeholder now                                     |
 | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------- | --------------------------------------------------- |
