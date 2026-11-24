@@ -81,7 +81,7 @@ export const buildLocalBusiness = (siteUrl: string | URL, locale: Locale = 'el')
         latitude: site.address.geo.lat,
         longitude: site.address.geo.lng,
       },
-      // The owner's Google Maps link to the shop, the one the contact page's map opens.
+      // The shop's address in Google Maps, the link the contact page's map opens.
       hasMap: site.address.mapUrl,
       // Closed days (no ranges) are left out: schema.org reads a missing day as closed.
       openingHoursSpecification: site.hours
