@@ -101,7 +101,7 @@ Only the feminine article την/στην (like δεν and μην) drops its fin
 
 | URL                                          | Primary query                              | Recommended title (before " \| ΔΙΑΤΥΠΩΣΗ")       | Recommended h1                                                |
 | -------------------------------------------- | ------------------------------------------ | ------------------------------------------------ | ------------------------------------------------------------- |
-| `/`                                          | τυπογραφείο {Πόλη}                         | Τυπογραφείο, εκτυπώσεις & διαφήμιση              | Keep the owner's "Η ιδέα σας… γίνεται δημιουργία!" (see note) |
+| `/`                                          | τυπογραφείο {Πόλη}                         | Διαφημιστικό γραφείο & εκτυπώσεις                | Keep the owner's "Η ιδέα σας… γίνεται δημιουργία!" (see note) |
 | `/ypiresies/`                                | εκτυπώσεις και διαφήμιση {Πόλη}            | Υπηρεσίες εκτύπωσης & διαφήμισης                 | Υπηρεσίες εκτύπωσης και διαφήμισης                            |
 | `/ypiresies/diafimistika-dora/`              | διαφημιστικά δώρα                          | Διαφημιστικά & προσωποποιημένα δώρα              | Διαφημιστικά δώρα με λογότυπο και προσωποποιημένα δώρα        |
 | `/ypiresies/mplouzakia-rouxismos/`           | στάμπες σε μπλουζάκια                      | Στάμπες σε μπλουζάκια & επαγγελματικός ρουχισμός | Μπλουζάκια με στάμπα και ρούχα εργασίας με λογότυπο           |
@@ -124,9 +124,9 @@ Only the feminine article την/στην (like δεν and μην) drops its fin
 - **Primary:** τυπογραφείο {Πόλη}
 - **Secondary / long tail:** εκτυπώσεις {Πόλη}; τυπογραφείο κοντά μου; εκτυπώσεις κοντά μου; διαφημιστική εταιρεία {Πόλη} / διαφημιστικό γραφείο {Πόλη}; ψηφιακές εκτυπώσεις κοντά μου; ΔΙΑΤΥΠΩΣΗ / Διατύπωση εκτυπώσεις; diatyposi (brand, Greeklish); typografeio (Greeklish, mapped to Greek by Google)
 - **Intent:** local commercial and navigational (find a print/advertising shop nearby, or find this one by name).
-- **Title:** "Τυπογραφείο, εκτυπώσεις & διαφήμιση" (35). On the home page Google recommends the full site name; brand-first ("ΔΙΑΤΥΠΩΣΗ | Τυπογραφείο, εκτυπώσεις & διαφήμιση {στην Πόλη}") or brand-last are both fine. Keep the home title consistent with the `WebSite` name.
+- **Title:** "Διαφημιστικό γραφείο & εκτυπώσεις" (33), as the owner describes the shop (2026-11-24; "τυπογραφείο" stays the target of the digital & offset printing page). On the home page Google recommends the full site name; brand-first ("ΔΙΑΤΥΠΩΣΗ | Διαφημιστικό γραφείο & εκτυπώσεις {στην Πόλη}") or brand-last are both fine. Keep the home title consistent with the `WebSite` name.
 - **h1:** the owner's headline "Η ιδέα σας… γίνεται δημιουργία!" (owner copy, verbatim; it carries no search term). Shipped as option (a): the red label directly above the h1 reads "ΔΙΑΦΗΜΙΣΗ – ΕΚΤΥΠΩΣΕΙΣ" and, once `site.address.locative` is set, adds the city in capitals ("ΔΙΑΦΗΜΙΣΗ – ΕΚΤΥΠΩΣΕΙΣ ΣΤΗΝ ΑΘΗΝΑ"); the owner's intro, which already says "διαφήμισης, εκτύπωσης και προβολής", stays the first paragraph. Option (b), putting the descriptor inside the h1 ("ΔΙΑΤΥΠΩΣΗ, διαφήμιση και εκτυπώσεις {στην Πόλη}: Η ιδέα σας… γίνεται δημιουργία!"), needs the owner's approval and was not done.
-- **Meta description (145):** "Τυπογραφείο ΔΙΑΤΥΠΩΣΗ: ψηφιακές και offset εκτυπώσεις, κάρτες, banners, επιγραφές, στάμπες σε μπλουζάκια και διαφημιστικά δώρα. Ζητήστε προσφορά."
+- **Meta description (154):** "Διαφημιστικό γραφείο ΔΙΑΤΥΠΩΣΗ: ψηφιακές και offset εκτυπώσεις, κάρτες, banners, επιγραφές, στάμπες σε μπλουζάκια και διαφημιστικά δώρα. Ζητήστε προσφορά."
 
 #### `/ypiresies/` Υπηρεσίες (hub)
 

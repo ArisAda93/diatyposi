@@ -4,43 +4,43 @@ Every Greek string on the site that is **not** the owner’s own wording, for th
 
 ## Shared interface — `src/i18n/ui.ts`
 
-| Key                  | Text                                                                                                                                                           |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `skipLink`           | Μετάβαση στο περιεχόμενο                                                                                                                                       |
-| `navLabel`           | Κύρια πλοήγηση                                                                                                                                                 |
-| `menuOpen`           | Μενού                                                                                                                                                          |
-| `menuClose`          | Κλείσιμο                                                                                                                                                       |
-| `menuDialogLabel`    | Μενού πλοήγησης                                                                                                                                                |
-| `homeLinkLabel`      | ΔΙΑΤΥΠΩΣΗ, αρχική σελίδα                                                                                                                                       |
-| `callUs`             | Καλέστε μας                                                                                                                                                    |
-| `callShort`          | Κλήση                                                                                                                                                          |
-| `viber`              | Viber                                                                                                                                                          |
-| `whatsapp`           | WhatsApp                                                                                                                                                       |
-| `email`              | Email                                                                                                                                                          |
-| `requestQuote`       | Ζητήστε προσφορά                                                                                                                                               |
-| `ourServices`        | Οι υπηρεσίες μας                                                                                                                                               |
-| `phoneLabel`         | Τηλέφωνο                                                                                                                                                       |
-| `emailLabel`         | Email                                                                                                                                                          |
-| `addressLabel`       | Διεύθυνση                                                                                                                                                      |
-| `hoursLabel`         | Ωράριο                                                                                                                                                         |
-| `closed`             | Κλειστά                                                                                                                                                        |
-| `followUs`           | Ακολουθήστε μας                                                                                                                                                |
-| `facebookLabel`      | Η ΔΙΑΤΥΠΩΣΗ στο Facebook                                                                                                                                       |
-| `instagramLabel`     | Η ΔΙΑΤΥΠΩΣΗ στο Instagram                                                                                                                                      |
-| `footerServices`     | Υπηρεσίες                                                                                                                                                      |
-| `footerContact`      | Επικοινωνία                                                                                                                                                    |
-| `footerPages`        | Σελίδες                                                                                                                                                        |
-| `footerPrivacy`      | Πολιτική απορρήτου                                                                                                                                             |
-| `copyright`          | Με επιφύλαξη παντός δικαιώματος.                                                                                                                               |
-| `floatingLabel`      | Γρήγορη επικοινωνία                                                                                                                                            |
-| `sectionNavLabel`    | Ενότητες σελίδας                                                                                                                                               |
-| `themeToggle`        | Σκούρο θέμα                                                                                                                                                    |
-| `themeOn`            | Ενεργό                                                                                                                                                         |
-| `themeOff`           | Ανενεργό                                                                                                                                                       |
-| `newTab`             | (ανοίγει σε νέα καρτέλα)                                                                                                                                       |
-| `standInLabel`       | Ενδεικτική εικόνα                                                                                                                                              |
-| `defaultDescription` | ΔΙΑΤΥΠΩΣΗ, τυπογραφείο και διαφήμιση: σχεδιάζουμε και τυπώνουμε κάρτες, έντυπα, banners, επιγραφές, ρούχα και διαφημιστικά δώρα για επαγγελματίες και ιδιώτες. |
-| `ogImageAlt`         | Το λογότυπο της ΔΙΑΤΥΠΩΣΗΣ με τις τέσσερις καμάρες σε κυανό, ματζέντα, κίτρινο και μαύρο                                                                       |
+| Key                  | Text                                                                                                                                                                     |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `skipLink`           | Μετάβαση στο περιεχόμενο                                                                                                                                                 |
+| `navLabel`           | Κύρια πλοήγηση                                                                                                                                                           |
+| `menuOpen`           | Μενού                                                                                                                                                                    |
+| `menuClose`          | Κλείσιμο                                                                                                                                                                 |
+| `menuDialogLabel`    | Μενού πλοήγησης                                                                                                                                                          |
+| `homeLinkLabel`      | ΔΙΑΤΥΠΩΣΗ, αρχική σελίδα                                                                                                                                                 |
+| `callUs`             | Καλέστε μας                                                                                                                                                              |
+| `callShort`          | Κλήση                                                                                                                                                                    |
+| `viber`              | Viber                                                                                                                                                                    |
+| `whatsapp`           | WhatsApp                                                                                                                                                                 |
+| `email`              | Email                                                                                                                                                                    |
+| `requestQuote`       | Ζητήστε προσφορά                                                                                                                                                         |
+| `ourServices`        | Οι υπηρεσίες μας                                                                                                                                                         |
+| `phoneLabel`         | Τηλέφωνο                                                                                                                                                                 |
+| `emailLabel`         | Email                                                                                                                                                                    |
+| `addressLabel`       | Διεύθυνση                                                                                                                                                                |
+| `hoursLabel`         | Ωράριο                                                                                                                                                                   |
+| `closed`             | Κλειστά                                                                                                                                                                  |
+| `followUs`           | Ακολουθήστε μας                                                                                                                                                          |
+| `facebookLabel`      | Η ΔΙΑΤΥΠΩΣΗ στο Facebook                                                                                                                                                 |
+| `instagramLabel`     | Η ΔΙΑΤΥΠΩΣΗ στο Instagram                                                                                                                                                |
+| `footerServices`     | Υπηρεσίες                                                                                                                                                                |
+| `footerContact`      | Επικοινωνία                                                                                                                                                              |
+| `footerPages`        | Σελίδες                                                                                                                                                                  |
+| `footerPrivacy`      | Πολιτική απορρήτου                                                                                                                                                       |
+| `copyright`          | Με επιφύλαξη παντός δικαιώματος.                                                                                                                                         |
+| `floatingLabel`      | Γρήγορη επικοινωνία                                                                                                                                                      |
+| `sectionNavLabel`    | Ενότητες σελίδας                                                                                                                                                         |
+| `themeToggle`        | Σκούρο θέμα                                                                                                                                                              |
+| `themeOn`            | Ενεργό                                                                                                                                                                   |
+| `themeOff`           | Ανενεργό                                                                                                                                                                 |
+| `newTab`             | (ανοίγει σε νέα καρτέλα)                                                                                                                                                 |
+| `standInLabel`       | Ενδεικτική εικόνα                                                                                                                                                        |
+| `defaultDescription` | ΔΙΑΤΥΠΩΣΗ, διαφημιστικό γραφείο και εκτυπώσεις: σχεδιάζουμε και τυπώνουμε κάρτες, έντυπα, banners, επιγραφές, ρούχα και διαφημιστικά δώρα για επαγγελματίες και ιδιώτες. |
+| `ogImageAlt`         | Το λογότυπο της ΔΙΑΤΥΠΩΣΗΣ με τις τέσσερις καμάρες σε κυανό, ματζέντα, κίτρινο και μαύρο                                                                                 |
 
 ## Business data — `src/data/site.ts`
 
@@ -338,56 +338,56 @@ Every Greek string on the site that is **not** the owner’s own wording, for th
 
 ## `src/i18n/pages/home.ts` — `homeText`
 
-| Key                                                      | Text                                                                                                                                                   |
-| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `metaTitle`                                              | Τυπογραφείο, εκτυπώσεις & διαφήμιση                                                                                                                    |
-| `metaDescription`                                        | Τυπογραφείο ΔΙΑΤΥΠΩΣΗ: ψηφιακές και offset εκτυπώσεις, κάρτες, banners, επιγραφές, στάμπες σε μπλουζάκια και διαφημιστικά δώρα. Ζητήστε προσφορά.      |
-| `services.label`                                         | Τι κάνουμε                                                                                                                                             |
-| `services.allLink`                                       | Δείτε όλες τις υπηρεσίες                                                                                                                               |
-| `journey.label`                                          | Από την ιδέα στο αποτέλεσμα                                                                                                                            |
-| `journey.heading`                                        | Μία ιδέα. Παντού όπου σας βλέπουν.                                                                                                                     |
-| `journey.lead`                                           | Σχεδιάζουμε το σήμα σας και το τυπώνουμε σε ό,τι χρειάζεστε, από την κάρτα στην τσέπη ως τη βιτρίνα στον δρόμο. Ένας συνεργάτης, η ίδια εικόνα παντού. |
-| `journey.sampleName`                                     | Η επωνυμία σας                                                                                                                                         |
-| `journey.view.sketch`                                    | Σκίτσο                                                                                                                                                 |
-| `journey.view.product`                                   | Προϊόν                                                                                                                                                 |
-| `journey.steps.idea.title`                               | Η ιδέα σας                                                                                                                                             |
-| `journey.steps.idea.text`                                | Ξεκινάμε από αυτό που έχετε στο μυαλό σας: ένα πρόχειρο σκίτσο, μια φωτογραφία ή απλώς μια κουβέντα.                                                   |
-| `journey.steps.mark.title`                               | Γίνεται σήμα                                                                                                                                           |
-| `journey.steps.mark.text`                                | Το δουλεύουμε μαζί σας μέχρι να γίνει ένα καθαρό σήμα που νιώθετε δικό σας, έτοιμο για χαρτί, ύφασμα και οθόνη.                                        |
-| `journey.steps.card.title`                               | Στην κάρτα σας                                                                                                                                         |
-| `journey.steps.card.text`                                | Η κάρτα που δίνετε στη χειραψία, το φυλλάδιο, ο κατάλογος, όλα τυπωμένα στο χαρτί που τους ταιριάζει.                                                  |
-| `journey.steps.shirt.title`                              | Πάνω στην ομάδα σας                                                                                                                                    |
-| `journey.steps.shirt.text`                               | Μπλουζάκια και ρούχα εργασίας με το σήμα σας, ώστε η ομάδα σας να ξεχωρίζει όπου κι αν βρίσκεται.                                                      |
-| `journey.steps.sign.title`                               | Στη βιτρίνα σας                                                                                                                                        |
-| `journey.steps.sign.text`                                | Η επιγραφή και η βιτρίνα λένε ποιοι είστε σε όποιον περνά από τον δρόμο, πριν ακόμη μπει μέσα.                                                         |
-| `journey.steps.gift.title`                               | Στα χέρια των πελατών σας                                                                                                                              |
-| `journey.steps.gift.text`                                | Μια κούπα ή ένα σημειωματάριο με το σήμα σας κρατά το όνομά σας στο γραφείο τους, κάθε μέρα.                                                           |
-| `journey.steps.social.title`                             | Στην οθόνη τους                                                                                                                                        |
-| `journey.steps.social.text`                              | Αναρτήσεις και stories με την ίδια εικόνα, για να σας αναγνωρίζουν αμέσως και στο κινητό.                                                              |
-| `journey.chooser.heading`                                | Τι θα θέλατε να φτιάξουμε;                                                                                                                             |
-| `journey.chooser.hint`                                   | Σημειώστε ό,τι σας ενδιαφέρει. Θα το βρείτε ήδη επιλεγμένο στη φόρμα προσφοράς.                                                                        |
-| `journey.chooser.options.grafistikos-sxediasmos`         | Λογότυπο                                                                                                                                               |
-| `journey.chooser.options.kartes-fylladia-entypa`         | Κάρτες & έντυπα                                                                                                                                        |
-| `journey.chooser.options.mplouzakia-rouxismos`           | Μπλουζάκια & ρουχισμός                                                                                                                                 |
-| `journey.chooser.options.epigrafes-aftokollita-vitrines` | Επιγραφή & βιτρίνα                                                                                                                                     |
-| `journey.chooser.options.diafimistika-dora`              | Διαφημιστικά δώρα                                                                                                                                      |
-| `journey.chooser.options.social-media`                   | Αναρτήσεις για social media                                                                                                                            |
-| `journey.chooser.cta.none`                               | Ζητήστε προσφορά                                                                                                                                       |
-| `journey.chooser.cta.one`                                | Ζητήστε προσφορά για 1 επιλογή                                                                                                                         |
-| `journey.chooser.cta.many`                               | Ζητήστε προσφορά για {count} επιλογές                                                                                                                  |
-| `journey.chooser.status.none`                            | Δεν έχετε σημειώσει κάτι ακόμη.                                                                                                                        |
-| `journey.chooser.status.one`                             | Σημειώσατε 1 επιλογή.                                                                                                                                  |
-| `journey.chooser.status.many`                            | Σημειώσατε {count} επιλογές.                                                                                                                           |
-| `journey.promises[0]`                                    | Σχεδιασμός και εκτύπωση στο ίδιο μέρος, χωρίς να τρέχετε αλλού.                                                                                        |
-| `journey.promises[1]`                                    | Βλέπετε δοκίμιο και εγκρίνετε πριν τυπωθεί οτιδήποτε.                                                                                                  |
-| `journey.promises[2]`                                    | Προσωπική εξυπηρέτηση, από την πρώτη ιδέα ως την παράδοση.                                                                                             |
-| `work.label`                                             | Έργα                                                                                                                                                   |
-| `work.heading`                                           | Δείγματα δουλειάς                                                                                                                                      |
-| `work.allLink`                                           | Δείτε όλα τα έργα                                                                                                                                      |
-| `values.label`                                           | Οι αξίες μας                                                                                                                                           |
-| `contactBand.label`                                      | Επικοινωνία                                                                                                                                            |
-| `contactBand.heading`                                    | Έχετε μια ιδέα; Ας της δώσουμε μορφή.                                                                                                                  |
-| `contactBand.text`                                       | Πείτε μας τι χρειάζεστε και θα σας προτείνουμε τη λύση που σας ταιριάζει, με μια προσφορά στα μέτρα σας.                                               |
+| Key                                                      | Text                                                                                                                                                       |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `metaTitle`                                              | Διαφημιστικό γραφείο & εκτυπώσεις                                                                                                                          |
+| `metaDescription`                                        | Διαφημιστικό γραφείο ΔΙΑΤΥΠΩΣΗ: ψηφιακές και offset εκτυπώσεις, κάρτες, banners, επιγραφές, στάμπες σε μπλουζάκια και διαφημιστικά δώρα. Ζητήστε προσφορά. |
+| `services.label`                                         | Τι κάνουμε                                                                                                                                                 |
+| `services.allLink`                                       | Δείτε όλες τις υπηρεσίες                                                                                                                                   |
+| `journey.label`                                          | Από την ιδέα στο αποτέλεσμα                                                                                                                                |
+| `journey.heading`                                        | Μία ιδέα. Παντού όπου σας βλέπουν.                                                                                                                         |
+| `journey.lead`                                           | Σχεδιάζουμε το σήμα σας και το τυπώνουμε σε ό,τι χρειάζεστε, από την κάρτα στην τσέπη ως τη βιτρίνα στον δρόμο. Ένας συνεργάτης, η ίδια εικόνα παντού.     |
+| `journey.sampleName`                                     | Η επωνυμία σας                                                                                                                                             |
+| `journey.view.sketch`                                    | Σκίτσο                                                                                                                                                     |
+| `journey.view.product`                                   | Προϊόν                                                                                                                                                     |
+| `journey.steps.idea.title`                               | Η ιδέα σας                                                                                                                                                 |
+| `journey.steps.idea.text`                                | Ξεκινάμε από αυτό που έχετε στο μυαλό σας: ένα πρόχειρο σκίτσο, μια φωτογραφία ή απλώς μια κουβέντα.                                                       |
+| `journey.steps.mark.title`                               | Γίνεται σήμα                                                                                                                                               |
+| `journey.steps.mark.text`                                | Το δουλεύουμε μαζί σας μέχρι να γίνει ένα καθαρό σήμα που νιώθετε δικό σας, έτοιμο για χαρτί, ύφασμα και οθόνη.                                            |
+| `journey.steps.card.title`                               | Στην κάρτα σας                                                                                                                                             |
+| `journey.steps.card.text`                                | Η κάρτα που δίνετε στη χειραψία, το φυλλάδιο, ο κατάλογος, όλα τυπωμένα στο χαρτί που τους ταιριάζει.                                                      |
+| `journey.steps.shirt.title`                              | Πάνω στην ομάδα σας                                                                                                                                        |
+| `journey.steps.shirt.text`                               | Μπλουζάκια και ρούχα εργασίας με το σήμα σας, ώστε η ομάδα σας να ξεχωρίζει όπου κι αν βρίσκεται.                                                          |
+| `journey.steps.sign.title`                               | Στη βιτρίνα σας                                                                                                                                            |
+| `journey.steps.sign.text`                                | Η επιγραφή και η βιτρίνα λένε ποιοι είστε σε όποιον περνά από τον δρόμο, πριν ακόμη μπει μέσα.                                                             |
+| `journey.steps.gift.title`                               | Στα χέρια των πελατών σας                                                                                                                                  |
+| `journey.steps.gift.text`                                | Μια κούπα ή ένα σημειωματάριο με το σήμα σας κρατά το όνομά σας στο γραφείο τους, κάθε μέρα.                                                               |
+| `journey.steps.social.title`                             | Στην οθόνη τους                                                                                                                                            |
+| `journey.steps.social.text`                              | Αναρτήσεις και stories με την ίδια εικόνα, για να σας αναγνωρίζουν αμέσως και στο κινητό.                                                                  |
+| `journey.chooser.heading`                                | Τι θα θέλατε να φτιάξουμε;                                                                                                                                 |
+| `journey.chooser.hint`                                   | Σημειώστε ό,τι σας ενδιαφέρει. Θα το βρείτε ήδη επιλεγμένο στη φόρμα προσφοράς.                                                                            |
+| `journey.chooser.options.grafistikos-sxediasmos`         | Λογότυπο                                                                                                                                                   |
+| `journey.chooser.options.kartes-fylladia-entypa`         | Κάρτες & έντυπα                                                                                                                                            |
+| `journey.chooser.options.mplouzakia-rouxismos`           | Μπλουζάκια & ρουχισμός                                                                                                                                     |
+| `journey.chooser.options.epigrafes-aftokollita-vitrines` | Επιγραφή & βιτρίνα                                                                                                                                         |
+| `journey.chooser.options.diafimistika-dora`              | Διαφημιστικά δώρα                                                                                                                                          |
+| `journey.chooser.options.social-media`                   | Αναρτήσεις για social media                                                                                                                                |
+| `journey.chooser.cta.none`                               | Ζητήστε προσφορά                                                                                                                                           |
+| `journey.chooser.cta.one`                                | Ζητήστε προσφορά για 1 επιλογή                                                                                                                             |
+| `journey.chooser.cta.many`                               | Ζητήστε προσφορά για {count} επιλογές                                                                                                                      |
+| `journey.chooser.status.none`                            | Δεν έχετε σημειώσει κάτι ακόμη.                                                                                                                            |
+| `journey.chooser.status.one`                             | Σημειώσατε 1 επιλογή.                                                                                                                                      |
+| `journey.chooser.status.many`                            | Σημειώσατε {count} επιλογές.                                                                                                                               |
+| `journey.promises[0]`                                    | Σχεδιασμός και εκτύπωση στο ίδιο μέρος, χωρίς να τρέχετε αλλού.                                                                                            |
+| `journey.promises[1]`                                    | Βλέπετε δοκίμιο και εγκρίνετε πριν τυπωθεί οτιδήποτε.                                                                                                      |
+| `journey.promises[2]`                                    | Προσωπική εξυπηρέτηση, από την πρώτη ιδέα ως την παράδοση.                                                                                                 |
+| `work.label`                                             | Έργα                                                                                                                                                       |
+| `work.heading`                                           | Δείγματα δουλειάς                                                                                                                                          |
+| `work.allLink`                                           | Δείτε όλα τα έργα                                                                                                                                          |
+| `values.label`                                           | Οι αξίες μας                                                                                                                                               |
+| `contactBand.label`                                      | Επικοινωνία                                                                                                                                                |
+| `contactBand.heading`                                    | Έχετε μια ιδέα; Ας της δώσουμε μορφή.                                                                                                                      |
+| `contactBand.text`                                       | Πείτε μας τι χρειάζεστε και θα σας προτείνουμε τη λύση που σας ταιριάζει, με μια προσφορά στα μέτρα σας.                                                   |
 
 ## `src/i18n/pages/notfound.ts` — `notfoundText`
 
