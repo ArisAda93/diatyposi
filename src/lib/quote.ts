@@ -2,7 +2,8 @@
  * Quote request logic: validation, service pre-selection from the URL, the app the visitor chose
  * to send with, and the message they send to the shop with their own email, Viber or WhatsApp app
  * (subject, body and the links that open each app with it prefilled). The site itself sends
- * nothing: there is no network request and no form service. Nothing here touches the DOM
+ * nothing: there is no network request of its own and no form service (the WhatsApp link is
+ * WhatsApp's wa.me address, which the visitor's browser opens). Nothing here touches the DOM
  * (src/scripts/quote-form.ts does), so it is unit-tested in tests/quote.test.ts.
  *
  * Relative imports only: vitest runs without the `~` alias.

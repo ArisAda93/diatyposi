@@ -153,12 +153,13 @@ const text = contactText.el.result.ready;
       max-width: 52ch;
       margin-top: 0.875rem;
     }
-    /* The "text copied" note after Viber or WhatsApp opens; takes no room while empty. */
+    /* The "text copied" note after Viber or WhatsApp opens. While empty it takes no room but stays
+       rendered, so the status region is in the accessibility tree and its text gets announced. */
     .result-chat-hint {
       font-weight: 600;
     }
     .result-chat-hint:empty {
-      display: none;
+      margin-top: 0;
     }
 
     /* The files note: a paperclip beside the text. */
