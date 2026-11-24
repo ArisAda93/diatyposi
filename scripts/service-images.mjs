@@ -80,8 +80,9 @@ const IMAGES = [
 A finished promotional order for a neighbourhood bakery on a sunlit wooden table: three white
 ceramic mugs printed with a dark red round mark of a wheat ear and the single word "ΦΟΥΡΝΟΣ", one
 still half in crumpled packing paper in an open cardboard box; a natural cotton tote bag with the
-same mark lying folded in front; a few red pens with the small wheat mark. Morning sun from the
-side, crisp shadows, a bright window softly blurred behind. Three-quarter view, close-medium.`,
+same mark lying folded in front; two plain glossy red pens with nothing printed on them at all.
+Morning sun from the side, crisp shadows, a bright window softly blurred behind. Three-quarter
+view, close-medium.`,
   },
   {
     file: 'dora-02.jpg',
@@ -149,43 +150,50 @@ vivid clean colours.`,
 Printed logo proposals for a honey shop on a round marble café table in bright morning sun: three
 A4 sheets each showing a simple bee mark in a different version, no words, a row of paper colour
 swatches in honey, amber and black, a pencil, an iced coffee with a straw at the edge of the frame.
-Plane-tree shade and a square softly blurred behind. Angled top-down view, crisp paper texture.`,
+Behind, softly blurred, only plane-tree leaves and a plain sunlit wall, with no signs. Angled
+top-down view, crisp paper texture.`,
   },
   // Banners, αφίσες & μουσαμάδες
   {
     file: 'banners-01.jpg',
     prompt: `
-A freshly hung large vinyl banner on the front of an ordinary Greek concrete building above a shop
-entrance, bright morning: bright yellow with a bold black dumbbell mark and the single word
-"ΓΥΜΝΑΣΤΗΡΙΟ", tied at the corners with cable ties through metal eyelets, the vinyl slightly
-rippled in the breeze. A balcony railing and a striped awning at the top edge, blue sky. Shot from
-the pavement at a slight upward angle, the banner filling most of the frame.`,
+A freshly hung large vinyl banner on the plain concrete front of an ordinary Greek apartment
+building, photographed from the pavement looking up so the frame holds only the banner, the
+concrete wall around it, a balcony railing with a striped awning above and blue sky; the shop
+entrance and ground floor are out of frame. The banner is bright yellow with a bold black dumbbell
+mark and the single word "ΓΥΜΝΑΣΤΗΡΙΟ", tied at the corners with cable ties through metal eyelets,
+slightly rippled in the breeze. No other signs, notices or objects with writing. Bright morning.`,
   },
   {
     file: 'banners-02.jpg',
     prompt: `
-A roll-up banner standing in a sunlit village square for a local wine festival: the banner shows a
-vivid photo of vineyards and mountains and a simple grape mark, with no words or letters at all on the banner, on its aluminium base on
-the paving stones, next to a wooden crate of wine bottles. Plane trees and strings of bulbs softly
-blurred behind. Eye-level shot, the banner filling most of the frame, bright late-afternoon light.`,
+A roll-up banner standing in a sunlit village square for a local wine festival, built correctly:
+the graphic rises straight out of its aluminium cassette base on the paving stones and hangs from
+a top rail held by a single pole hidden directly behind the graphic, nothing standing beside it.
+The graphic shows a vivid photo of vineyards and mountains above a deep red band with a simple
+white grape mark, no words or letters. A wooden crate of wine bottles with plain labels beside the
+base; plane trees and strings of bulbs softly blurred behind. Eye-level shot, bright late
+afternoon.`,
   },
   // Επιγραφές, αυτοκόλλητα & βιτρίνες
   {
     file: 'epigrafes-01.jpg',
     prompt: `
-A new shop sign and window graphics for a traditional barber shop on a sunny old-town street: a
-flat, non-illuminated fascia sign in deep green with the single word "ΚΟΥΡΕΙΟ" in cream capitals
-and a simple scissors mark, above a shop window carrying the same mark as a white cut-vinyl
-sticker. Ochre wall, a pot of basil by the door. Shot from across the street at a slight angle, the
-sign and window filling most of the frame, bright morning light, blue sky at the top edge.`,
+A new shop sign and window graphic for a traditional barber shop on a sunny old-town street: a
+flat, non-illuminated fascia sign in deep green with the single word "ΚΟΥΡΕΙΟ" (seven letters: Κ-Ο-Υ-Ρ-Ε-Ι-Ο, a single Κ) in cream capitals
+and a simple scissors mark, above a shop window carrying the same scissors mark as a white
+cut-vinyl sticker; behind the glass a plain white blind is pulled all the way down, so nothing of
+the inside is visible. Ochre wall, a pot of basil by the door. Shot from across the street at a
+slight angle, bright morning light, blue sky at the top edge.`,
   },
   {
     file: 'epigrafes-02.jpg',
     prompt: `
 Close view of fresh cut-vinyl lettering on the side door of a white van in bright midday sun: the
 dark blue word "ΥΔΡΑΥΛΙΚΟΣ" next to a simple water-drop mark, the transfer tape still half peeled
-back at one corner, a felt-edged squeegee resting on the door step. Olive trees softly blurred in
-the background reflections. Three-quarter close-medium shot, crisp vinyl edges.`,
+back at one corner, a felt-edged squeegee resting on the door step. The van's window glass is
+clean and clear with no stickers, decals or labels, only soft reflections of olive trees.
+Three-quarter close-medium shot, crisp vinyl edges.`,
   },
   {
     file: 'aftokollita-01.jpg',
@@ -209,39 +217,41 @@ morning sun, a tiled wall softly blurred behind. Close-medium shot.`,
   {
     file: 'social-02.jpg',
     prompt: `
-A set of social media designs for a neighbourhood bakery on a sunny marble table: a laptop screen
-shows a grid of nine colourful square posts and a phone beside it shows one tall story; every
-design is only a close food photo (koulouria, a spinach pie, a loaf of bread) on bold flat colour
-shapes, with no logo, badge, caption, word or letter anywhere on it. The same nine designs printed
-as small square cards are fanned out in front, also without any logo or text. A koulouri on a
-napkin at the edge. Bright daylight, close-medium angled view focused on the cards and screens.`,
+A set of social media designs for a neighbourhood bakery on a sunny marble table: a smartphone
+lying flat shows one tall story design filling the whole screen, a close food photo of koulouria
+on bold flat colour shapes, with no interface, icons or text; in front, nine square cards with
+the same post designs (koulouria, a spinach pie, a loaf of bread on flat colour shapes) are fanned
+out, with no logo, word or letter on any of them. No laptop. A koulouri on a napkin and a cup of
+coffee at the edge. Bright daylight, close-medium angled view.`,
   },
   // Ψηφιακές & offset εκτυπώσεις
   {
     file: 'ektyposeis-01.jpg',
     prompt: `
-Close view of freshly printed offset sheets stacked on the delivery of a printing press: each
-large sheet carries eight postcards of empty Greek landscapes (a deserted blue bay, a white
-chapel, an olive grove, a quiet harbour with moored boats), photos only, with no people, swimmers
-or figures anywhere in them, separated by thin white gutters and corner crop marks, with a CMYK
-colour bar along the edge and no text anywhere; a small loupe rests on the top sheet, ink rollers
-glinting out of focus behind. Bright clean light, saturated ink colours. No brand names.`,
+Macro close-up of the inking unit of an offset printing press in bright daylight: a row of glossy
+rollers coated in thick, vivid cyan, magenta and yellow ink, the ink's fine orange-peel texture
+and a few drips catching the light, a steel ink knife resting across an open plain metal ink tin
+full of magenta ink. Only metal, rubber rollers and ink in the frame: no paper, no sheets, no
+cloth, no labels, no writing of any kind. Rich saturated colour, crisp detail, shallow depth of
+field. No brand names.`,
   },
   {
     file: 'ektyposeis-02.jpg',
     prompt: `
-Close view of a large poster emerging from a wide-format inkjet printer: a vivid photo of a Greek
-harbour with fishing boats and blue sea, no text, sliding over the front platen with a slight
-sheen and curling down, the print carriage blurred mid-pass at the top of the frame. Bright clean
-light, rich colour. No brand names, labels, logos or stickers on the machine or anywhere else.`,
+Close view of a large poster emerging from a wide-format inkjet printer: a vivid photo of a single
+white and blue wooden fishing boat floating on clear turquoise water seen from above, its shadow
+on the sandy sea bed, nothing else in the photo, sliding over the front platen with a slight sheen
+and curling down, the print carriage blurred mid-pass at the top of the frame. No text anywhere.
+Bright clean light. No brand names, labels, logos or stickers.`,
   },
   {
     file: 'ektyposeis-03.jpg',
     prompt: `
-Freshly printed and trimmed A5 flyers for a summer concert, a neat stack and a few fanned out, the
-flyers showing a photo of a bouzouki on a stage and a plain red colour block, with no letters or text, next
-to a fan of paper samples in different weights and finishes (matte, gloss, textured cream) and a
-printed colour test strip with swatches. Bright daylight on a white worktop. Angled close-medium
+Freshly printed and trimmed A5 flyers for a summer concert, a neat stack and a few fanned out:
+each flyer shows a photo of a bouzouki lying alone on an empty stage under blue spotlights, with
+no musician or people, next to a plain red colour block, and no letters or text. Beside them a
+fan of plain paper samples in different weights and finishes (matte white, gloss, textured
+cream) with nothing printed on them. Bright daylight on a white worktop. Angled close-medium
 shot.`,
   },
   // Κάρτες, φυλλάδια & έντυπα
@@ -256,11 +266,11 @@ door softly blurred behind. Close shot at a low angle, crisp card edges and pape
   {
     file: 'kartes-02.jpg',
     prompt: `
-Freshly printed folded menus on a village taverna table in bright late-morning shade: cream card
-covers with a simple dark blue goat mark and the single word "ΜΕΝΟΥ", one menu open showing
-colour photos of dishes only, with no letters or text of any kind, on a paper tablecloth clipped to the table, with a
-basket of bread and a carafe of water. Vine leaves and sunny olive groves softly blurred behind.
-Close-medium shot.`,
+Freshly printed menus on a village taverna table in bright late-morning shade: two closed folded
+menus, one standing and one lying flat, cream card covers with a simple dark blue goat mark and
+the single word "ΜΕΝΟΥ"; no menu is open. A paper tablecloth clipped to the table, a basket of
+bread, a carafe of water. Vine leaves and sunny olive groves softly blurred behind. Close-medium
+shot.`,
   },
   {
     file: 'entypa-01.jpg',
