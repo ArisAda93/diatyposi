@@ -10,8 +10,11 @@ with the label “Ενδεικτική εικόνα”. They were generated on 2
 The prompt for each image is in `scripts/service-images.mjs`; to regenerate one, run
 `OPENROUTER_API_KEY=… node scripts/service-images.mjs --only <file>` (each image costs money).
 The script centre-crops each image to 4:3, resizes it to 2000 × 1500 and re-encodes it as an sRGB
-JPEG (mozjpeg, quality 86) with all metadata removed. Generated fine print was removed by cloning the plain surface beside it in two images: two specks on the
-flyer in `entypa-01.jpg` and two marks on the inked sheet in `ektyposeis-01.jpg`. Each service uses two of them: `image` on the
+JPEG (mozjpeg, quality 86) with all metadata removed. Small generated text was retouched out in four images: two specks on the flyer in `entypa-01.jpg`
+and two marks on the inked sheet in `ektyposeis-01.jpg` (cloned from the plain surface beside
+them), a glass maker's mark on the van window in `epigrafes-02.jpg` (cloned from the blurred trees
+beside it), and the tiny numerals on the printer's front ruler in `ektyposeis-02.jpg` (softened
+with a feathered blur, like foreground depth of field). Each service uses two of them: `image` on the
 home page and /ypiresies/, `pageImage` on its own page.
 
 | File                   | Service (slug)                   | Subject                                                                 |
@@ -35,7 +38,7 @@ home page and /ypiresies/, `pageImage` on its own page.
 | `ektyposeis-02.jpg`    | `psifiakes-offset-ektyposeis`    | Poster of a fishing boat on turquoise water from a wide-format printer  |
 | `ektyposeis-03.jpg`    | `psifiakes-offset-ektyposeis`    | Concert flyers (a bouzouki on an empty stage) with paper samples        |
 | `kartes-01.jpg`        | `kartes-fylladia-entypa`         | Garage business cards with car keys                                     |
-| `kartes-02.jpg`        | `kartes-fylladia-entypa`         | Two closed printed menus on a village taverna table                     |
+| `kartes-02.jpg`        | `kartes-fylladia-entypa`         | Two closed printed menus with a jug mark on a village taverna table     |
 | `entypa-01.jpg`        | `kartes-fylladia-entypa`         | A stack of dance school flyers showing traditional dance shoes          |
 | `prosklitiria-01.jpg`  | `prosklitiria-kartes`            | Wedding invitation suite on linen                                       |
 | `prosklitiria-02.jpg`  | `prosklitiria-kartes`            | Baptism place card, menu and favour                                     |

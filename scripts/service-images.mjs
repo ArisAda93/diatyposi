@@ -267,7 +267,8 @@ door softly blurred behind. Close shot at a low angle, crisp card edges and pape
     file: 'kartes-02.jpg',
     prompt: `
 Freshly printed menus on a village taverna table in bright late-morning shade: two closed folded
-menus, one standing and one lying flat, cream card covers with a simple dark blue goat mark and
+menus, one standing and one lying flat, cream card covers with a simple dark blue mark of a
+single clay wine jug and
 the single word "ΜΕΝΟΥ"; no menu is open. A paper tablecloth clipped to the table, a basket of
 bread, a carafe of water. Vine leaves and sunny olive groves softly blurred behind. Close-medium
 shot.`,
