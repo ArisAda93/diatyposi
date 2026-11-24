@@ -1,7 +1,6 @@
 /**
- * Strings for the contact page (/epikoinonia/), the quote form, its result panels (sent, not
- * sent) and the composed message. New copy, not the owner's wording: listed in CONTENT_REVIEW.md
- * for review.
+ * Strings for the contact page (/epikoinonia/), the quote form, its "ready" panel and the
+ * composed message. New copy, not the owner's wording: listed in CONTENT_REVIEW.md for review.
  *
  * No imports on purpose: src/lib/quote.ts reads this file and is unit-tested without the `~` alias.
  */
@@ -16,7 +15,7 @@ export const contactText = {
       label: 'Επικοινωνία',
       title: 'Επικοινωνία και αίτημα προσφοράς',
       intro:
-        'Πείτε μας τι έχετε στο μυαλό σας. Συμπληρώστε τη φόρμα και το αίτημά σας έρχεται αμέσως σε εμάς. Μπορείτε επίσης να μας τηλεφωνήσετε, να μας στείλετε μήνυμα ή να περάσετε από το κατάστημα.',
+        'Πείτε μας τι έχετε στο μυαλό σας. Συμπληρώστε τη φόρμα και στείλτε μας το αίτημα με το email, το Viber ή το WhatsApp σας. Μπορείτε επίσης να μας τηλεφωνήσετε ή να περάσετε από το κατάστημα.',
     },
     details: {
       heading: 'Στοιχεία επικοινωνίας',
@@ -32,7 +31,7 @@ export const contactText = {
     form: {
       ticket: 'Δελτίο προσφοράς',
       intro:
-        'Πείτε μας τι χρειάζεστε. Με την αποστολή, το αίτημά σας έρχεται κατευθείαν στο email μας και σας απαντάμε το συντομότερο.',
+        'Πείτε μας τι χρειάζεστε. Η φόρμα ετοιμάζει το μήνυμα, εσείς το στέλνετε με την εφαρμογή σας και σας απαντάμε το συντομότερο.',
       requiredNote: 'Όλα τα πεδία χρειάζονται, εκτός από όσα γράφουν «προαιρετικό».',
       optional: '(προαιρετικό)',
       /** Headings of the form's two parts (numbered 01 and 02 on the ticket). */
@@ -47,21 +46,19 @@ export const contactText = {
       messageLabel: 'Περιγραφή',
       messageHint:
         'Πείτε μας για τη δουλειά: διαστάσεις, χρώματα, υλικό ή ό,τι άλλο έχετε σκεφτεί.',
-      /** Label of the hidden anti-spam field (people never see it; a bot that fills it is ignored). */
-      honeyLabel: 'Αφήστε αυτό το πεδίο κενό',
-      submit: 'Αποστολή αιτήματος',
-      /** The submit (and retry) button while the request is on its way. */
-      sending: 'Αποστολή…',
-      /** Announced to screen readers while the request is on its way. */
-      sendingStatus: 'Το αίτημά σας στέλνεται. Περιμένετε λίγο.',
+      /** Label of the three send buttons (the visitor's own email, Viber or WhatsApp app). */
+      sendLegend: 'Στείλτε το με:',
+      sendEmail: 'Αποστολή με email',
+      sendViber: 'Αποστολή με Viber',
+      sendWhatsapp: 'Αποστολή με WhatsApp',
       noSend:
-        'Με την αποστολή, τα στοιχεία σας έρχονται στο email μας μέσω της υπηρεσίας FormSubmit και τα χρησιμοποιούμε μόνο για να σας απαντήσουμε.',
+        'Ο ιστότοπος δεν στέλνει και δεν κρατάει τα στοιχεία σας: ανοίγει τη δική σας εφαρμογή με το μήνυμα έτοιμο και το στέλνετε εσείς.',
       privacyLink: 'Πολιτική απορρήτου',
       summaryTitle: 'Λείπουν ή χρειάζονται διόρθωση κάποια στοιχεία:',
       errorPrefix: 'Σφάλμα:',
       noJsTitle: 'Η φόρμα χρειάζεται JavaScript',
       noJsText:
-        'Για να στείλει το αίτημα, η φόρμα χρειάζεται JavaScript. Μέχρι τότε, μπορείτε να μας βρείτε απευθείας:',
+        'Για να ετοιμάσει το μήνυμα, η φόρμα χρειάζεται JavaScript. Μέχρι τότε, μπορείτε να μας βρείτε απευθείας:',
     },
     errors: {
       nameRequired: 'Γράψτε το όνομά σας.',
@@ -75,27 +72,19 @@ export const contactText = {
       messageShort: 'Γράψτε λίγο περισσότερα, τουλάχιστον 10 χαρακτήρες.',
     },
     result: {
-      /** The request reached the shop. */
-      success: {
-        heading: 'Το μήνυμά σας στάλθηκε',
-        text: 'Ευχαριστούμε! Λάβαμε το αίτημά σας και θα σας καλέσουμε ή θα σας απαντήσουμε σύντομα.',
-        files: 'Έχετε λογότυπο, σκίτσο ή φωτογραφίες; Στείλτε τα μας με email, Viber ή WhatsApp.',
-        /** Subject of the email (and first line of the chat) that carries the files. */
-        filesSubject: 'Αρχεία για το αίτημα προσφοράς',
-        again: 'Νέο αίτημα',
-      },
-      /** Sending failed: retry, or send the same text with the visitor's own app. */
-      failure: {
-        heading: 'Το μήνυμα δεν στάλθηκε',
-        text: 'Λυπούμαστε, η αποστολή δεν ολοκληρώθηκε. Τα στοιχεία σας δεν χάθηκαν: δοκιμάστε ξανά ή στείλτε το ίδιο κείμενο με τη δική σας εφαρμογή.',
-        retry: 'Δοκιμάστε ξανά',
-        fallbackHeading: 'Ή στείλτε το με την εφαρμογή σας',
-        fallbackHint:
-          'Θα ανοίξει η εφαρμογή σας με το κείμενο συμπληρωμένο. Εκεί μπορείτε να επισυνάψετε και αρχεία.',
+      /** The message is composed and the visitor's chosen app is opening with it. */
+      ready: {
+        heading: 'Το μήνυμά σας είναι έτοιμο',
+        text: 'Ανοίγει η εφαρμογή σας με το μήνυμα συμπληρωμένο. Για να μας έρθει, πατήστε «Αποστολή» εκεί.',
+        files:
+          'Έχετε λογότυπο, σκίτσο ή φωτογραφίες; Επισυνάψτε τα στο ίδιο μήνυμα πριν το στείλετε.',
+        /** The fallback box: another app, or the text to copy (followed by the shop's email). */
+        notOpenedHeading: 'Δεν άνοιξε η εφαρμογή;',
+        notOpenedHint: 'Δοκιμάστε έναν άλλο τρόπο ή αντιγράψτε το κείμενο και στείλτε το εσείς στο',
         email: 'Αποστολή με email',
         viber: 'Αποστολή με Viber',
         whatsapp: 'Αποστολή με WhatsApp',
-        /** Opens the copyable text (a disclosure under the send buttons). */
+        /** Opens the copyable text (a disclosure under the send links). */
         previewSummary: 'Δείτε και αντιγράψτε το κείμενο',
         previewLabel: 'Το κείμενο του μηνύματος',
         previewHint:
@@ -104,7 +93,10 @@ export const contactText = {
         copied: 'Το κείμενο αντιγράφηκε.',
         copyFallback:
           'Το κείμενο επιλέχθηκε. Αντιγράψτε το με Ctrl+C (Cmd+C σε Mac) ή, στο κινητό, με παρατεταμένο πάτημα.',
+        /** Back to the form with everything kept. */
         edit: 'Πίσω στη φόρμα',
+        /** Clears the form and brings it back. */
+        again: 'Νέο αίτημα',
       },
     },
     message: {

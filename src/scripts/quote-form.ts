@@ -1,26 +1,26 @@
 /**
- * Quote form behaviour (contact page). Validates in the browser with Greek messages, pre-selects
- * services from ?ypiresia=, then posts the request to FormSubmit's AJAX endpoint, which emails it
- * to the shop (the root's `data-email`). While it is on its way the submit button reads
- * “Αποστολή…” (aria-busy) and a second submit is ignored. Then the form gives way to a result
- * panel, focused on its heading: “sent” (with a way to start a new request), or “not sent” after
- * a network error, a 45 s timeout, a non-2xx reply or a reply that is not success "true" (with a
- * retry and the send-it-yourself fallback: email, Viber and WhatsApp links carrying the composed
- * text, and the text to copy). A filled honeypot gets the “sent” panel and sends nothing.
+ * Quote form behaviour (contact page). Validates in the browser with Greek messages and
+ * pre-selects services from ?ypiresia=. The site sends nothing itself: the form has three submit
+ * buttons, one per app (email, Viber, WhatsApp), and a valid submit composes the request
+ * (buildQuoteMessage), gives way to the “ready” panel, focused on its heading, and opens the app
+ * of the pressed button with the message prefilled and addressed to the shop (the root's
+ * `data-email`, `data-viber`, `data-whatsapp`). Enter in a field submits with the first button,
+ * so a submit without a known button value opens email. The panel keeps the three links (to open
+ * the same or another app again), the text to copy, a way back to the form with everything kept,
+ * and a way to start a new request from a clean form.
  *
  * Markup contract (src/components/contact/QuoteForm.astro, Field.astro, SendPanel.astro):
  * - root `[data-quote]` with `data-email`, `data-viber`, `data-whatsapp`
- * - `form[data-quote-form]`; each field wrapped in `[data-field="<QuoteField>"]` holding the
- *   control (`[data-describe]` receives aria-describedby) and, for fields that can be wrong,
- *   `[data-field-error]` with `[data-error-text]` inside (the optional services have none)
+ * - `form[data-quote-form]` (novalidate); each field wrapped in `[data-field="<QuoteField>"]`
+ *   holding the control (`[data-describe]` receives aria-describedby) and, for fields that can be
+ *   wrong, `[data-field-error]` with `[data-error-text]` inside (the optional services have none)
  * - `[data-error-summary]` (role="alert", tabindex="-1") with `ul[data-error-list]`
- * - `input[data-honeypot]`; `button[data-submit]` with `[data-submit-label]`
- * - `[data-submit-status]` (role="status", outside the form and the panels)
- * - `[data-result="success"]` with `[data-result-heading]`, `a[data-files="email|viber|whatsapp"]`
- *   and `button[data-again]`
- * - `[data-result="failure"]` with `[data-result-heading]`, `button[data-retry]` (with
- *   `[data-submit-label]`), `a[data-send="email|viber|whatsapp"]`, `textarea[data-preview]`,
- *   `button[data-copy]`, `[data-copy-status]` and `button[data-edit]`
+ * - three submit buttons in the form, in this order: `button[type="submit"][name="via"]` with
+ *   `value` and `data-via` set to "email", "viber" and "whatsapp"
+ * - `[data-result="ready"]` (hidden, a sibling of the form inside the root) with
+ *   `[data-result-heading]` (tabindex="-1"), `a[data-send="email|viber|whatsapp"]`,
+ *   `textarea[data-preview]`, `button[data-copy]`, `[data-copy-status]`, `button[data-edit]` and
+ *   `button[data-again]`
  *
  * State hooks for the CSS: `data-invalid` on a field wrapper while it shows an error (set only
  * after a submit), `data-valid` once a filled-in field passes the same checks (set when the
@@ -33,21 +33,16 @@
  * (`enterkeyhint="next"`) moves on to the next field instead of submitting the form.
  */
 import {
-  buildFilesLinks,
   buildQuoteMessage,
   buildSendLinks,
-  buildSubmission,
   chatText,
   firstInvalidField,
-  formSubmitEndpoint,
   isoDate,
-  isSubmitSuccess,
   nextQuoteField,
   parsePreselect,
   QUOTE_FIELDS,
-  SUBMIT_TIMEOUT_MS,
+  sendChannel,
   validateQuote,
-  type FormSubmitPayload,
   type QuoteData,
   type QuoteErrors,
   type QuoteField,
@@ -91,72 +86,28 @@ const announce = (region: HTMLElement, message: string): void => {
   }, 60);
 };
 
-/**
- * Posts the request to FormSubmit. True only when FormSubmit confirms it (isSubmitSuccess); a
- * network error, the timeout (the abort also cancels reading the reply) or a reply that is not
- * JSON all count as not sent, and the caller shows the failure panel with the fallback.
- */
-const deliver = async (endpoint: string, payload: FormSubmitPayload): Promise<boolean> => {
-  const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), SUBMIT_TIMEOUT_MS);
-  try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-    const json: unknown = await response.json().catch(() => null);
-    return isSubmitSuccess(response.ok, json);
-  } catch {
-    // Offline, blocked, DNS or the timeout's abort: not sent.
-    return false;
-  } finally {
-    window.clearTimeout(timer);
-  }
-};
-
 const initQuote = (root: HTMLElement): void => {
   const form = root.querySelector<HTMLFormElement>('[data-quote-form]');
   const summary = root.querySelector<HTMLElement>('[data-error-summary]');
   const summaryList = root.querySelector<HTMLUListElement>('[data-error-list]');
-  const honeypot = root.querySelector<HTMLInputElement>('[data-honeypot]');
-  const submitButton = root.querySelector<HTMLButtonElement>('[data-submit]');
-  const submitStatus = root.querySelector<HTMLElement>('[data-submit-status]');
-  const success = root.querySelector<HTMLElement>('[data-result="success"]');
-  const failure = root.querySelector<HTMLElement>('[data-result="failure"]');
-  const successHeading = success?.querySelector<HTMLElement>('[data-result-heading]');
-  const failureHeading = failure?.querySelector<HTMLElement>('[data-result-heading]');
-  const filesEmail = success?.querySelector<HTMLAnchorElement>('[data-files="email"]');
-  const filesViber = success?.querySelector<HTMLAnchorElement>('[data-files="viber"]');
-  const filesWhatsapp = success?.querySelector<HTMLAnchorElement>('[data-files="whatsapp"]');
-  const againButton = success?.querySelector<HTMLButtonElement>('[data-again]');
-  const retryButton = failure?.querySelector<HTMLButtonElement>('[data-retry]');
-  const emailLink = failure?.querySelector<HTMLAnchorElement>('[data-send="email"]');
-  const viberLink = failure?.querySelector<HTMLAnchorElement>('[data-send="viber"]');
-  const whatsappLink = failure?.querySelector<HTMLAnchorElement>('[data-send="whatsapp"]');
-  const preview = failure?.querySelector<HTMLTextAreaElement>('[data-preview]');
-  const copyButton = failure?.querySelector<HTMLButtonElement>('[data-copy]');
-  const copyStatus = failure?.querySelector<HTMLElement>('[data-copy-status]');
-  const editButton = failure?.querySelector<HTMLButtonElement>('[data-edit]');
+  const ready = root.querySelector<HTMLElement>('[data-result="ready"]');
+  const readyHeading = ready?.querySelector<HTMLElement>('[data-result-heading]');
+  const emailLink = ready?.querySelector<HTMLAnchorElement>('a[data-send="email"]');
+  const viberLink = ready?.querySelector<HTMLAnchorElement>('a[data-send="viber"]');
+  const whatsappLink = ready?.querySelector<HTMLAnchorElement>('a[data-send="whatsapp"]');
+  const preview = ready?.querySelector<HTMLTextAreaElement>('[data-preview]');
+  const copyButton = ready?.querySelector<HTMLButtonElement>('[data-copy]');
+  const copyStatus = ready?.querySelector<HTMLElement>('[data-copy-status]');
+  const editButton = ready?.querySelector<HTMLButtonElement>('[data-edit]');
+  const againButton = ready?.querySelector<HTMLButtonElement>('[data-again]');
   const { email, viber, whatsapp } = root.dataset;
 
   if (
     !form ||
     !summary ||
     !summaryList ||
-    !honeypot ||
-    !submitButton ||
-    !submitStatus ||
-    !success ||
-    !failure ||
-    !successHeading ||
-    !failureHeading ||
-    !filesEmail ||
-    !filesViber ||
-    !filesWhatsapp ||
-    !againButton ||
-    !retryButton ||
+    !ready ||
+    !readyHeading ||
     !emailLink ||
     !viberLink ||
     !whatsappLink ||
@@ -164,6 +115,7 @@ const initQuote = (root: HTMLElement): void => {
     !copyButton ||
     !copyStatus ||
     !editButton ||
+    !againButton ||
     !email ||
     !viber ||
     !whatsapp
@@ -171,7 +123,8 @@ const initQuote = (root: HTMLElement): void => {
     return;
   }
   const contact = { email, viber, whatsapp };
-  const endpoint = formSubmitEndpoint(email);
+  /** The panel's send links by app: the visible links and the ones a submit opens. */
+  const sendLinks = { email: emailLink, viber: viberLink, whatsapp: whatsappLink };
 
   const control = (name: string): HTMLInputElement | HTMLTextAreaElement | null => {
     const el = form.elements.namedItem(name);
@@ -181,7 +134,7 @@ const initQuote = (root: HTMLElement): void => {
   const checkboxes = Array.from(
     form.querySelectorAll<HTMLInputElement>('input[type="checkbox"][name="services"]'),
   );
-  /** Service slug → full title, for the email and the fallback message. */
+  /** Service slug → full title, for the composed message. */
   const serviceTitles: Record<string, string> = Object.fromEntries(
     checkboxes.map((box): [string, string] => [box.value, box.dataset.title ?? box.value]),
   );
@@ -381,86 +334,13 @@ const initQuote = (root: HTMLElement): void => {
     markValid(field, data, collectErrors(data));
   });
 
-  /** The send buttons (submit, and retry on the failure panel) with their resting labels. */
-  const sendButtons = [submitButton, retryButton].flatMap((button) => {
-    const label = button.querySelector<HTMLElement>('[data-submit-label]');
-    return label ? [{ button, label, idle: label.textContent ?? '' }] : [];
-  });
-
-  /**
-   * Sending state. aria-disabled (not disabled) keeps focus on the pressed button, so a screen
-   * reader stays put and hears the new label; the `sending` flag is what blocks a second submit.
-   */
-  let sending = false;
-  let statusTimer = 0;
-  const setSending = (on: boolean): void => {
-    sending = on;
-    for (const { button, label, idle } of sendButtons) {
-      if (on) {
-        button.setAttribute('aria-busy', 'true');
-        button.setAttribute('aria-disabled', 'true');
-        label.textContent = text.form.sending;
-      } else {
-        button.removeAttribute('aria-busy');
-        button.removeAttribute('aria-disabled');
-        label.textContent = idle;
-      }
-    }
-    // Like announce(), but a quick reply must not leave the “sending” line behind.
-    window.clearTimeout(statusTimer);
-    submitStatus.textContent = '';
-    if (on) {
-      statusTimer = window.setTimeout(() => {
-        submitStatus.textContent = text.form.sendingStatus;
-      }, 60);
-    }
-  };
-
-  /** Hides the form and both panels, then shows one of them. */
+  /** Shows the form or the ready panel, and hides the other. */
   const show = (view: HTMLElement): void => {
-    for (const el of [form, success, failure]) el.hidden = el !== view;
-  };
-
-  const showSuccess = (data: QuoteData): void => {
-    const links = buildFilesLinks(contact, data.name);
-    filesEmail.href = links.email;
-    filesViber.href = links.viber;
-    filesWhatsapp.href = links.whatsapp;
-    show(success);
-    successHeading.focus();
-  };
-
-  const showFailure = (data: QuoteData): void => {
-    const message = buildQuoteMessage(data, serviceTitles);
-    const links = buildSendLinks(contact, message);
-    emailLink.href = links.email;
-    viberLink.href = links.viber;
-    whatsappLink.href = links.whatsapp;
-    preview.value = chatText(message);
-    copyStatus.textContent = '';
-    show(failure);
-    failureHeading.focus();
-  };
-
-  /** The request last sent, for “Δοκιμάστε ξανά”. */
-  let lastData: QuoteData | null = null;
-
-  const send = async (data: QuoteData): Promise<void> => {
-    if (sending) return;
-    lastData = data;
-    setSending(true);
-    // A filled honeypot is a bot: it sees “sent”, and nothing leaves the page.
-    const attempt = async (): Promise<boolean> =>
-      honeypot.value.trim() !== '' || deliver(endpoint, buildSubmission(data, serviceTitles));
-    // The sending state ends however the attempt ends.
-    const delivered = await attempt().finally(() => setSending(false));
-    if (delivered) showSuccess(data);
-    else showFailure(data);
+    for (const el of [form, ready]) el.hidden = el !== view;
   };
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
-    if (sending) return;
     const data = readData();
     const errors = collectErrors(data);
     for (const field of QUOTE_FIELDS) {
@@ -476,16 +356,26 @@ const initQuote = (root: HTMLElement): void => {
       if (!first || !revealField(first)) summary.focus();
       return;
     }
-    void send(data);
-  });
-
-  retryButton.addEventListener('click', () => {
-    if (lastData) void send(lastData);
+    // The pressed button names the app; Enter in a field submits with the first one (email).
+    const channel = sendChannel(
+      event.submitter instanceof HTMLButtonElement ? event.submitter.value : null,
+    );
+    const message = buildQuoteMessage(data, serviceTitles);
+    const links = buildSendLinks(contact, message);
+    emailLink.href = links.email;
+    viberLink.href = links.viber;
+    whatsappLink.href = links.whatsapp;
+    preview.value = chatText(message);
+    copyStatus.textContent = '';
+    show(ready);
+    readyHeading.focus();
+    // Open the chosen app through the panel's own link, the same one the visitor can press again;
+    // the submit's user activation lets the app link open from here.
+    sendLinks[channel].click();
   });
 
   // Back to the form with everything the visitor wrote still in place.
   editButton.addEventListener('click', () => {
-    if (sending) return;
     show(form);
     control('name')?.focus();
   });
@@ -501,7 +391,6 @@ const initQuote = (root: HTMLElement): void => {
     }
     renderSummary({});
     if (dateInput instanceof HTMLInputElement) dateInput.min = today();
-    lastData = null;
     show(form);
     control('name')?.focus();
   });
@@ -510,7 +399,7 @@ const initQuote = (root: HTMLElement): void => {
     const selectForManualCopy = (): void => {
       preview.focus();
       preview.select();
-      announce(copyStatus, text.result.failure.copyFallback);
+      announce(copyStatus, text.result.ready.copyFallback);
     };
     if (typeof navigator.clipboard?.writeText !== 'function') {
       selectForManualCopy();
@@ -518,7 +407,7 @@ const initQuote = (root: HTMLElement): void => {
     }
     navigator.clipboard
       .writeText(preview.value)
-      .then(() => announce(copyStatus, text.result.failure.copied), selectForManualCopy);
+      .then(() => announce(copyStatus, text.result.ready.copied), selectForManualCopy);
   });
 };
 

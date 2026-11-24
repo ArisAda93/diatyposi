@@ -118,11 +118,11 @@ Page header with the owner's intro. A two-column block: the photo slot (a crop-m
 
 ### Επικοινωνία
 
-Page header. Two columns: left, contact details, hours table, social links, the Google map of the shop (the whole box opens Google Maps); right, the quote form (anchor `#prosfora`). A valid submit sends the request to the owner's inbox through FormSubmit (front end only); a panel confirms it, or, if sending fails, offers Email, Viber and WhatsApp with the composed text.
+Page header. Two columns: left, contact details, hours table, social links, the Google map of the shop (the whole box opens Google Maps); right, the quote form (anchor `#prosfora`). The form ends in three send buttons (email, Viber, WhatsApp) that open the visitor's own app with the composed message prefilled to the shop; the site sends nothing itself. A valid submit shows a “ready” panel in place of the form: send it from the app, attach any files there, and, if the app did not open, the other two apps, the shop's email and the text to copy.
 
 ### Πολιτική απορρήτου
 
-Plain reading page (max 68ch), honest about what the site does (no cookies of its own, no analytics; the Google map loads with the contact page and the quote form goes through FormSubmit). Marked for the owner's legal review.
+Plain reading page (max 68ch), honest about what the site does (no cookies of its own, no analytics; the Google map loads with the contact page; the quote form sends nothing through the site, it opens the visitor's own app). Marked for the owner's legal review.
 
 ### 404
 

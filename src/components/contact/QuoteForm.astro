@@ -3,19 +3,20 @@
  * Quote request form (section #prosfora on the contact page), styled as a print-shop job ticket
  * in two numbered parts: 01 the visitor's details (name and phone side by side, email below),
  * 02 the job (optional service tiles, quantity and date side by side, the description), then the
- * submit row behind a perforation line. Validation, ?ypiresia= pre-selection and delivery run in
- * src/scripts/quote-form.ts: a valid submit posts the request to FormSubmit, which emails it to
- * the shop (site.contact.email); SendPanel.astro then shows whether it arrived and, when it did
- * not, the send-it-yourself fallback. Without JS the form is hidden and a note with the direct
- * contact links takes its place, so the section is never a dead end.
+ * submit row behind a perforation line: “Στείλτε το με:” and three submit buttons (email, the
+ * primary one, then Viber and WhatsApp), each naming the visitor's own app it will use.
+ * Validation and ?ypiresia= pre-selection run in src/scripts/quote-form.ts. The site sends
+ * nothing itself: on a valid submit the script composes the message, shows SendPanel.astro's
+ * “ready” panel in place of the form and opens the chosen app with the message prefilled to the
+ * shop (site.contact: email, Viber, WhatsApp); the visitor sends it from there. Without JS the
+ * form is hidden and a note with the direct contact links takes its place, so the section is
+ * never a dead end.
  *
  * Field feedback: focus prints a yellow plate under the field and marks its label; a field that
  * passes (`data-valid`, from the script) shows a key check; an error (`data-invalid`) gets the
  * red rule and a short shake. Service choices are drawn square checkboxes that print a key tick
- * with a plate pop. While the request is on its way the submit button (and the panel's retry
- * button, which shares the `.q-send` look) reads “Αποστολή…” and prints a small C, M, Y, K
- * strip in place of its arrow (static under reduced motion). The panel itself is the paper job
- * ticket (allowed: it is a card, not a full-width section).
+ * with a plate pop. The panel itself is the paper job ticket (allowed: it is a card, not a
+ * full-width section).
  *
  * The layout follows the form's own width (container queries), not the viewport's, because the
  * form sits in a column beside the contact details on wide screens.
@@ -230,31 +231,38 @@ const text = contactText.el.form;
         </div>
       </div>
 
-      {/* Honeypot: people never see or reach it; a bot that fills it gets a quiet “sent”. */}
-      <div class="q-hp" aria-hidden="true">
-        <label for="q-hp">{text.honeyLabel}</label>
-        <input
-          id="q-hp"
-          name="_honey"
-          type="text"
-          tabindex="-1"
-          autocomplete="off"
-          aria-hidden="true"
-          data-honeypot
-        />
-      </div>
-
       <div class="q-submit">
-        <button type="submit" class="btn btn-primary q-send" data-submit>
-          <span data-submit-label>{text.submit}</span>
-          <Icon name="arrow-right" class="q-send-arrow" />
-          <span class="q-progress" aria-hidden="true">
-            <i></i>
-            <i></i>
-            <i></i>
-            <i></i>
-          </span>
-        </button>
+        <div class="q-send-group" role="group" aria-labelledby="q-send-label">
+          <p id="q-send-label" class="q-send-label">
+            {text.sendLegend}
+          </p>
+          <div class="q-send-buttons">
+            <button type="submit" name="via" value="email" class="btn btn-primary" data-via="email">
+              <Icon name="mail" />
+              <span>{text.sendEmail}</span>
+            </button>
+            <button
+              type="submit"
+              name="via"
+              value="viber"
+              class="btn btn-secondary"
+              data-via="viber"
+            >
+              <Icon name="viber" />
+              <span>{text.sendViber}</span>
+            </button>
+            <button
+              type="submit"
+              name="via"
+              value="whatsapp"
+              class="btn btn-secondary"
+              data-via="whatsapp"
+            >
+              <Icon name="whatsapp" />
+              <span>{text.sendWhatsapp}</span>
+            </button>
+          </div>
+        </div>
         <p class="text-small muted q-submit-note">
           {`${text.noSend} `}
           <a href={routes.privacy} class="link q-privacy-link">
@@ -265,9 +273,6 @@ const text = contactText.el.form;
     </form>
 
     <SendPanel />
-
-    {/* Outside the form and the panels, so it still speaks while either is hidden. */}
-    <p class="sr-only" role="status" data-submit-status></p>
   </div>
 </section>
 
@@ -702,38 +707,44 @@ const text = contactText.el.form;
       text-underline-offset: 3px;
     }
 
-    /* Honeypot: off screen, out of the tab order and the accessibility tree. */
-    .q-hp {
-      position: absolute;
-      left: -9999px;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    /* Submit row: behind the ticket's perforation, the button and the privacy note. */
+    /* Submit row: behind the ticket's perforation, the three send buttons and the privacy note. */
     .q-submit {
       display: flex;
       flex-direction: column;
-      align-items: flex-start;
-      gap: 1rem;
+      gap: 1.25rem;
       padding-top: 1.75rem;
       border-top: 2px dashed color-mix(in srgb, var(--color-key) 40%, transparent);
     }
-    @container quote-form (min-width: 36rem) {
-      .q-submit {
-        flex-direction: row;
-        align-items: center;
-        gap: 1.5rem;
-      }
-      .q-submit .btn {
-        flex: none;
-      }
+    .q-send-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      min-width: 0;
     }
-    .q-submit .btn {
+    .q-send-label {
+      font-family: var(--font-display);
+      font-weight: 720;
+      font-size: 1.0625rem;
+      line-height: 1.3;
+    }
+    /* Stacked full width on a narrow form (icons in a column, text may wrap); a row of three
+       once the form has room for them. Each button is at least 48px tall (.btn). */
+    .q-send-buttons {
+      display: grid;
+      gap: 0.625rem;
+    }
+    .q-send-buttons .btn {
+      justify-content: flex-start;
       white-space: normal;
+    }
+    @container quote-form (min-width: 40rem) {
+      .q-send-buttons {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .q-send-buttons .btn {
+        justify-content: center;
+        padding-inline: 1rem;
+      }
     }
     .q-submit-note {
       max-width: 46ch;
@@ -752,78 +763,6 @@ const text = contactText.el.form;
       height: max(2.75rem, 100%);
       translate: 0 -50%;
     }
-
-    /* Send buttons (this form's submit and the panel's retry, SendPanel.astro). */
-    .quote :global(.q-send-arrow) {
-      transition: transform var(--dur-base) var(--ease-out);
-    }
-    @media (prefers-reduced-motion: no-preference) {
-      .quote :global(.q-send:focus-visible .q-send-arrow) {
-        transform: translateX(4px);
-      }
-    }
-    @media (prefers-reduced-motion: no-preference) and (hover: hover) {
-      .quote :global(.q-send:hover .q-send-arrow) {
-        transform: translateX(4px);
-      }
-    }
-    /* Sending (`aria-busy`, set with `aria-disabled` so the button keeps focus): full strength,
-       no lift or plates, and a C, M, Y, K strip in place of the arrow. */
-    .quote :global(.q-send[aria-busy='true']) {
-      opacity: 1;
-    }
-    .quote :global(.q-send[aria-busy='true']:focus-visible) {
-      transform: none;
-      box-shadow: none;
-    }
-    .quote :global(.q-send[aria-busy='true'] .q-send-arrow) {
-      display: none;
-    }
-    .quote :global(.q-progress) {
-      display: none;
-      flex: none;
-      align-items: center;
-      gap: 3px;
-    }
-    .quote :global(.q-send[aria-busy='true'] .q-progress) {
-      display: inline-flex;
-    }
-    .quote :global(.q-progress i) {
-      width: 0.5rem;
-      height: 0.5rem;
-      background-color: currentColor;
-    }
-    .quote :global(.q-progress i:nth-child(1)) {
-      background-color: var(--color-cyan);
-    }
-    .quote :global(.q-progress i:nth-child(2)) {
-      background-color: var(--color-magenta);
-    }
-    .quote :global(.q-progress i:nth-child(3)) {
-      background-color: var(--color-yellow);
-    }
-    /* Each plate prints out of register and snaps in, one after another, then the strip clears. */
-    @media (prefers-reduced-motion: no-preference) {
-      .quote :global(.q-progress i) {
-        animation: q-plate-print 1.4s var(--ease-out) infinite both;
-      }
-      .quote :global(.q-progress i:nth-child(2)) {
-        animation-delay: 0.14s;
-      }
-      .quote :global(.q-progress i:nth-child(3)) {
-        animation-delay: 0.28s;
-      }
-      .quote :global(.q-progress i:nth-child(4)) {
-        animation-delay: 0.42s;
-      }
-    }
-    /* Forced colours would paint the plates the button's own colour: draw them in text colour. */
-    @media (forced-colors: active) {
-      .quote :global(.q-progress i:nth-child(n)) {
-        forced-color-adjust: none;
-        background-color: ButtonText;
-      }
-    }
   }
 
   @keyframes field-shake {
@@ -839,21 +778,6 @@ const text = contactText.el.form;
     }
     70% {
       translate: -3px 0;
-    }
-  }
-  @keyframes q-plate-print {
-    0% {
-      opacity: 0.2;
-      translate: -2px -2px;
-    }
-    30%,
-    70% {
-      opacity: 1;
-      translate: 0 0;
-    }
-    100% {
-      opacity: 0.2;
-      translate: 0 0;
     }
   }
   /* The ticked box lands with a C/M plate shadow that snaps into register. */

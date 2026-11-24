@@ -1,118 +1,79 @@
 ---
 /**
- * The quote form's result, shown in place of the form after a valid submit
- * (src/scripts/quote-form.ts shows one variant and moves focus to its heading):
+ * The quote form's "ready" panel, shown in place of the form after a valid submit. The visitor
+ * pressed one of the three send buttons (QuoteForm.astro); src/scripts/quote-form.ts composes the
+ * message, fills this panel, shows it, moves focus to its heading and opens the chosen app
+ * (email, Viber or WhatsApp) with the message prefilled to the shop. The site itself sends
+ * nothing: the message goes only if the visitor sends it from their app.
  *
- * - Sent (`data-result="success"`): FormSubmit delivered the request to the shop's inbox. A short
- *   thank-you, a note that files (which the form cannot carry) go by email, Viber or WhatsApp,
- *   with those three links, and “Νέο αίτημα”, which clears the form and brings it back.
- * - Not sent (`data-result="failure"`): a polite apology, “Δοκιμάστε ξανά” (sends the same request
- *   again; it shares the submit button's sending state, `.q-send` in QuoteForm.astro), the
- *   send-it-yourself fallback (email, Viber and WhatsApp with the composed text, and the text
- *   itself to copy, behind a disclosure) and a way back to the form with everything kept.
+ * The panel says the message is ready and to press send in the app, reminds that files (which
+ * the form cannot carry) can be attached to the same message, and, in case the app did not open,
+ * offers the shop's email address, the three send links again and the composed text to copy
+ * (behind a disclosure). “Πίσω στη φόρμα” brings the form back with everything kept; “Νέο αίτημα”
+ * clears it and brings it back.
  *
  * The hrefs below are plain fallbacks; the script adds the subject and the composed text.
  * Chat links open the app itself (viber://, whatsapp://), so none opens a new tab.
  *
- * A panel prints in from the top; the sent check is stamped on with a C/M plate that snaps into
+ * The panel prints in from the top; the check is stamped on with a C/M plate that snaps into
  * register. Reduced motion: it simply appears.
  */
 import Icon from '~/components/Icon.astro';
 import { site } from '~/data/site';
-import { t } from '~/i18n/ui';
 import { contactText } from '~/i18n/pages/contact';
 import { mailtoHref, viberHref, whatsappHref } from '~/lib/links';
 
-const text = contactText.el.result;
+const text = contactText.el.result.ready;
 ---
 
-<div class="result" data-result="success" hidden>
+<div class="result" data-result="ready" hidden>
   <h3 class="h3 result-heading" tabindex="-1" data-result-heading>
     <span class="result-mark result-mark-ok" aria-hidden="true">
       <Icon name="check" size={26} />
     </span>
-    <span>{text.success.heading}</span>
+    <span>{text.heading}</span>
   </h3>
-  <p class="result-text">{text.success.text}</p>
+  <p class="result-text">{text.text}</p>
+  <p class="result-text result-files">
+    <Icon name="paperclip" size={22} />
+    <span>{text.files}</span>
+  </p>
 
   <div class="result-box">
-    <p class="result-box-text">
-      <Icon name="paperclip" size={22} />
-      <span>{text.success.files}</span>
+    <h4 class="result-subhead">{text.notOpenedHeading}</h4>
+    <p class="result-hint">
+      {`${text.notOpenedHint} `}
+      <a href={mailtoHref(site.contact.email)} class="link result-email">
+        {site.contact.email}
+      </a>
+      .
     </p>
-    <div class="send-actions">
-      <a href={mailtoHref(site.contact.email)} class="btn btn-secondary" data-files="email">
-        <Icon name="mail" />
-        <span>{t('email')}</span>
-      </a>
-      <a href={viberHref(site.contact.viber)} class="btn btn-secondary" data-files="viber">
-        <Icon name="viber" />
-        <span>{t('viber')}</span>
-      </a>
-      <a href={whatsappHref(site.contact.whatsapp)} class="btn btn-secondary" data-files="whatsapp">
-        <Icon name="whatsapp" />
-        <span>{t('whatsapp')}</span>
-      </a>
-    </div>
-  </div>
-
-  <button type="button" class="text-action" data-again>
-    <span class="link">{text.success.again}</span>
-    <Icon name="arrow-right" size={20} />
-  </button>
-</div>
-
-<div class="result" data-result="failure" hidden>
-  <h3 class="h3 result-heading" tabindex="-1" data-result-heading>
-    <span class="result-mark result-mark-fail" aria-hidden="true">
-      !
-    </span>
-    <span>{text.failure.heading}</span>
-  </h3>
-  <p class="result-text">{text.failure.text}</p>
-
-  <div class="result-retry">
-    <button type="button" class="btn btn-primary q-send" data-retry>
-      <span data-submit-label>{text.failure.retry}</span>
-      <Icon name="arrow-right" class="q-send-arrow" />
-      <span class="q-progress" aria-hidden="true">
-        <i></i>
-        <i></i>
-        <i></i>
-        <i></i>
-      </span>
-    </button>
-  </div>
-
-  <div class="result-box">
-    <h4 class="result-subhead">{text.failure.fallbackHeading}</h4>
-    <p class="result-hint">{text.failure.fallbackHint}</p>
     <div class="send-actions">
       <a href={mailtoHref(site.contact.email)} class="btn btn-secondary" data-send="email">
         <Icon name="mail" />
-        <span>{text.failure.email}</span>
+        <span>{text.email}</span>
       </a>
       <a href={viberHref(site.contact.viber)} class="btn btn-secondary" data-send="viber">
         <Icon name="viber" />
-        <span>{text.failure.viber}</span>
+        <span>{text.viber}</span>
       </a>
       <a href={whatsappHref(site.contact.whatsapp)} class="btn btn-secondary" data-send="whatsapp">
         <Icon name="whatsapp" />
-        <span>{text.failure.whatsapp}</span>
+        <span>{text.whatsapp}</span>
       </a>
     </div>
 
     <details class="result-copy">
       <summary class="result-copy-summary">
         <Icon name="chevron-right" size={20} class="result-copy-chevron" />
-        <span>{text.failure.previewSummary}</span>
+        <span>{text.previewSummary}</span>
       </summary>
       <div class="send-preview">
         <label for="q-preview" class="field-label">
-          {text.failure.previewLabel}
+          {text.previewLabel}
         </label>
         <p id="q-preview-hint" class="result-hint">
-          {text.failure.previewHint}
+          {text.previewHint}
         </p>
         <textarea
           id="q-preview"
@@ -125,7 +86,7 @@ const text = contactText.el.result;
         <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
           <button type="button" class="btn btn-secondary" data-copy>
             <Icon name="copy" />
-            <span>{text.failure.copy}</span>
+            <span>{text.copy}</span>
           </button>
           <p class="text-small" role="status" data-copy-status></p>
         </div>
@@ -133,10 +94,16 @@ const text = contactText.el.result;
     </details>
   </div>
 
-  <button type="button" class="text-action text-action-back" data-edit>
-    <Icon name="chevron-left" size={20} />
-    <span class="link">{text.failure.edit}</span>
-  </button>
+  <div class="result-actions">
+    <button type="button" class="text-action text-action-back" data-edit>
+      <Icon name="chevron-left" size={20} />
+      <span class="link">{text.edit}</span>
+    </button>
+    <button type="button" class="text-action" data-again>
+      <span class="link">{text.again}</span>
+      <Icon name="arrow-right" size={20} />
+    </button>
+  </div>
 </div>
 
 <style>
@@ -152,7 +119,7 @@ const text = contactText.el.result;
       gap: 0.875rem;
       outline-offset: 6px;
     }
-    /* The result's stamp: a square plate, yellow with an ink check or red with a paper “!”. */
+    /* The panel's stamp: a square yellow plate with an ink check. */
     .result-mark {
       flex: none;
       display: grid;
@@ -170,16 +137,23 @@ const text = contactText.el.result;
       /* Ink on yellow in both themes. */
       color: var(--ink-fixed);
     }
-    .result-mark-fail {
-      background: var(--color-red);
-      color: var(--color-paper);
-    }
     .result-text {
       max-width: 52ch;
       margin-top: 0.875rem;
     }
 
-    /* A paper box with a key rule: the files note, or the send-it-yourself fallback. */
+    /* The files note: a paperclip beside the text. */
+    .result-files {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+    }
+    .result-files :global(svg) {
+      flex: none;
+      margin-top: 0.1em;
+    }
+
+    /* A paper box with a key rule: the fallback when the app did not open. */
     .result-box {
       display: flex;
       flex-direction: column;
@@ -188,15 +162,6 @@ const text = contactText.el.result;
       padding: 1.125rem 1.125rem 1.25rem 1.25rem;
       background-color: var(--color-paper);
       border-left: 4px solid var(--color-key);
-    }
-    .result-box-text {
-      display: flex;
-      gap: 0.75rem;
-      align-items: flex-start;
-    }
-    .result-box-text :global(svg) {
-      flex: none;
-      margin-top: 0.1em;
     }
     .result-subhead {
       font-family: var(--font-display);
@@ -209,11 +174,20 @@ const text = contactText.el.result;
       line-height: var(--text-small--line-height);
       color: var(--color-muted);
     }
-    .result-retry {
-      margin-top: 1.5rem;
+    /* The shop's address keeps the link look but takes a hit area at least 44px tall, centred on
+       the link whatever its line box rounds to; a long address may break anywhere. */
+    .result-email {
+      position: relative;
+      overflow-wrap: anywhere;
     }
-    .result-retry .btn {
-      white-space: normal;
+    .result-email::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      right: -0.25rem;
+      left: -0.25rem;
+      height: max(2.75rem, 100%);
+      translate: 0 -50%;
     }
 
     .send-actions {
@@ -287,14 +261,19 @@ const text = contactText.el.result;
       }
     }
 
-    /* Quiet text actions: “Νέο αίτημα” and “Πίσω στη φόρμα” (44px tall). */
+    /* Quiet text actions: “Πίσω στη φόρμα” and “Νέο αίτημα” (44px tall), side by side when they
+       fit. */
+    .result-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem 1.75rem;
+      margin-top: 1.5rem;
+    }
     .text-action {
       display: inline-flex;
       align-items: center;
       gap: 0.375rem;
-      align-self: flex-start;
       min-height: 2.75rem;
-      margin-top: 1.5rem;
       font-family: var(--font-display);
       font-weight: 700;
       cursor: pointer;

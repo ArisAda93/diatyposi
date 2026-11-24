@@ -1,19 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
-  buildFilesLinks,
   buildQuoteMessage,
   buildSendLinks,
-  buildSubmission,
   chatText,
   firstInvalidField,
   formatDateEl,
-  formSubmitEndpoint,
   isoDate,
-  isSubmitSuccess,
   isValidEmail,
   isValidPhone,
   nextQuoteField,
   parsePreselect,
+  SEND_CHANNELS,
+  sendChannel,
   validateQuote,
   type QuoteData,
 } from '../src/lib/quote';
@@ -314,147 +312,16 @@ describe('buildSendLinks', () => {
   });
 });
 
-describe('buildFilesLinks', () => {
-  const contact = {
-    email: 'info@diatyposi.example',
-    viber: '306900000000',
-    whatsapp: '+30 690 000 0000',
-  };
-  const filesSubject = contactText.el.result.success.filesSubject;
-
-  it('opens the email and the chats with the files subject and the name', () => {
-    const subject = `${filesSubject} – Μαρία`;
-    const links = buildFilesLinks(contact, '  Μαρία ');
-    expect(links.email).toBe(
-      `mailto:info@diatyposi.example?subject=${encodeURIComponent(subject)}`,
-    );
-    expect(links.viber).toBe(
-      `viber://chat?number=%2B306900000000&draft=${encodeURIComponent(subject)}`,
-    );
-    expect(links.whatsapp).toBe(
-      `whatsapp://send?phone=306900000000&text=${encodeURIComponent(subject)}`,
-    );
+describe('sendChannel', () => {
+  it('lists the apps in the order the form offers them', () => {
+    expect(SEND_CHANNELS).toEqual(['email', 'viber', 'whatsapp']);
   });
 
-  it('uses the subject alone without a name', () => {
-    expect(buildFilesLinks(contact, ' ').email).toBe(
-      `mailto:info@diatyposi.example?subject=${encodeURIComponent(filesSubject)}`,
-    );
-  });
-});
-
-describe('formSubmitEndpoint', () => {
-  it('posts to the FormSubmit AJAX endpoint for the address, @ kept as is', () => {
-    expect(formSubmitEndpoint('owner@example.com')).toBe(
-      'https://formsubmit.co/ajax/owner@example.com',
-    );
+  it.each(['email', 'viber', 'whatsapp'] as const)('opens %s for its own button', (channel) => {
+    expect(sendChannel(channel)).toBe(channel);
   });
 
-  it('trims the address and encodes anything that would change the path', () => {
-    expect(formSubmitEndpoint(' owner@example.com ')).toBe(
-      'https://formsubmit.co/ajax/owner@example.com',
-    );
-    expect(formSubmitEndpoint('a/b?c@example.com')).toBe(
-      'https://formsubmit.co/ajax/a%2Fb%3Fc@example.com',
-    );
-  });
-});
-
-describe('buildSubmission', () => {
-  const titles = {
-    'kartes-fylladia-entypa': 'Επαγγελματικές κάρτες, φυλλάδια & έντυπα',
-    'social-media': 'Σχεδιασμός διαφημιστικού υλικού για τα social media',
-  };
-
-  it('sends every filled field under its Greek label, in form order', () => {
-    const payload = buildSubmission(
-      withData({
-        name: '  Μαρία Παπαδοπούλου ',
-        email: ' maria@example.gr ',
-        services: ['kartes-fylladia-entypa', 'social-media'],
-        quantity: ' 500 τεμάχια ',
-        date: '2026-12-05',
-        message: 'Δύο όψεις,\r\nματ χαρτί.',
-      }),
-      titles,
-    );
-    expect(payload).toEqual({
-      Όνομα: 'Μαρία Παπαδοπούλου',
-      Τηλέφωνο: '690 000 0000',
-      Email: 'maria@example.gr',
-      Υπηρεσίες:
-        'Επαγγελματικές κάρτες, φυλλάδια & έντυπα; Σχεδιασμός διαφημιστικού υλικού για τα social media',
-      Ποσότητα: '500 τεμάχια',
-      'Επιθυμητή ημερομηνία': '05/12/2026',
-      Περιγραφή: 'Δύο όψεις,\nματ χαρτί.',
-      _subject: 'Αίτημα προσφοράς – Μαρία Παπαδοπούλου',
-      _template: 'table',
-      _captcha: 'false',
-      _replyto: 'maria@example.gr',
-    });
-    expect(Object.keys(payload).slice(0, 7)).toEqual([
-      'Όνομα',
-      'Τηλέφωνο',
-      'Email',
-      'Υπηρεσίες',
-      'Ποσότητα',
-      'Επιθυμητή ημερομηνία',
-      'Περιγραφή',
-    ]);
-  });
-
-  it('leaves out empty optional fields and the reply-to without an email', () => {
-    const payload = buildSubmission(withData({ services: [], email: '   ' }), titles);
-    expect(payload).toEqual({
-      Όνομα: 'Μαρία Παπαδοπούλου',
-      Τηλέφωνο: '690 000 0000',
-      Περιγραφή: 'Θα ήθελα 500 επαγγελματικές κάρτες.',
-      _subject: 'Αίτημα προσφοράς – Μαρία Παπαδοπούλου',
-      _template: 'table',
-      _captcha: 'false',
-    });
-    expect(payload).not.toHaveProperty('_replyto');
-  });
-
-  it('uses the same labels and subject as the composed message', () => {
-    const payload = buildSubmission(valid, titles);
-    expect(payload).toHaveProperty(labels.nameLabel);
-    expect(payload).toHaveProperty(labels.phoneLabel);
-    expect(payload).toHaveProperty(labels.messageLabel);
-    expect(payload['_subject']).toBe(buildQuoteMessage(valid, titles).subject);
-  });
-
-  it('falls back to the slug for an unknown service', () => {
-    expect(buildSubmission(withData({ services: ['unknown'] }), titles)[labels.servicesLabel]).toBe(
-      'unknown',
-    );
-  });
-});
-
-describe('isSubmitSuccess', () => {
-  it('accepts a 2xx reply with success true, as a string or a boolean', () => {
-    expect(
-      isSubmitSuccess(true, { success: 'true', message: 'The form was submitted successfully.' }),
-    ).toBe(true);
-    expect(isSubmitSuccess(true, { success: true })).toBe(true);
-  });
-
-  it('rejects success "false", such as the one-time activation reply', () => {
-    expect(
-      isSubmitSuccess(true, { success: 'false', message: 'This form needs Activation.' }),
-    ).toBe(false);
-    expect(isSubmitSuccess(true, { success: false })).toBe(false);
-  });
-
-  it('rejects a reply that is not 2xx, even when it says success', () => {
-    expect(isSubmitSuccess(false, { success: 'true' })).toBe(false);
-    expect(isSubmitSuccess(false, null)).toBe(false);
-  });
-
-  it('rejects a body that is missing, not JSON or without success', () => {
-    expect(isSubmitSuccess(true, null)).toBe(false);
-    expect(isSubmitSuccess(true, 'true')).toBe(false);
-    expect(isSubmitSuccess(true, {})).toBe(false);
-    expect(isSubmitSuccess(true, { success: 'yes' })).toBe(false);
+  it.each(['', null, undefined, 'sms'])('falls back to email for %j', (value) => {
+    expect(sendChannel(value)).toBe('email');
   });
 });
