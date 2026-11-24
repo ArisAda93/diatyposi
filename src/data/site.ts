@@ -28,8 +28,10 @@ export interface Service {
    */
   slug: string;
   icon: IconName;
-  /** File name inside src/assets/portfolio/. */
+  /** File name inside src/assets/portfolio/: the photo on the home page and /ypiresies/. */
   image: string;
+  /** The service page's photo (src/assets/portfolio/): a different scene from `image`. */
+  pageImage: string;
   text: Localized<{
     /** Owner's wording, verbatim. */
     title: string;
@@ -38,6 +40,7 @@ export interface Service {
     description: string;
     products: string[];
     imageAlt: string;
+    pageImageAlt: string;
   }>;
 }
 
@@ -149,10 +152,8 @@ export const site = {
   ] satisfies OpeningHours[],
 
   social: {
-    // TODO(owner): Facebook page URL.
-    facebook: 'https://www.facebook.com/',
-    // TODO(owner): Instagram profile URL.
-    instagram: 'https://www.instagram.com/',
+    facebook: 'https://www.facebook.com/profile.php?id=61585943139657',
+    instagram: 'https://www.instagram.com/diatyposi',
   },
 
   /** About page photo (file in src/assets/portfolio/). TODO(owner): add a real shop or team photo. */
@@ -230,6 +231,7 @@ export const services: Service[] = [
     slug: 'diafimistika-dora',
     icon: 'gift',
     image: 'dora-01.jpg',
+    pageImage: 'dora-02.jpg',
     text: {
       el: {
         title: 'Διαφημιστικά δώρα & προσωποποιημένα προϊόντα',
@@ -243,7 +245,9 @@ export const services: Service[] = [
           'Προσωποποιημένα δώρα',
         ],
         imageAlt:
-          'Κούπες, ποτήρι, στυλό, σημειωματάριο, μπλοκ και υφασμάτινη τσάντα με το ίδιο λογότυπο, και κούπα με παιδική ζωγραφιά',
+          'Κούπες, υφασμάτινη τσάντα και στυλό με το λογότυπο ενός φούρνου, σε ξύλινο τραπέζι στο φως του πρωινού',
+        pageImageAlt:
+          'Κούπα τυπωμένη με παιδική ζωγραφιά, δώρο γιορτής, με κάρτα «ΧΡΟΝΙΑ ΠΟΛΛΑ», κουλουράκια και ελληνικό καφέ',
       },
     },
   },
@@ -251,6 +255,7 @@ export const services: Service[] = [
     slug: 'mplouzakia-rouxismos',
     icon: 'shirt',
     image: 'rouxismos-01.jpg',
+    pageImage: 'rouxismos-02.jpg',
     text: {
       el: {
         title: 'Εκτυπώσεις σε μπλουζάκια & επαγγελματικό ρουχισμό',
@@ -264,7 +269,9 @@ export const services: Service[] = [
           'Μπλουζάκια για εκδηλώσεις και ομάδες',
         ],
         imageAlt:
-          'Μπλουζάκια ομάδας με λογότυπο σε κρεμάστρα και ρούχα εργασίας με το ίδιο λογότυπο: πόλο, ποδιά, καπέλο και φούτερ',
+          'Μπλε μπλουζάκια και ποδιά με τυπωμένο λογότυπο ψαριού σε κρεμάστρα και καρέκλα, με το λιμάνι στο βάθος',
+        pageImageAlt:
+          'Πράσινα μπλουζάκια ποδοσφαιρικής ομάδας με τυπωμένο σήμα, απλωμένα σε πάγκο γηπέδου',
       },
     },
   },
@@ -275,6 +282,7 @@ export const services: Service[] = [
     slug: '3d-ektyposeis',
     icon: 'print3d',
     image: '3d-ektyposeis-01.jpg',
+    pageImage: '3d-ektyposeis-02.jpg',
     text: {
       el: {
         title: 'Τρισδιάστατες εκτυπώσεις (3D printing)',
@@ -287,8 +295,9 @@ export const services: Service[] = [
           'Φιγούρες, δώρα και διακοσμητικά',
           'Τρισδιάστατα γράμματα και λογότυπα',
         ],
-        imageAlt:
-          '3D εκτυπωτής τυπώνει ένα κομμάτι δίπλα σε έτοιμα αντικείμενα: ανταλλακτικό, μακέτα σπιτιού, φιγούρα και γράμματα',
+        imageAlt: 'Το ακροφύσιο ενός 3D εκτυπωτή τυπώνει πορτοκαλί ανταλλακτικό, σε κοντινό πλάνο',
+        pageImageAlt:
+          'Μακέτα πολυκατοικίας, ανταλλακτικό κουμπί, γρανάζι, καραβάκι και κουπάτ σε σχήμα χταποδιού, τυπωμένα σε 3D εκτυπωτή',
       },
     },
   },
@@ -296,6 +305,7 @@ export const services: Service[] = [
     slug: 'grafistikos-sxediasmos',
     icon: 'design',
     image: 'grafistiko-01.jpg',
+    pageImage: 'grafistiko-02.jpg',
     text: {
       el: {
         title: 'Γραφιστικός σχεδιασμός & δημιουργία λογοτύπων',
@@ -309,7 +319,9 @@ export const services: Service[] = [
           'Αρχεία έτοιμα για εκτύπωση',
         ],
         imageAlt:
-          'Σκίτσα λογοτύπου, το τελικό λογότυπο σε φορητό υπολογιστή, κάρτες, επιστολόχαρτο, φάκελος, σακούλα και αυτοκόλλητα',
+          'Δοκιμαστικές ετικέτες για τσίπουρο τυλιγμένες σε τρία μπουκάλια, πάνω στα σκίτσα του σήματος',
+        pageImageAlt:
+          'Τρεις τυπωμένες προτάσεις λογοτύπου με μέλισσα και δείγματα χρωμάτων σε μαρμάρινο τραπέζι καφετέριας',
       },
     },
   },
@@ -317,6 +329,7 @@ export const services: Service[] = [
     slug: 'banners-afises-mousamades',
     icon: 'banner',
     image: 'banners-01.jpg',
+    pageImage: 'banners-02.jpg',
     text: {
       el: {
         title: 'Διαφημιστικά banners, αφίσες & μουσαμάδες',
@@ -330,7 +343,9 @@ export const services: Service[] = [
           'Πανό για εκθέσεις',
         ],
         imageAlt:
-          'Μουσαμάς στην πρόσοψη, roll-up banner στην είσοδο και αφίσα στη βιτρίνα ενός ανθοπωλείου',
+          'Κίτρινος μουσαμάς «ΓΥΜΝΑΣΤΗΡΙΟ» δεμένος στην πρόσοψη κτιρίου πάνω από την είσοδο',
+        pageImageAlt:
+          'Roll-up banner με φωτογραφία αμπελώνα σε πλατεία χωριού, δίπλα σε κιβώτιο με κρασιά',
       },
     },
   },
@@ -338,6 +353,7 @@ export const services: Service[] = [
     slug: 'epigrafes-aftokollita-vitrines',
     icon: 'sign',
     image: 'epigrafes-01.jpg',
+    pageImage: 'epigrafes-02.jpg',
     text: {
       el: {
         title: 'Επιγραφές, αυτοκόλλητα & βιτρίνες καταστημάτων',
@@ -350,8 +366,9 @@ export const services: Service[] = [
           'Αυτοκόλλητα οχημάτων',
           'Ετικέτες και αυτοκόλλητα προϊόντων',
         ],
-        imageAlt:
-          'Επιγραφή και αυτοκόλλητα βιτρίνας σε κατάστημα με τοπικά προϊόντα, και αυτοκόλλητο λογότυπο στην πόρτα ενός βαν',
+        imageAlt: 'Πράσινη επιγραφή «ΚΟΥΡΕΙΟ» και αυτοκόλλητο ψαλίδι στη βιτρίνα ενός κουρείου',
+        pageImageAlt:
+          'Φρεσκοκολλημένα γράμματα «ΥΔΡΑΥΛΙΚΟΣ» στην πόρτα λευκού βαν, με τη μεμβράνη ακόμα στη μία γωνία',
       },
     },
   },
@@ -359,6 +376,7 @@ export const services: Service[] = [
     slug: 'social-media',
     icon: 'social',
     image: 'social-01.jpg',
+    pageImage: 'social-02.jpg',
     text: {
       el: {
         title: 'Σχεδιασμός διαφημιστικού υλικού για τα social media',
@@ -372,7 +390,9 @@ export const services: Service[] = [
           'Ενιαία εικόνα σε έντυπα και οθόνες',
         ],
         imageAlt:
-          'Σειρά αναρτήσεων σε φορητό υπολογιστή, story σε κινητό και τάμπλετ, δίπλα σε φυλλάδιο και κάρτες στο ίδιο ύφος',
+          'Κινητό σε βάση δείχνει φωτογραφία μπουγάτσας δίπλα στο πραγματικό πιάτο, σε μαρμάρινο πάγκο',
+        pageImageAlt:
+          'Σειρά αναρτήσεων για φούρνο σε οθόνη υπολογιστή, story στο κινητό και τα ίδια σχέδια τυπωμένα σε καρτελάκια',
       },
     },
   },
@@ -380,6 +400,7 @@ export const services: Service[] = [
     slug: 'psifiakes-offset-ektyposeis',
     icon: 'press',
     image: 'ektyposeis-01.jpg',
+    pageImage: 'ektyposeis-03.jpg',
     text: {
       el: {
         title: 'Ψηφιακές & offset εκτυπώσεις',
@@ -393,7 +414,9 @@ export const services: Service[] = [
           'Έλεγχος χρώματος πριν από την εκτύπωση',
         ],
         imageAlt:
-          'Μηχανή όφσετ με φρεσκοτυπωμένα φύλλα και χρωματική κλίμακα, μεγεθυντικός φακός, έτοιμα έντυπα και δείγματα χαρτιού',
+          'Φρεσκοτυπωμένα φύλλα όφσετ με καρτ ποστάλ ελληνικών τοπίων, χρωματική κλίμακα και μεγεθυντικό φακό',
+        pageImageAlt:
+          'Φρεσκοτυπωμένα φυλλάδια συναυλίας δίπλα σε δείγματα χαρτιού και χρωματική κλίμακα',
       },
     },
   },
@@ -401,6 +424,7 @@ export const services: Service[] = [
     slug: 'kartes-fylladia-entypa',
     icon: 'cards',
     image: 'kartes-01.jpg',
+    pageImage: 'kartes-02.jpg',
     text: {
       el: {
         title: 'Επαγγελματικές κάρτες, φυλλάδια & έντυπα',
@@ -413,8 +437,8 @@ export const services: Service[] = [
           'Κατάλογοι και μενού',
           'Επιστολόχαρτα, φάκελοι και μπλοκ',
         ],
-        imageAlt:
-          'Επαγγελματικές κάρτες, τρίπτυχο, καρτ ποστάλ, επιστολόχαρτο, φάκελος και μπλοκ στο ίδιο σχέδιο',
+        imageAlt: 'Επαγγελματικές κάρτες «ΣΥΝΕΡΓΕΙΟ» με κλειδιά αυτοκινήτου σε μεταλλικό γραφείο',
+        pageImageAlt: 'Τυπωμένοι κατάλογοι «ΜΕΝΟΥ» σε τραπέζι ταβέρνας με ψωμί και κανάτα νερό',
       },
     },
   },
@@ -422,6 +446,7 @@ export const services: Service[] = [
     slug: 'prosklitiria-kartes',
     icon: 'invite',
     image: 'prosklitiria-01.jpg',
+    pageImage: 'prosklitiria-02.jpg',
     text: {
       el: {
         title: 'Προσκλητήρια, κάρτες & ειδικές κατασκευές',
@@ -435,7 +460,8 @@ export const services: Service[] = [
           'Ειδικές κατασκευές κατόπιν συνεννόησης',
         ],
         imageAlt:
-          'Σετ προσκλητηρίων με φάκελο και κορδέλα, μενού και καρτελάκια τραπεζιού, με κλαδιά ελιάς σε λινό ύφασμα',
+          'Προσκλητήρια γάμου με φακέλους, κορδέλα και λευκά λουλούδια σε λινό τραπεζομάντιλο',
+        pageImageAlt: 'Καρτελάκι «ΒΑΠΤΙΣΗ» με καραβάκι, μενού και μπομπονιέρα σε τραπέζι δεξίωσης',
       },
     },
   },
@@ -457,8 +483,8 @@ export const portfolio: PortfolioItem[] = [
     featured: true,
     text: {
       el: {
-        title: 'Κάρτες και έντυπα',
-        alt: 'Επαγγελματικές κάρτες, τρίπτυχο, καρτ ποστάλ, επιστολόχαρτο, φάκελος και μπλοκ στο ίδιο σχέδιο',
+        title: 'Επαγγελματικές κάρτες',
+        alt: 'Επαγγελματικές κάρτες «ΣΥΝΕΡΓΕΙΟ» με κλειδιά αυτοκινήτου σε μεταλλικό γραφείο',
       },
     },
   },
@@ -469,8 +495,8 @@ export const portfolio: PortfolioItem[] = [
     featured: true,
     text: {
       el: {
-        title: 'Μουσαμάς, roll-up και αφίσα',
-        alt: 'Μουσαμάς στην πρόσοψη, roll-up banner στην είσοδο και αφίσα στη βιτρίνα ενός ανθοπωλείου',
+        title: 'Μουσαμάς σε πρόσοψη',
+        alt: 'Κίτρινος μουσαμάς «ΓΥΜΝΑΣΤΗΡΙΟ» δεμένος στην πρόσοψη κτιρίου πάνω από την είσοδο',
       },
     },
   },
@@ -481,8 +507,8 @@ export const portfolio: PortfolioItem[] = [
     featured: true,
     text: {
       el: {
-        title: 'Μπλουζάκια και ρούχα εργασίας',
-        alt: 'Μπλουζάκια ομάδας με λογότυπο σε κρεμάστρα και ρούχα εργασίας με το ίδιο λογότυπο: πόλο, ποδιά, καπέλο και φούτερ',
+        title: 'Μπλουζάκια και ποδιές ταβέρνας',
+        alt: 'Μπλε μπλουζάκια και ποδιά με τυπωμένο λογότυπο ψαριού σε κρεμάστρα και καρέκλα, με το λιμάνι στο βάθος',
       },
     },
   },
@@ -493,8 +519,8 @@ export const portfolio: PortfolioItem[] = [
     featured: true,
     text: {
       el: {
-        title: 'Προσκλητήρια και καρτελάκια',
-        alt: 'Σετ προσκλητηρίων με φάκελο και κορδέλα, μενού και καρτελάκια τραπεζιού, με κλαδιά ελιάς σε λινό ύφασμα',
+        title: 'Προσκλητήρια γάμου',
+        alt: 'Προσκλητήρια γάμου με φακέλους, κορδέλα και λευκά λουλούδια σε λινό τραπεζομάντιλο',
       },
     },
   },
@@ -504,8 +530,19 @@ export const portfolio: PortfolioItem[] = [
     standIn: true,
     text: {
       el: {
-        title: 'Λογότυπο και εταιρική ταυτότητα',
-        alt: 'Σκίτσα λογοτύπου, το τελικό λογότυπο σε φορητό υπολογιστή, κάρτες, επιστολόχαρτο, φάκελος, σακούλα και αυτοκόλλητα',
+        title: 'Σχεδιασμός ετικέτας',
+        alt: 'Δοκιμαστικές ετικέτες για τσίπουρο τυλιγμένες σε τρία μπουκάλια, πάνω στα σκίτσα του σήματος',
+      },
+    },
+  },
+  {
+    image: 'grafistiko-02.jpg',
+    service: 'grafistikos-sxediasmos',
+    standIn: true,
+    text: {
+      el: {
+        title: 'Προτάσεις λογοτύπου',
+        alt: 'Τρεις τυπωμένες προτάσεις λογοτύπου με μέλισσα και δείγματα χρωμάτων σε μαρμάρινο τραπέζι καφετέριας',
       },
     },
   },
@@ -516,7 +553,18 @@ export const portfolio: PortfolioItem[] = [
     text: {
       el: {
         title: 'Offset εκτύπωση',
-        alt: 'Μηχανή όφσετ με φρεσκοτυπωμένα φύλλα και χρωματική κλίμακα, μεγεθυντικός φακός, έτοιμα έντυπα και δείγματα χαρτιού',
+        alt: 'Φρεσκοτυπωμένα φύλλα όφσετ με καρτ ποστάλ ελληνικών τοπίων, χρωματική κλίμακα και μεγεθυντικό φακό',
+      },
+    },
+  },
+  {
+    image: 'ektyposeis-03.jpg',
+    service: 'psifiakes-offset-ektyposeis',
+    standIn: true,
+    text: {
+      el: {
+        title: 'Ψηφιακή εκτύπωση φυλλαδίων',
+        alt: 'Φρεσκοτυπωμένα φυλλάδια συναυλίας δίπλα σε δείγματα χαρτιού και χρωματική κλίμακα',
       },
     },
   },
@@ -525,14 +573,33 @@ export const portfolio: PortfolioItem[] = [
     service: 'psifiakes-offset-ektyposeis',
     standIn: true,
     text: {
-      el: { title: 'Ψηφιακή εκτύπωση', alt: 'Εκτυπωτής μεγάλου φορμά τυπώνει πολύχρωμο πανό' },
+      el: {
+        title: 'Εκτύπωση μεγάλου φορμά',
+        alt: 'Αφίσα με λιμάνι και ψαροκάικα βγαίνει από εκτυπωτή μεγάλου φορμά',
+      },
+    },
+  },
+  {
+    image: 'kartes-02.jpg',
+    service: 'kartes-fylladia-entypa',
+    standIn: true,
+    text: {
+      el: {
+        title: 'Κατάλογοι ταβέρνας',
+        alt: 'Τυπωμένοι κατάλογοι «ΜΕΝΟΥ» σε τραπέζι ταβέρνας με ψωμί και κανάτα νερό',
+      },
     },
   },
   {
     image: 'entypa-01.jpg',
     service: 'kartes-fylladia-entypa',
     standIn: true,
-    text: { el: { title: 'Φυλλάδια', alt: 'Τυπωμένα φυλλάδια απλωμένα σε ξύλινο τραπέζι' } },
+    text: {
+      el: {
+        title: 'Φυλλάδια',
+        alt: 'Φυλλάδια σχολής χορού «ΧΟΡΟΣ» με παραδοσιακά παπούτσια χορού, απλωμένα σε μαρμάρινο τραπέζι καφετέριας',
+      },
+    },
   },
   {
     image: 'epigrafes-01.jpg',
@@ -540,8 +607,19 @@ export const portfolio: PortfolioItem[] = [
     standIn: true,
     text: {
       el: {
-        title: 'Επιγραφή και αυτοκόλλητα βιτρίνας',
-        alt: 'Επιγραφή και αυτοκόλλητα βιτρίνας σε κατάστημα με τοπικά προϊόντα, και αυτοκόλλητο λογότυπο στην πόρτα ενός βαν',
+        title: 'Επιγραφή και βιτρίνα',
+        alt: 'Πράσινη επιγραφή «ΚΟΥΡΕΙΟ» και αυτοκόλλητο ψαλίδι στη βιτρίνα ενός κουρείου',
+      },
+    },
+  },
+  {
+    image: 'epigrafes-02.jpg',
+    service: 'epigrafes-aftokollita-vitrines',
+    standIn: true,
+    text: {
+      el: {
+        title: 'Αυτοκόλλητα οχήματος',
+        alt: 'Φρεσκοκολλημένα γράμματα «ΥΔΡΑΥΛΙΚΟΣ» στην πόρτα λευκού βαν, με τη μεμβράνη ακόμα στη μία γωνία',
       },
     },
   },
@@ -550,7 +628,43 @@ export const portfolio: PortfolioItem[] = [
     service: 'epigrafes-aftokollita-vitrines',
     standIn: true,
     text: {
-      el: { title: 'Αυτοκόλλητα', alt: 'Φύλλα με ολογραφικά αυτοκόλλητα σε σκούρο γραφείο' },
+      el: {
+        title: 'Ετικέτες προϊόντων',
+        alt: 'Βάζα με θυμαρίσιο μέλι και τυπωμένες ετικέτες «ΜΕΛΙ», με ρολό ετικετών και κυψέλες στο βάθος',
+      },
+    },
+  },
+  {
+    image: 'banners-02.jpg',
+    service: 'banners-afises-mousamades',
+    standIn: true,
+    text: {
+      el: {
+        title: 'Roll-up banner',
+        alt: 'Roll-up banner με φωτογραφία αμπελώνα σε πλατεία χωριού, δίπλα σε κιβώτιο με κρασιά',
+      },
+    },
+  },
+  {
+    image: 'rouxismos-02.jpg',
+    service: 'mplouzakia-rouxismos',
+    standIn: true,
+    text: {
+      el: {
+        title: 'Μπλουζάκια ομάδας',
+        alt: 'Πράσινα μπλουζάκια ποδοσφαιρικής ομάδας με τυπωμένο σήμα, απλωμένα σε πάγκο γηπέδου',
+      },
+    },
+  },
+  {
+    image: 'prosklitiria-02.jpg',
+    service: 'prosklitiria-kartes',
+    standIn: true,
+    text: {
+      el: {
+        title: 'Καρτελάκια βάπτισης',
+        alt: 'Καρτελάκι «ΒΑΠΤΙΣΗ» με καραβάκι, μενού και μπομπονιέρα σε τραπέζι δεξίωσης',
+      },
     },
   },
   {
@@ -559,8 +673,19 @@ export const portfolio: PortfolioItem[] = [
     standIn: true,
     text: {
       el: {
-        title: 'Διαφημιστικά δώρα με λογότυπο',
-        alt: 'Κούπες, ποτήρι, στυλό, σημειωματάριο, μπλοκ και υφασμάτινη τσάντα με το ίδιο λογότυπο, και κούπα με παιδική ζωγραφιά',
+        title: 'Διαφημιστικά δώρα φούρνου',
+        alt: 'Κούπες, υφασμάτινη τσάντα και στυλό με το λογότυπο ενός φούρνου, σε ξύλινο τραπέζι στο φως του πρωινού',
+      },
+    },
+  },
+  {
+    image: 'dora-02.jpg',
+    service: 'diafimistika-dora',
+    standIn: true,
+    text: {
+      el: {
+        title: 'Προσωποποιημένη κούπα',
+        alt: 'Κούπα τυπωμένη με παιδική ζωγραφιά, δώρο γιορτής, με κάρτα «ΧΡΟΝΙΑ ΠΟΛΛΑ», κουλουράκια και ελληνικό καφέ',
       },
     },
   },
@@ -570,8 +695,19 @@ export const portfolio: PortfolioItem[] = [
     standIn: true,
     text: {
       el: {
+        title: 'Υλικό για social media',
+        alt: 'Κινητό σε βάση δείχνει φωτογραφία μπουγάτσας δίπλα στο πραγματικό πιάτο, σε μαρμάρινο πάγκο',
+      },
+    },
+  },
+  {
+    image: 'social-02.jpg',
+    service: 'social-media',
+    standIn: true,
+    text: {
+      el: {
         title: 'Αναρτήσεις και stories',
-        alt: 'Σειρά αναρτήσεων σε φορητό υπολογιστή, story σε κινητό και τάμπλετ, δίπλα σε φυλλάδιο και κάρτες στο ίδιο ύφος',
+        alt: 'Σειρά αναρτήσεων για φούρνο σε οθόνη υπολογιστή, story στο κινητό και τα ίδια σχέδια τυπωμένα σε καρτελάκια',
       },
     },
   },
@@ -581,8 +717,19 @@ export const portfolio: PortfolioItem[] = [
     standIn: true,
     text: {
       el: {
-        title: '3D εκτυπώσεις',
-        alt: '3D εκτυπωτής τυπώνει ένα κομμάτι δίπλα σε έτοιμα αντικείμενα: ανταλλακτικό, μακέτα σπιτιού, φιγούρα και γράμματα',
+        title: '3D εκτύπωση εξαρτήματος',
+        alt: 'Το ακροφύσιο ενός 3D εκτυπωτή τυπώνει πορτοκαλί ανταλλακτικό, σε κοντινό πλάνο',
+      },
+    },
+  },
+  {
+    image: '3d-ektyposeis-02.jpg',
+    service: '3d-ektyposeis',
+    standIn: true,
+    text: {
+      el: {
+        title: 'Αντικείμενα από 3D εκτυπωτή',
+        alt: 'Μακέτα πολυκατοικίας, ανταλλακτικό κουμπί, γρανάζι, καραβάκι και κουπάτ σε σχήμα χταποδιού, τυπωμένα σε 3D εκτυπωτή',
       },
     },
   },

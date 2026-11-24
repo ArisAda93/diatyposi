@@ -1,7 +1,8 @@
 ---
 /**
  * The service at a glance, in section 01 of its page (src/pages/ypiresies/[slug].astro), under
- * the owner's title: the service's photo in a crop-marked frame with a halftone under-plate in
+ * the owner's title: the service's own photo (`pageImage`, a different scene from the `image` the
+ * home page and /ypiresies/ show) in a crop-marked frame with a halftone under-plate in
  * the page's plate ink, and beside it the description at lead size, the usual jobs as tag chips
  * (as on the /ypiresies/ chapters) and the quote button that pre-selects this service.
  *
@@ -33,7 +34,7 @@ const text = serviceDetailText.el;
 // Services carry no stand-in flag: take it from the portfolio entry that uses the same photo, so a
 // real photo marked `standIn: false` there drops the label here too. A photo with no portfolio
 // entry has no known provenance, so it stays labelled.
-const standIn = portfolio.find((p) => p.image === service.image)?.standIn ?? true;
+const standIn = portfolio.find((p) => p.image === service.pageImage)?.standIn ?? true;
 
 // Rendered photo width: the full width less the crop-mark room on phones; 7 of 12 parts of the
 // content width from 768px, capped by the 1440px wrap.
@@ -45,7 +46,7 @@ const sizes = '(min-width: 90rem) 720px, (min-width: 48rem) 50vw, calc(100vw - 5
     <span class="sdo-under" aria-hidden="true" data-parallax="0.08"></span>
     <div class="sdo-frame crop-frame">
       <div class="sdo-media media">
-        <Photo image={service.image} alt={copy.imageAlt} sizes={sizes} />
+        <Photo image={service.pageImage} alt={copy.pageImageAlt} sizes={sizes} />
         {standIn && <span class="sdo-standin">{t('standInLabel')}</span>}
       </div>
     </div>
