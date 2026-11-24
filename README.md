@@ -50,9 +50,9 @@ The domain (`https://diatyposi.com`, `SITE_URL` in `astro.config.mjs`) and the c
 
 When every contact value is real, set **`site.contactIsPlaceholder = false`**. That adds the phone, e-mail, address, hours, coordinates, map link, areas served and social profiles to the `LocalBusiness` structured data that search engines read (they are left out while they are placeholders).
 
-### Before launch: search engines
+### Search engines
 
-The site is kept out of search results on purpose until launch: `public/_headers` sends `X-Robots-Tag: noindex` for every page. At launch, delete `public/_headers` (or remove its `X-Robots-Tag: noindex` line), otherwise Google will not index the site. The full launch checklist (Search Console, Google Business Profile, sitemap submission and more) is in [docs/SEO.md](docs/SEO.md).
+The site is open to search engines since 2026-11-24: no page sends `X-Robots-Tag: noindex` (the pre-launch `public/_headers` that did is gone), `robots.txt` allows everything and lists the sitemap, and only the 404 page and hidden sections carry `<meta name="robots" content="noindex">`. Do not add a `noindex` header back. The rest of the launch checklist (Search Console, Google Business Profile, sitemap submission and more) is in [docs/SEO.md](docs/SEO.md).
 
 ## Editing content
 

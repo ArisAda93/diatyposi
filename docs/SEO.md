@@ -508,7 +508,7 @@ In order:
 3. **Locality:** set `site.address.locative` (e.g. "στην Αθήνα", "στο Περιστέρι", "στη Θεσσαλονίκη"; see §3.1) and `site.address.areaServed` (the municipalities the shop really serves).
 4. **Structured data switch:** set `site.contactIsPlaceholder = false` only after steps 2–3 are real.
 5. **Copy:** the ten service pages approved by the owner (`npm run content-review`), no "TODO(owner)" left in visible text, stand-in labels still shown on any stand-in image.
-6. **Indexing switch:** delete the `X-Robots-Tag: noindex` rule in `public/_headers` (the file holds nothing else, so delete the file). Confirm after deploy that no page sends `X-Robots-Tag: noindex` and no `<meta name="robots" content="noindex">` except the 404 page.
+6. **Indexing switch:** done 2026-11-24: `public/_headers`, which sent `X-Robots-Tag: noindex` site-wide, is deleted. After any deploy, no page should send `X-Robots-Tag: noindex` or `<meta name="robots" content="noindex">` except the 404 page and hidden sections.
 7. **robots.txt and sitemap:** open `https://<domain>/robots.txt` (Allow all, Sitemap line on the real domain) and `https://<domain>/sitemap-index.xml` (all pages, including the ten `/ypiresies/<slug>/`, on the real domain, no 404).
 8. **Search Console + Bing:** §5.6 (verify, submit sitemap, request indexing).
 9. **Rich results:** test `/`, one service page and `/epikoinonia/` in the [Rich Results Test](https://search.google.com/test/rich-results) (Breadcrumb, Local business) and in the [Schema Markup Validator](https://validator.schema.org/) (WebSite site name, Service, FAQPage, which the Rich Results Test no longer covers).
@@ -531,7 +531,7 @@ In order:
 - **Open Graph and Twitter cards** with a 1200×630 share image (matters for links shared on Viber, Messenger, WhatsApp).
 - **Self-hosted fonts with Greek subsets**, preloaded; no third-party requests until the visitor opts in to the map.
 - **Conversion paths:** tap-to-call, Viber, WhatsApp, a quote form that pre-selects the service (`quoteHref`).
-- **Pre-launch protection:** `public/_headers` sends `X-Robots-Tag: noindex` site-wide on purpose.
+- **Pre-launch protection:** `public/_headers` sent `X-Robots-Tag: noindex` site-wide on purpose (removed at launch, 2026-11-24).
 
 ### 7.2 Gaps found at the base
 
