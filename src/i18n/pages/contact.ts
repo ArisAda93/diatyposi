@@ -78,6 +78,9 @@ export const contactText = {
         text: 'Ανοίγει η εφαρμογή σας με το μήνυμα συμπληρωμένο. Για να μας έρθει, πατήστε «Αποστολή» εκεί.',
         files:
           'Έχετε λογότυπο, σκίτσο ή φωτογραφίες; Επισυνάψτε τα στο ίδιο μήνυμα πριν το στείλετε.',
+        /** Shown when Viber or WhatsApp opens: the message is also on the clipboard. */
+        chatCopied:
+          'Αντιγράψαμε και το κείμενο. Αν η συνομιλία ανοίξει χωρίς το μήνυμα, πατήστε παρατεταμένα στο πεδίο του μηνύματος και επιλέξτε «Επικόλληση».',
         /** The fallback box: another app, or the text to copy (followed by the shop's email). */
         notOpenedHeading: 'Δεν άνοιξε η εφαρμογή;',
         notOpenedHint: 'Δοκιμάστε έναν άλλο τρόπο ή αντιγράψτε το κείμενο και στείλτε το εσείς στο',

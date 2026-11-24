@@ -7,7 +7,9 @@
  * `data-email`, `data-viber`, `data-whatsapp`). Enter in a field submits with the first button,
  * so a submit without a known button value opens email. The panel keeps the three links (to open
  * the same or another app again), the text to copy, a way back to the form with everything kept,
- * and a way to start a new request from a clean form.
+ * and a way to start a new request from a clean form. Opening Viber or WhatsApp also copies the
+ * message to the clipboard and says so (`[data-chat-hint]`), because some of their apps open the
+ * chat without the prefilled text; WhatsApp's link is wa.me and opens in a new tab.
  *
  * Markup contract (src/components/contact/QuoteForm.astro, Field.astro, SendPanel.astro):
  * - root `[data-quote]` with `data-email`, `data-viber`, `data-whatsapp`
@@ -18,7 +20,8 @@
  * - three submit buttons in the form, in this order: `button[type="submit"][name="via"]` with
  *   `value` and `data-via` set to "email", "viber" and "whatsapp"
  * - `[data-result="ready"]` (hidden, a sibling of the form inside the root) with
- *   `[data-result-heading]` (tabindex="-1"), `a[data-send="email|viber|whatsapp"]`,
+ *   `[data-result-heading]` (tabindex="-1"), `[data-chat-hint]` (role="status"),
+ *   `a[data-send="email|viber|whatsapp"]` (WhatsApp with target="_blank"),
  *   `textarea[data-preview]`, `button[data-copy]`, `[data-copy-status]`, `button[data-edit]` and
  *   `button[data-again]`
  *
@@ -98,6 +101,7 @@ const initQuote = (root: HTMLElement): void => {
   const preview = ready?.querySelector<HTMLTextAreaElement>('[data-preview]');
   const copyButton = ready?.querySelector<HTMLButtonElement>('[data-copy]');
   const copyStatus = ready?.querySelector<HTMLElement>('[data-copy-status]');
+  const chatHint = ready?.querySelector<HTMLElement>('[data-chat-hint]');
   const editButton = ready?.querySelector<HTMLButtonElement>('[data-edit]');
   const againButton = ready?.querySelector<HTMLButtonElement>('[data-again]');
   const { email, viber, whatsapp } = root.dataset;
@@ -114,6 +118,7 @@ const initQuote = (root: HTMLElement): void => {
     !preview ||
     !copyButton ||
     !copyStatus ||
+    !chatHint ||
     !editButton ||
     !againButton ||
     !email ||
@@ -372,6 +377,7 @@ const initQuote = (root: HTMLElement): void => {
     whatsappLink.href = links.whatsapp;
     preview.value = chatText(message);
     copyStatus.textContent = '';
+    chatHint.textContent = '';
     show(ready);
     ready.scrollIntoView({ block: 'start', behavior: 'instant' });
     readyHeading.focus({ preventScroll: true });
@@ -400,6 +406,20 @@ const initQuote = (root: HTMLElement): void => {
     show(form);
     revealField('name', 'instant');
   });
+
+  // Viber and WhatsApp: some of their apps open the chat without the prefilled text, so opening
+  // either one (from a submit, which clicks this same link, or from the panel) also copies the
+  // message and says so; the visitor can then paste it. The click carries the user activation the
+  // clipboard needs. Nothing is said if copying is not allowed: the copy button stays available.
+  for (const link of [viberLink, whatsappLink]) {
+    link.addEventListener('click', () => {
+      if (typeof navigator.clipboard?.writeText !== 'function') return;
+      navigator.clipboard.writeText(preview.value).then(
+        () => announce(chatHint, text.result.ready.chatCopied),
+        () => undefined,
+      );
+    });
+  }
 
   copyButton.addEventListener('click', () => {
     const selectForManualCopy = (): void => {

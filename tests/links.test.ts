@@ -6,6 +6,7 @@ import {
   telHref,
   viberHref,
   whatsappHref,
+  whatsappMessageHref,
 } from '../src/lib/links';
 
 describe('phone normalisation', () => {
@@ -50,6 +51,18 @@ describe('chat deep links', () => {
     expect(href.match(/&/g)).toHaveLength(1);
     expect(new URL(href).searchParams.get('text')).toBe('Γεια σας & καλημέρα');
     expect(whatsappHref('306974122163')).toBe('whatsapp://send?phone=306974122163');
+  });
+  it('builds wa.me Click to Chat links with international digits and the text', () => {
+    const href = whatsappMessageHref('+30 697 412 2163', 'Γεια σας & καλημέρα\nΌνομα: Μαρία');
+    expect(href).toBe(
+      `https://wa.me/306974122163?text=${encodeURIComponent('Γεια σας & καλημέρα\nΌνομα: Μαρία')}`,
+    );
+    const url = new URL(href);
+    expect(url.pathname).toBe('/306974122163');
+    // The whole text, & and line break included, comes back as one parameter.
+    expect([...url.searchParams.keys()]).toEqual(['text']);
+    expect(url.searchParams.get('text')).toBe('Γεια σας & καλημέρα\nΌνομα: Μαρία');
+    expect(whatsappMessageHref('306974122163')).toBe('https://wa.me/306974122163');
   });
   it('builds Viber links with an encoded + and a draft', () => {
     const href = viberHref('306900000000', 'Γεια σας');

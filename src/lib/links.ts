@@ -32,9 +32,20 @@ export const whatsappHref = (phone: string, text?: string): string =>
   `whatsapp://send?phone=${intlDigits(phone)}${text ? `&text=${encodeURIComponent(text)}` : ''}`;
 
 /**
+ * WhatsApp Click to Chat link (`https://wa.me/<digits>?text=…`), WhatsApp's documented way to open
+ * a chat with a message already typed. Used for the quote message: some WhatsApp apps (the
+ * desktop ones in particular) open the chat from the `whatsapp://` scheme but drop its text,
+ * while wa.me carries it on phones, desktop and WhatsApp Web. It is an https link, so the caller
+ * opens it in a new tab and the page stays where it is.
+ */
+export const whatsappMessageHref = (phone: string, text?: string): string =>
+  `https://wa.me/${intlDigits(phone)}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
+
+/**
  * Viber chat link: opens a chat with the number in the Viber app. `draft` prefills the message
  * box. The number carries an encoded + (`%2B`), the form Viber's chat links use on every
- * platform.
+ * platform. `draft` is not an officially documented parameter and some Viber apps ignore it, so
+ * the quote form also copies the message to the clipboard when it opens Viber.
  */
 export const viberHref = (phone: string, draft?: string): string =>
   `viber://chat?number=${encodeURIComponent(`+${intlDigits(phone)}`)}${

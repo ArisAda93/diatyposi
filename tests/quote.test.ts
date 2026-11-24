@@ -295,10 +295,9 @@ describe('buildSendLinks', () => {
     expect(links.email).not.toMatch(/[ \n]/);
   });
 
-  it('prefills WhatsApp with &text=', () => {
-    expect(links.whatsapp).toBe(
-      `whatsapp://send?phone=306900000000&text=${encodeURIComponent(text)}`,
-    );
+  it('prefills WhatsApp through wa.me with ?text=', () => {
+    expect(links.whatsapp).toBe(`https://wa.me/306900000000?text=${encodeURIComponent(text)}`);
+    expect(new URL(links.whatsapp).searchParams.get('text')).toBe(text);
   });
 
   it('prefills Viber with draft= and an encoded + in the number', () => {

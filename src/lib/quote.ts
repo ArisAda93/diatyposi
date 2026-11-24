@@ -7,7 +7,7 @@
  *
  * Relative imports only: vitest runs without the `~` alias.
  */
-import { mailtoHref, viberHref, whatsappHref } from './links';
+import { mailtoHref, viberHref, whatsappMessageHref } from './links';
 import { contactText } from '../i18n/pages/contact';
 
 const strings = contactText.el;
@@ -205,13 +205,16 @@ export const buildQuoteMessage = (
 /** The text for chat apps and the preview: subject line, blank line, body. */
 export const chatText = (message: QuoteMessage): string => `${message.subject}\n\n${message.body}`;
 
-/** The three send links: email (subject + body), Viber and WhatsApp (chat text). */
+/**
+ * The three send links: email (subject + body), Viber (`draft`) and WhatsApp (wa.me with the chat
+ * text, the form WhatsApp prefills on every platform).
+ */
 export const buildSendLinks = (contact: QuoteContact, message: QuoteMessage): QuoteLinks => {
   const text = chatText(message);
   return {
     email: mailtoHref(contact.email, message.subject, message.body),
     viber: viberHref(contact.viber, text),
-    whatsapp: whatsappHref(contact.whatsapp, text),
+    whatsapp: whatsappMessageHref(contact.whatsapp, text),
   };
 };
 

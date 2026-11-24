@@ -12,8 +12,11 @@
  * (behind a disclosure). “Πίσω στη φόρμα” brings the form back with everything kept; “Νέο αίτημα”
  * clears it and brings it back.
  *
- * The hrefs below are plain fallbacks; the script adds the subject and the composed text.
- * Chat links open the app itself (viber://, whatsapp://), so none opens a new tab.
+ * The hrefs below are plain fallbacks; the script adds the subject and the composed text. Email
+ * and Viber open the app itself (mailto:, viber://). WhatsApp uses its Click to Chat address
+ * (https://wa.me), the link WhatsApp prefills on every platform, so it opens in a new tab and the
+ * panel stays. When Viber or WhatsApp opens, the script also copies the message and says so in
+ * `[data-chat-hint]`, in case the app opens the chat without the text.
  *
  * The panel prints in from the top; the check is stamped on with a C/M plate that snaps into
  * register. Reduced motion: it simply appears.
@@ -21,7 +24,8 @@
 import Icon from '~/components/Icon.astro';
 import { site } from '~/data/site';
 import { contactText } from '~/i18n/pages/contact';
-import { mailtoHref, viberHref, whatsappHref } from '~/lib/links';
+import { t } from '~/i18n/ui';
+import { mailtoHref, viberHref, whatsappMessageHref } from '~/lib/links';
 
 const text = contactText.el.result.ready;
 ---
@@ -34,6 +38,7 @@ const text = contactText.el.result.ready;
     <span>{text.heading}</span>
   </h3>
   <p class="result-text">{text.text}</p>
+  <p class="result-text result-chat-hint" role="status" data-chat-hint></p>
   <p class="result-text result-files">
     <Icon name="paperclip" size={22} />
     <span>{text.files}</span>
@@ -57,9 +62,16 @@ const text = contactText.el.result.ready;
         <Icon name="viber" />
         <span>{text.viber}</span>
       </a>
-      <a href={whatsappHref(site.contact.whatsapp)} class="btn btn-secondary" data-send="whatsapp">
+      <a
+        href={whatsappMessageHref(site.contact.whatsapp)}
+        class="btn btn-secondary"
+        target="_blank"
+        rel="noopener"
+        data-send="whatsapp"
+      >
         <Icon name="whatsapp" />
         <span>{text.whatsapp}</span>
+        <span class="sr-only">{` ${t('newTab')}`}</span>
       </a>
     </div>
 
@@ -140,6 +152,13 @@ const text = contactText.el.result.ready;
     .result-text {
       max-width: 52ch;
       margin-top: 0.875rem;
+    }
+    /* The "text copied" note after Viber or WhatsApp opens; takes no room while empty. */
+    .result-chat-hint {
+      font-weight: 600;
+    }
+    .result-chat-hint:empty {
+      display: none;
     }
 
     /* The files note: a paperclip beside the text. */
