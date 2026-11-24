@@ -250,11 +250,12 @@ const initQuote = (root: HTMLElement): void => {
   /**
    * Brings a field's label into view (the page's scroll padding keeps it clear of the fixed
    * header and the call bar) and focuses its control. False when the field is not on the page.
+   * `behavior` 'auto' follows the page's smooth scrolling; 'instant' is for a view swap.
    */
-  const revealField = (field: QuoteField): boolean => {
+  const revealField = (field: QuoteField, behavior: ScrollBehavior = 'auto'): boolean => {
     const ref = refs.get(field);
     if (!ref) return false;
-    ref.wrap.scrollIntoView({ block: 'start' });
+    ref.wrap.scrollIntoView({ block: 'start', behavior });
     ref.focus.focus({ preventScroll: true });
     return true;
   };
@@ -334,7 +335,11 @@ const initQuote = (root: HTMLElement): void => {
     markValid(field, data, collectErrors(data));
   });
 
-  /** Shows the form or the ready panel, and hides the other. */
+  /**
+   * Shows the form or the ready panel, and hides the other. After a swap the view is scrolled
+   * into place instantly: the page's smooth scrolling gets cancelled by the layout change when the
+   * form and the panel swap, which leaves the focused element out of sight.
+   */
   const show = (view: HTMLElement): void => {
     for (const el of [form, ready]) el.hidden = el !== view;
   };
@@ -368,7 +373,8 @@ const initQuote = (root: HTMLElement): void => {
     preview.value = chatText(message);
     copyStatus.textContent = '';
     show(ready);
-    readyHeading.focus();
+    ready.scrollIntoView({ block: 'start', behavior: 'instant' });
+    readyHeading.focus({ preventScroll: true });
     // Open the chosen app through the panel's own link, the same one the visitor can press again;
     // the submit's user activation lets the app link open from here.
     sendLinks[channel].click();
@@ -377,7 +383,7 @@ const initQuote = (root: HTMLElement): void => {
   // Back to the form with everything the visitor wrote still in place.
   editButton.addEventListener('click', () => {
     show(form);
-    control('name')?.focus();
+    revealField('name', 'instant');
   });
 
   // A new request starts from a clean form: no values, marks, errors or summary.
@@ -392,7 +398,7 @@ const initQuote = (root: HTMLElement): void => {
     renderSummary({});
     if (dateInput instanceof HTMLInputElement) dateInput.min = today();
     show(form);
-    control('name')?.focus();
+    revealField('name', 'instant');
   });
 
   copyButton.addEventListener('click', () => {
