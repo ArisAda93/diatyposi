@@ -115,17 +115,25 @@ export const initWorkbench = (): void => {
     render();
   };
 
-  const bind = (el: HTMLElement, i: number): void => {
+  /** Whether the current hover came from a marker (released when the pointer leaves the photo). */
+  let fromMarker = false;
+  const bind = (el: HTMLElement, i: number, release: boolean): void => {
     el.addEventListener('pointerenter', (e) => {
-      if (e.pointerType !== 'touch') hover(i);
+      if (e.pointerType === 'touch') return;
+      fromMarker = !release;
+      hover(i);
     });
-    el.addEventListener('pointerleave', (e) => {
-      if (e.pointerType !== 'touch' && hovered === i) hover(null);
-    });
+    // A marker glides towards the middle of the view once marked, out from under the pointer, so
+    // it stays marked until the pointer leaves the photo or points at another step.
+    if (release) {
+      el.addEventListener('pointerleave', (e) => {
+        if (e.pointerType !== 'touch' && hovered === i) hover(null);
+      });
+    }
     el.addEventListener('click', () => pin(i));
   };
   steps.forEach((s, i) => {
-    bind(s, i);
+    bind(s, i, true);
     s.addEventListener('focus', () => {
       if (s.matches(':focus-visible')) hover(i);
     });
@@ -133,7 +141,12 @@ export const initWorkbench = (): void => {
       if (hovered === i) hover(null);
     });
   });
-  markers.forEach((m, i) => bind(m, i));
+  markers.forEach((m, i) => bind(m, i, false));
+  media.addEventListener('pointerleave', (e) => {
+    if (e.pointerType === 'touch' || !fromMarker) return;
+    fromMarker = false;
+    hover(null);
+  });
   // A tap anywhere else lets go of a pinned step.
   document.addEventListener('pointerdown', (e) => {
     if (pinned === null) return;
@@ -162,7 +175,9 @@ export const initWorkbench = (): void => {
   const look = { x: 0, y: 0 };
   const cx: Spring = { x: 0.5, v: 0 };
   const cy: Spring = { x: 0.5, v: 0 };
-  const zoom: Spring = { x: BASE_ZOOM, v: 0 };
+  // From the photo's own framing (zoom 1), so the first frames match the photo under the canvas
+  // while it fades in; the camera then settles at its rest zoom.
+  const zoom: Spring = { x: 1, v: 0 };
   let focusDepth = 0.5;
   let spotOn = 0;
   const spot = { x: 0.5, y: 0.5 };
@@ -173,8 +188,8 @@ export const initWorkbench = (): void => {
 
   const resize = (): void => {
     if (!scene) return;
-    const rect = media.getBoundingClientRect();
-    scene.resize(rect.width, rect.height, Math.min(window.devicePixelRatio || 1, 2));
+    // Layout size, not the bounding box: the frame is tilted in 3D while the scene runs.
+    scene.resize(media.clientWidth, media.clientHeight, Math.min(window.devicePixelRatio || 1, 2));
   };
 
   const frameStep = (now: number): void => {
@@ -260,6 +275,11 @@ export const initWorkbench = (): void => {
     canvas?.remove();
     canvas = null;
     root.classList.remove('is-live');
+    // Back to the photo's own framing for a later start; the markers fall back to their places on
+    // the photo (--wb-x0 / --wb-y0 in the markup).
+    Object.assign(cx, { x: 0.5, v: 0 });
+    Object.assign(cy, { x: 0.5, v: 0 });
+    Object.assign(zoom, { x: 1, v: 0 });
     markers.forEach((m) => {
       m.style.removeProperty('--wb-x');
       m.style.removeProperty('--wb-y');

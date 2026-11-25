@@ -10,7 +10,8 @@
  * motion allowed and WebGL the photo becomes a depth-parallax scene (a canvas in
  * `[data-wb-scene]`, over the photo) whose camera glides to the marked step, looks around with the
  * pointer and breathes; the frame tilts in 3D under a faint glare (`--wb-rx`, `--wb-ry`,
- * `--wb-gx`, `--wb-gy`, `--wb-glare`) and the markers follow their objects (`--wb-x`, `--wb-y`).
+ * `--wb-gx`, `--wb-gy`, `--wb-glare`) and the markers follow their objects (`--wb-x`, `--wb-y`, set
+ * by the script; their places on the photo, `--wb-x0` / `--wb-y0`, apply otherwise and in print).
  * Without JS, with reduced motion or without WebGL, the plain photo and the markers stay.
  *
  * The photograph is AI-generated (CREDITS.md) and carries the “Ενδεικτική εικόνα” chip, as the
@@ -64,7 +65,7 @@ const sizes =
             data-wb-marker
             data-x={m.x}
             data-y={m.y}
-            style={`--wb-x: ${m.x}%; --wb-y: ${m.y}%; --wb-ink: var(${m.ink}); --wb-on: var(${m.on})`}
+            style={`--wb-x0: ${m.x}%; --wb-y0: ${m.y}%; --wb-ink: var(${m.ink}); --wb-on: var(${m.on})`}
           >
             {i + 1}
           </li>
@@ -92,7 +93,9 @@ const sizes =
         margin-inline: 1.5rem;
       }
     }
+    /* Its own stacking context, so the scaled photo never rises above the canvas and markers. */
     .wb-media {
+      isolation: isolate;
       aspect-ratio: 4 / 3;
       box-shadow: 0 1.75rem 3rem -2rem rgb(34 31 32 / 0.4);
     }
@@ -104,6 +107,8 @@ const sizes =
       }
     }
     .wb-media :global(picture) {
+      position: relative;
+      z-index: 0;
       display: block;
       height: 100%;
     }
@@ -140,8 +145,8 @@ const sizes =
     .wb-marker {
       --wb-size: clamp(1.625rem, 1.2rem + 1.2vw, 2.25rem);
       position: absolute;
-      left: calc(var(--wb-x) - var(--wb-size) / 2);
-      top: calc(var(--wb-y) - var(--wb-size) / 2);
+      left: calc(var(--wb-x, var(--wb-x0)) - var(--wb-size) / 2);
+      top: calc(var(--wb-y, var(--wb-y0)) - var(--wb-size) / 2);
       display: grid;
       place-items: center;
       width: var(--wb-size);
@@ -181,9 +186,22 @@ const sizes =
       background-color: var(--wb-ink);
       color: var(--wb-on);
     }
-    .wb-marker.is-out {
+    /* Pushed out of the zoomed view: gone (outranks the dimming above). */
+    .wb .wb-marker.is-out,
+    .wb[data-active] .wb-marker.is-out:not(.is-active) {
       opacity: 0;
       pointer-events: none;
+    }
+    /* Print shows the plain photo: every marker on its place on it. */
+    @media print {
+      .wb .wb-marker,
+      .wb .wb-marker.is-out,
+      .wb[data-active] .wb-marker:not(.is-active),
+      .wb[data-active] .wb-marker.is-out:not(.is-active) {
+        left: calc(var(--wb-x0) - var(--wb-size) / 2);
+        top: calc(var(--wb-y0) - var(--wb-size) / 2);
+        opacity: 1;
+      }
     }
 
     /* The live scene (src/scripts/workbench/): the canvas fades in over the photo, which is shown
@@ -227,7 +245,6 @@ const sizes =
       }
       .wb:global(.is-live) .wb-frame {
         transform: rotateX(var(--wb-rx, 0deg)) rotateY(var(--wb-ry, 0deg));
-        transform-style: preserve-3d;
         will-change: transform;
       }
       .wb-marker.is-active::after {
