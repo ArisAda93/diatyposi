@@ -32,7 +32,8 @@ const ASPECT = '1:1';
 const RESOLUTION = '2K';
 const OUT_SIZE = 2048;
 const JPEG_QUALITY = 90;
-const CONCURRENCY = 2;
+/** One at a time: OpenRouter refuses parallel requests with 402 when the balance runs low. */
+const CONCURRENCY = 1;
 const MAX_ATTEMPTS = 2;
 const REQUEST_TIMEOUT_MS = 5 * 60 * 1000;
 

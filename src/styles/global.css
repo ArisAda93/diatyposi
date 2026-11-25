@@ -527,11 +527,26 @@ html {
   .btn-secondary:focus-visible {
     background-color: var(--color-paper);
   }
-  /* Accent: a cyan face with fixed dark ink (cyan is the same in both themes; 6.5 : 1). */
+  /* Accent: a cyan face with fixed dark ink (cyan is the same in both themes; 6.5 : 1). Its
+     first plate prints in key, since a cyan plate would vanish into the cyan face. */
   .btn-accent {
     border-color: var(--color-cyan);
     background-color: var(--color-cyan);
     color: var(--ink-fixed);
+  }
+  .btn-accent:focus-visible:not(:active) {
+    box-shadow:
+      2px 2px 0 var(--color-key),
+      4px 4px 0 var(--color-magenta),
+      6px 6px 0 var(--color-yellow);
+  }
+  @media (hover: hover) {
+    .btn-accent:hover:not(:active) {
+      box-shadow:
+        2px 2px 0 var(--color-key),
+        4px 4px 0 var(--color-magenta),
+        6px 6px 0 var(--color-yellow);
+    }
   }
   .on-ink .btn {
     border-color: var(--color-paper);

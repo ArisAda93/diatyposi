@@ -53,8 +53,9 @@ const choices = journeyChoices(services.map((service) => service.slug)).map((slu
   label: copy.chooser.options[slug],
 }));
 /**
- * Stage photographs (one per step, story order): one 1600 px WebP each, loaded by the stage. The
- * stage square is up to about 800 CSS px on large screens, so 1600 px stays sharp at 2×.
+ * Stage photographs (one per step, story order): one WebP each, 1600 px (or the source's width
+ * if smaller), loaded by the stage. The stage square is up to about 800 CSS px on large screens,
+ * so 1600 px stays sharp at 2×.
  */
 const photoFiles = import.meta.glob<{ default: ImageMetadata }>('/src/assets/journey/*.jpg', {
   eager: true,
@@ -63,7 +64,12 @@ const stagePhotos = await Promise.all(
   JOURNEY_STEPS.map(async (step) => {
     const file = photoFiles[`/src/assets/journey/${step.id}.jpg`];
     if (!file) throw new Error(`Journey photo "src/assets/journey/${step.id}.jpg" is missing.`);
-    const image = await getImage({ src: file.default, width: 1600, format: 'webp', quality: 82 });
+    const image = await getImage({
+      src: file.default,
+      width: Math.min(1600, file.default.width),
+      format: 'webp',
+      quality: 82,
+    });
     return image.src;
   }),
 );

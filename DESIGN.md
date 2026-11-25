@@ -11,7 +11,7 @@ The site is built the way a print job is made. Every visual device comes from th
 | **Halftone dots**            | Image hover reveal, statement section, about-photo slot | CSS radial-gradient dots, low contrast, masked.                                                               |
 | **Paper**                    | Every light section                                     | Warm off-white with a faint fixed grain (SVG noise, 3.5% opacity). Dark sections read as solid key-black ink. |
 | **Plate separation**         | Service icons on hover, logo mark                       | Four stacked copies (C, M, Y, K) split by a few px, then snap back into register.                             |
-| **Colour bar**               | Hero foot, footer top, values strip                     | The control strip printed at the edge of every press sheet: four solid patches plus tints.                    |
+| **Colour bar**               | Footer top, values strip, section and page heads        | The control strip printed at the edge of every press sheet: four solid patches plus tints.                    |
 
 **Signature moments.** (Round 1 limited the site to two; the owner's round-2 direction makes the whole site feel alive: see §7.)
 

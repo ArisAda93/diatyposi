@@ -119,6 +119,13 @@
       calc(var(--mo-bx, 1) * 4px) calc(var(--mo-by, 1) * 4px) 0 var(--color-magenta),
       calc(var(--mo-bx, 1) * 6px) calc(var(--mo-by, 1) * 6px) 0 var(--color-yellow);
   }
+  /* The cyan accent button prints its first plate in key (a cyan plate vanishes into it). */
+  html.mo-on.mo-fine .mo-mag.btn-accent:hover:not(:active) {
+    box-shadow:
+      calc(var(--mo-bx, 1) * 2px) calc(var(--mo-by, 1) * 2px) 0 var(--color-key),
+      calc(var(--mo-bx, 1) * 4px) calc(var(--mo-by, 1) * 4px) 0 var(--color-magenta),
+      calc(var(--mo-bx, 1) * 6px) calc(var(--mo-by, 1) * 6px) 0 var(--color-yellow);
+  }
   /* Press still snaps the plates into register. */
   html.mo-on.mo-fine .mo-mag:active {
     transform: translate(0, 0);
@@ -163,6 +170,10 @@
     --mo-rdx: -3px;
     --mo-rdy: -2px;
     color: var(--color-cyan);
+  }
+  /* On the cyan accent button the cyan ring would vanish: it prints in key there. */
+  html.mo-on .btn-accent .mo-ripple > .mo-ripple-c {
+    color: var(--ink-fixed);
   }
   html.mo-on .mo-ripple > .mo-ripple-m {
     --mo-rdx: 3px;
