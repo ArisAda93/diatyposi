@@ -3,16 +3,18 @@
  * “Μία ιδέα. Παντού.”) with ByteDance Seedream 5.5 through OpenRouter, at its highest resolution
  * (2K: 2048 × 2048 at 1:1). Every call costs money.
  *
- *   OPENROUTER_API_KEY=… node scripts/journey-images.mjs [--only idea,mark] [--ref <dir>]
+ *   OPENROUTER_API_KEY=… node scripts/journey-images.mjs --ref <dir> [--only idea,mark]
  *
  * Each photograph prints over its step's line drawing, so it must keep the drawing's composition.
- * The request therefore sends the step's current photograph (--ref, default src/assets/journey/)
+ * The request therefore sends the step's reference photograph (from --ref)
  * as the reference image: Seedream re-shoots the same object, in the same place and size on the
  * same light backdrop, as a hyper-realistic studio photograph.
  *
  * Flags:
  *   --only <ids>   comma-separated step ids (idea, mark, card, shirt, sign, gift, social)
- *   --ref <dir>    folder holding the reference <step>.jpg files (default: src/assets/journey/)
+ *   --ref <dir>    required: a folder holding known-good reference <step>.jpg files, kept apart
+ *                  from src/assets/journey/ (the output), so a retry never builds on a rejected
+ *                  result
  *   --raw <dir>    folder for the untouched API images (default: <os tmp>/journey-images-raw)
  *   --dry-run      print the prompts only; no key, no network, no files
  *
@@ -136,8 +138,8 @@ const fullPrompt = (image) => `${clean(image.prompt)}\n\n${clean(STYLE)}`;
 
 const usage = (message) => {
   console.error(`journey-images: ${message}`);
-  console.error('Usage: OPENROUTER_API_KEY=… node scripts/journey-images.mjs [--only a,b]');
-  console.error('       [--ref <dir>] [--raw <dir>] [--dry-run]');
+  console.error('Usage: OPENROUTER_API_KEY=… node scripts/journey-images.mjs --ref <dir>');
+  console.error('       [--only a,b] [--raw <dir>] [--dry-run]');
   process.exit(2);
 };
 
@@ -146,7 +148,7 @@ try {
   args = parseArgs({
     options: {
       only: { type: 'string' },
-      ref: { type: 'string', default: journeyDir },
+      ref: { type: 'string' },
       raw: { type: 'string', default: join(tmpdir(), 'journey-images-raw') },
       'dry-run': { type: 'boolean', default: false },
     },
@@ -172,7 +174,9 @@ if (args.only !== undefined) {
   selected = IMAGES.filter((i) => names.includes(i.id));
 }
 
+if (!args.ref) usage('--ref <dir> is required (a copy of the known-good photographs).');
 const refDir = resolve(args.ref);
+if (refDir === journeyDir) usage('--ref must not be src/assets/journey/, the output folder.');
 const rawDir = resolve(args.raw);
 
 const reference = async (image) => {

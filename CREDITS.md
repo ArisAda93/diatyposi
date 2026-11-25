@@ -58,10 +58,8 @@ AI-generated illustrative images with ByteDance Seedream 5.5 (`bytedance-seed/se
 through OpenRouter) at its highest resolution (2K, 2048 × 2048), generated on 2026-11-25. They
 show the sample brand “Η επωνυμία σας”, not real work. Each was made from the step's previous
 photograph as the reference image, so it keeps the composition of the step's line drawing it
-prints over; the phone (`social.jpg`) shows a generic feed post with grey placeholder bars, as a
-mock-up of the social media service. The prompts are in `scripts/journey-images.mjs`; to
-regenerate one, run `OPENROUTER_API_KEY=… node scripts/journey-images.mjs --only <step> --ref <dir>`
-with `--ref` pointing at a folder holding the current photographs (each image costs money). The
+prints over; the mug photo has a soft contact shadow where the drawing has a ground hairline; the phone (`social.jpg`) shows a generic feed post with grey placeholder bars, as a
+mock-up of the social media service. The prompts are in `scripts/journey-images.mjs`; to regenerate one, copy the current photographs to a folder outside `src/assets/journey/` and run `OPENROUTER_API_KEY=… node scripts/journey-images.mjs --ref <that folder> --only <step>` (each image costs money). The
 script writes a metadata-free sRGB JPEG (mozjpeg, quality 90). One retouch: a stray accent the
 model added before the first letter of the wordmark on the mug (`gift.jpg`) was removed with a
 feathered clone from the plain glaze above it.
