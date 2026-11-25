@@ -58,13 +58,13 @@ const text = contactText.el.result.ready;
         <Icon name="mail" />
         <span>{text.email}</span>
       </a>
-      <a href={viberHref(site.contact.viber)} class="btn btn-secondary" data-send="viber">
+      <a href={viberHref(site.contact.viber)} class="btn btn-viber" data-send="viber">
         <Icon name="viber" />
         <span>{text.viber}</span>
       </a>
       <a
         href={whatsappMessageHref(site.contact.whatsapp)}
-        class="btn btn-secondary"
+        class="btn btn-whatsapp"
         target="_blank"
         rel="noopener"
         data-send="whatsapp"

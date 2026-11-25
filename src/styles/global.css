@@ -540,6 +540,21 @@ html {
       4px 4px 0 var(--color-magenta),
       6px 6px 0 var(--color-yellow);
   }
+  /*
+   * Brand faces for the «Αποστολή με Viber / WhatsApp» buttons, fixed in both themes. Viber's
+   * purple (#7360F2) deepened by a hair so its white label reaches 4.5 : 1; WhatsApp's green
+   * (#25D366) takes dark ink (8.2 : 1), as white on it would be 2 : 1.
+   */
+  .btn-viber {
+    border-color: #725fef;
+    background-color: #725fef;
+    color: #ffffff;
+  }
+  .btn-whatsapp {
+    border-color: #25d366;
+    background-color: #25d366;
+    color: var(--ink-fixed);
+  }
   @media (hover: hover) {
     .btn-accent:hover:not(:active) {
       box-shadow:
