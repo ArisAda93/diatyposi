@@ -47,11 +47,6 @@ const stageStart = `transform:translate(${start.x}px, ${start.y}px) scale(${star
 const rings = Array.from({ length: 11 }, (_, i) => `M${150 + i * 30} 54V74`).join('');
 const cropMarks =
   'M84 100H100M110 74V90M500 100H516M490 74V90M84 500H100M110 510V526M500 500H516M490 510V526';
-/** Registration target: a small circle and a cross. */
-const target = (cx: number, cy: number): string => {
-  const ring = `M${cx - 6} ${cy}A6 6 0 1 0 ${cx + 6} ${cy}A6 6 0 1 0 ${cx - 6} ${cy}`;
-  return `${ring}M${cx - 11} ${cy}H${cx + 11}M${cx} ${cy - 11}V${cy + 11}`;
-};
 const colourBar = [
   { x: 132, cls: 'ij-c' },
   { x: 148, cls: 'ij-m' },
@@ -147,11 +142,6 @@ const sketchStroke = (k: number): string | undefined => (stage ? `--k:${k}` : un
       <rect class="ij-paper" x="110" y="100" width="380" height="400" />
       <path class="ij-line ij-hair ij-draw" pathLength="1" d="M110 100H490V500H110Z" />
       <path class="ij-line ij-hair ij-draw" pathLength="1" d={cropMarks} />
-      <path
-        class="ij-line ij-hair ij-draw"
-        pathLength="1"
-        d={`${target(300, 82)}${target(300, 518)}`}
-      />
       {colourBar.map((patch) => (
         <rect class={patch.cls} x={patch.x} y="466" width="14" height="10" />
       ))}

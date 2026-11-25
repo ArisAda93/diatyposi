@@ -2,7 +2,7 @@
 /**
  * Photo slot on /etaireia/. With `site.aboutPhoto` set it shows that photo in a crop-marked frame.
  * Until then it shows a press sheet: the four logo arches printed as halftone plates at their
- * screen angles (C 15°, M 75°, Y 0°, K 45°), slightly out of register, with a registration mark,
+ * screen angles (C 15°, M 75°, Y 0°, K 45°), slightly out of register, with an ink drop,
  * a colour bar and the solid mark as the proof. Decorative, no text.
  *
  * The arches sit on a parallax layer (`data-parallax`, motion.ts) and drift inside the sheet while
@@ -11,12 +11,12 @@
  *
  * Phones (under 48rem): the empty sheet is a landscape 4 / 3 proof rather than a tall 4 / 5 one
  * (which stood a whole screen high around little art), with the arches centred between the
- * registration mark and the foot and a gentler drift, so they never sink onto the colour bar.
+ * ink drop and the foot and a gentler drift, so they never sink onto the colour bar.
  */
 import Photo from '../Photo.astro';
 import Logo from '../Logo.astro';
 import ColorBar from '../ColorBar.astro';
-import RegMark from '../RegMark.astro';
+import InkDrop from '../InkDrop.astro';
 import { ARCH, ARCH_PLATES } from '../logo-paths';
 import { site } from '~/data/site';
 
@@ -59,7 +59,7 @@ const plates = [...ARCH_PLATES].reverse().map((p) => {
           <span class:list={['about-plate', `about-plate-${p.id}`]} style={p.style} />
         ))}
       </div>
-      <RegMark size={30} class="about-reg" />
+      <InkDrop size={30} class="about-reg" />
       <div class="about-foot">
         <ColorBar tints={3} class="about-colorbar" />
         <Logo variant="mark" id="about-proof-mark" class="about-proof" />

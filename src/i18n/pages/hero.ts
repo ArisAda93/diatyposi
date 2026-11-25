@@ -5,11 +5,9 @@
  */
 export const heroText = {
   el: {
-    /** Small word beside the animated scroll cue at the foot of the hero (shown in capitals). */
-    scrollCue: 'Κύλιση',
     /**
-     * New copy for owner review: the quiet link under the hero's actions, to the company page
-     * (/etaireia/). Moved here with the owner's intro, which the hero now carries.
+     * New copy for owner review: the hero's third button, beside the services button, to the
+     * company page (/etaireia/).
      */
     aboutLink: 'Γνωρίστε μας',
   },

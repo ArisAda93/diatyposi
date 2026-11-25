@@ -527,6 +527,12 @@ html {
   .btn-secondary:focus-visible {
     background-color: var(--color-paper);
   }
+  /* Accent: a cyan face with fixed dark ink (cyan is the same in both themes; 6.5 : 1). */
+  .btn-accent {
+    border-color: var(--color-cyan);
+    background-color: var(--color-cyan);
+    color: var(--ink-fixed);
+  }
   .on-ink .btn {
     border-color: var(--color-paper);
   }

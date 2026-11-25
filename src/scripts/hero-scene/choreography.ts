@@ -6,9 +6,7 @@
  * each held briefly, then moved into the next:
  *  - mark    the plates in the logo's register, gently exploded in depth and breathing;
  *  - target  the arches turn about one common centre (C 90°, M 0°, Y 180°, K −90°) and close into a
- *            ring, the printer's registration target. Where neighbouring feet overlap the inks
- *            overprint. The ring turns slowly while two key hairlines draw through its centre and
- *            retract again (crosshairAt);
+ *            ring. Where neighbouring feet overlap the inks overprint. The ring turns slowly;
  *  - wave    the plates line up side by side, alternately upright and inverted, into one
  *            continuous ribbon of ink. A rolling ripple travels along it, like ink through the
  *            press rollers.
@@ -171,13 +169,6 @@ export const LIFT = { forward: 40, spread: 56 } as const;
 export const SNAP_AT = 0.62;
 
 /**
- * Crosshair: half-length (× ring outer radius), delay after the target hold starts (and before
- * it ends), time to draw or retract one line, and the delay of the vertical line behind the
- * horizontal one (seconds).
- */
-export const CROSSHAIR = { reach: 1.2, delay: 0.15, draw: 0.8, stagger: 0.18 } as const;
-
-/**
  * Scroll-out hand-off (progress 0–1, see handoff): blend to the mark by `toMark`, collapse into
  * register from `collapseFrom` to `collapseTo`, shrink by `shrink` from `shrinkFrom`, and fade
  * out from `fadeFrom` while the header logo's arches pulse (registrationPulse).
@@ -268,8 +259,6 @@ export interface Layout {
   plates: readonly PlateLayout[];
   /** Distance of the ring plates' anchors from the centre (before RING.scale). */
   ringRadius: number;
-  /** Crosshair half-length in group units. */
-  crossReach: number;
 }
 
 const isInverted = (turn: number): boolean => Math.abs(Math.cos(turn) + 1) < 1e-9;
@@ -328,13 +317,7 @@ export const buildLayout = (
     };
   });
 
-  const ringRadius = halfWidth + halfHeight - RING.overlap;
-  return {
-    metrics,
-    plates,
-    ringRadius,
-    crossReach: (ringRadius + halfHeight) * RING.scale * CROSSHAIR.reach,
-  };
+  return { metrics, plates, ringRadius: halfWidth + halfHeight - RING.overlap };
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -376,7 +359,7 @@ const segmentOf = (pose: PoseName): Segment => {
 };
 
 const TARGET = segmentOf('target');
-/** The ring is at its canonical angles (apexes on the crosshair) in the middle of its hold. */
+/** The ring is at its canonical angles (apexes on the axes) in the middle of its hold. */
 const TARGET_MID = (TARGET.holdStart + TARGET.moveStart) / 2;
 
 /** Loop time in [0, PERIOD). */
@@ -532,31 +515,6 @@ export const tiltAt = (t: number): Tilt => {
 
 /** The mark's group tilt: the scroll-out hand-off blends to it. */
 export const markTilt = (): Tilt => MARK.tilt;
-
-export interface Span {
-  /** Ends of the drawn part of a crosshair line, −1 to 1 along it (× Layout.crossReach). */
-  from: number;
-  to: number;
-}
-
-/**
- * The two key hairlines of the target. Each draws through the centre (its head travels from −1
- * to 1: the horizontal line left to right, the vertical one top to bottom) and later retracts the
- * same way (its tail follows). Outside the target hold both are empty (from === to).
- */
-export const crosshairAt = (t: number): { horizontal: Span; vertical: Span } => {
-  const lt = loopTime(t);
-  const line = (delay: number): Span => {
-    const drawStart = TARGET.holdStart + CROSSHAIR.delay + delay;
-    const retractStart =
-      TARGET.moveStart - CROSSHAIR.delay - CROSSHAIR.stagger - CROSSHAIR.draw + delay;
-    return {
-      from: -1 + 2 * easeMove((lt - retractStart) / CROSSHAIR.draw),
-      to: -1 + 2 * easeMove((lt - drawStart) / CROSSHAIR.draw),
-    };
-  };
-  return { horizontal: line(0), vertical: line(CROSSHAIR.stagger) };
-};
 
 export interface Handoff {
   /** Blend from the loop pose to the mark pose (the loop clock also slows to a stop with it). */

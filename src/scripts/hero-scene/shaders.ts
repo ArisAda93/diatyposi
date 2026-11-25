@@ -61,8 +61,8 @@ void main() {
 `;
 
 /**
- * Flat quads in group space (the crosshair hairlines and the contact shadow). The quad spans
- * −0.5 to 0.5; vUv runs from −1 to 1 across it.
+ * Flat quad in group space (the contact shadow). The quad spans −0.5 to 0.5; vUv runs from −1 to
+ * 1 across it.
  */
 export const quadVertex = /* glsl */ `
 attribute vec2 position;
@@ -72,16 +72,6 @@ varying vec2 vUv;
 void main() {
   vUv = position * 2.0;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 0.0, 1.0);
-}
-`;
-
-/** A key hairline of the registration crosshair: solid ink, faded towards uPaper by uAlpha. */
-export const lineFragment = /* glsl */ `${PRECISION}
-uniform vec3 uInk;
-uniform vec3 uPaper;
-uniform float uAlpha;
-void main() {
-  gl_FragColor = vec4(mix(uPaper, uInk, uAlpha), 1.0);
 }
 `;
 

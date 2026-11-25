@@ -335,7 +335,6 @@ Every Greek string on the site that is **not** the owner’s own wording, for th
 
 | Key         | Text         |
 | ----------- | ------------ |
-| `scrollCue` | Κύλιση       |
 | `aboutLink` | Γνωρίστε μας |
 
 ## `src/i18n/pages/home.ts` — `homeText`

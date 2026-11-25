@@ -4,7 +4,7 @@
  * always sees where one part ends and the next begins.
  *
  * Head (from the top): a hairline rule across the content width that starts with a short C/M/Y/K
- * colour-bar segment and ends with a registration mark, like the control strip at the edge of a
+ * colour-bar segment and ends with an ink drop, like the control strip at the edge of a
  * press sheet; then the index (“01”) and the red spaced-caps label; then the h2 (`.h2`, so the
  * motion layer's registration reveal applies) with an optional lead. An optional “see all” link
  * (and anything in the `head-extra` slot) sits on the right of the head from 64rem; below that
@@ -32,7 +32,7 @@
  * `:global(.your-class)`, or style the slotted content (which carries the consumer's scope).
  */
 import Icon from './Icon.astro';
-import RegMark from './RegMark.astro';
+import InkDrop from './InkDrop.astro';
 import { capsEl } from '~/lib/text';
 
 interface Props {
@@ -105,7 +105,7 @@ const caps = capsEl(label);
             <span class="sec-bar-k"></span>
           </span>
           <span class="sec-line"></span>
-          <RegMark size={16} class="sec-reg" />
+          <InkDrop size={16} class="sec-reg" />
         </div>
 
         <div class:list={['sec-head-row', { 'has-aside': Boolean(link) || hasExtra }]}>
@@ -188,7 +188,7 @@ const caps = capsEl(label);
       margin-bottom: clamp(2.5rem, 1.5rem + 3vw, 4.5rem);
     }
 
-    /* The press control strip: C/M/Y/K segment, hairline, registration mark. */
+    /* The press control strip: C/M/Y/K segment, hairline, ink drop. */
     .sec-rule {
       display: flex;
       align-items: center;
@@ -318,7 +318,7 @@ const caps = capsEl(label);
       }
     }
 
-    /* The hairline draws in from the colour bar and the mark turns into register as the head
+    /* The hairline draws in from the colour bar and the ink drop falls into place as the head
        scrolls in. Nothing is hidden where scroll-driven animations are unsupported. */
     @supports (animation-timeline: view()) {
       @media (prefers-reduced-motion: no-preference) {
@@ -413,7 +413,7 @@ const caps = capsEl(label);
   @keyframes sec-register {
     from {
       opacity: 0;
-      transform: rotate(-90deg) scale(0.6);
+      transform: translateY(-60%) scale(0.6);
     }
     to {
       opacity: 1;

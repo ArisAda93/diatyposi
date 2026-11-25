@@ -3,11 +3,11 @@
  * "metamorphosis" loop of choreography.ts.
  *
  * - The plates move through a slow, seamless loop: the logo's mark (exploded in depth,
- *   breathing), the registration target (the arches close into a ring that turns slowly while
- *   two key hairlines draw through its centre), and a continuous wave of ink, then snap back
- *   into register. Overlaps multiply like overprinting (see shaders.ts). A soft contact shadow
- *   sits under them. The group follows the pointer with damped rotation on fine pointers (and a
- *   depth parallax per plate) and drifts on its own on touch screens.
+ *   breathing), the ring (the arches close into a ring that turns slowly), and a continuous
+ *   wave of ink, then snap back into register. Overlaps multiply like overprinting (see
+ *   shaders.ts). A soft contact shadow sits under them. The group follows the pointer with
+ *   damped rotation on fine pointers (and a depth parallax per plate) and drifts on its own on
+ *   touch screens.
  * - Every pose fits the art box the hero lays out for it (choreography.ts ART, Hero.astro
  *   `.hero-art`), so no pose is cropped or reaches the copy.
  * - Hand-off to the header logo as the hero scrolls out (scrubbed, nothing pinned; choreography.ts
@@ -29,10 +29,9 @@
  *
  * - Themes (theme.ts): in light the plates multiply on a white canvas composited with
  *   `mix-blend-mode: multiply`; in dark they screen on a black canvas composited with
- *   `mix-blend-mode: screen`, and the key plate, the hairlines and the shadow (a faint glow in
- *   dark) take the light key colour. `dt:themechange` switches the blend state, the uniforms and
- *   the canvas's blend mode together and redraws at once, in the same task, without rebuilding
- *   anything.
+ *   `mix-blend-mode: screen`, and the key plate and the shadow (a faint glow in dark) take the
+ *   light key colour. `dt:themechange` switches the blend state, the uniforms and the canvas's
+ *   blend mode together and redraws at once, in the same task, without rebuilding anything.
  * - Hand-over to the site-wide floating plates (handoff-signal.ts): every frame in which the
  *   hand-off progress, the art box or the plates' place changed, the scene publishes them
  *   (`dt:hero-handoff` on document, and latestHeroHandoff()).
@@ -49,7 +48,6 @@ import {
   blendPose,
   blendTilt,
   buildLayout,
-  crosshairAt,
   handoff,
   markPose,
   markTilt,
@@ -78,14 +76,7 @@ import {
   type Placement,
   type ViewBox,
 } from './math';
-import {
-  depthFragment,
-  lineFragment,
-  plateFragment,
-  plateVertex,
-  quadVertex,
-  shadowFragment,
-} from './shaders';
+import { depthFragment, plateFragment, plateVertex, quadVertex, shadowFragment } from './shaders';
 import { latestHeroHandoff, publishHeroHandoff } from './handoff-signal';
 import { precompile, yieldToMain } from './startup';
 import { inkModel, keyInkFor, sceneThemeOf, type SceneTheme } from './theme';
@@ -143,11 +134,6 @@ const INTRO_FROM: Record<PlateId, { x: number; y: number; rz: number }> = {
   y: { x: -120, y: -110, rz: 0.14 },
   k: { x: 160, y: -80, rz: -0.16 },
 };
-/**
- * Crosshair hairlines: width in CSS px, ink strength, and the scroll (px) over which they fade as
- * the hero starts to move (they reach almost to the art box's edge, so they go first).
- */
-const HAIRLINE = { width: 1.5, alpha: 1, scrollFade: 8 };
 /**
  * Contact shadow: size relative to the plates' bounds, offset towards the lower right (share of
  * the bounds; light from the upper left), and depth below the rearmost plate (raster units). Its
@@ -256,7 +242,6 @@ export const createHeroScene = async (
     [
       { vertex: plateVertex, fragment: plateFragment },
       { vertex: plateVertex, fragment: depthFragment },
-      { vertex: quadVertex, fragment: lineFragment },
       { vertex: quadVertex, fragment: shadowFragment },
     ],
     PRECOMPILE_TIMEOUT,
@@ -302,21 +287,8 @@ export const createHeroScene = async (
   );
 
   await yieldToMain();
-  // Key ink of the hairlines and the shadow (and of the key plate): set by applyTheme.
+  // Key ink of the shadow (and of the key plate): set by applyTheme.
   const keyInk = new Float32Array(3);
-  const lineUniforms = { uInk: { value: keyInk }, uPaper: paper, uAlpha: { value: 0 } };
-  const lineProgram = linked(
-    new Program(gl, {
-      vertex: quadVertex,
-      fragment: lineFragment,
-      uniforms: lineUniforms,
-      depthTest: false,
-      depthWrite: false,
-      cullFace: false,
-    }),
-  );
-
-  await yieldToMain();
   const shadowUniforms = { uInk: { value: keyInk }, uPaper: paper, uAlpha: { value: 0 } };
   const shadowProgram = linked(
     new Program(gl, {
@@ -349,23 +321,11 @@ export const createHeroScene = async (
     return { layout: plateLayout, ink: hexToRgb(hexOf(plateLayout.id)), mesh, alpha: 1 };
   });
 
-  // Flat quads (−0.5 to 0.5) for the crosshair hairlines and the contact shadow.
+  // Flat quad (−0.5 to 0.5) for the contact shadow.
   const quadGeometry = new Geometry(gl, {
     position: { size: 2, data: new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5]) },
     index: { data: new Uint16Array([0, 1, 2, 0, 2, 3]) },
   });
-  const makeLine = (): Mesh => {
-    const mesh = new Mesh(gl, {
-      geometry: quadGeometry,
-      program: lineProgram,
-      frustumCulled: false,
-    });
-    mesh.setParent(group);
-    return mesh;
-  };
-  const lineH = makeLine();
-  const lineV = makeLine();
-  const lines = [lineH, lineV];
   const shadow = new Mesh(gl, {
     geometry: quadGeometry,
     program: shadowProgram,
@@ -378,7 +338,7 @@ export const createHeroScene = async (
   // ---------------------------------------------------------------------------------------------
 
   const keyPlate = plates.find((p) => p.layout.id === 'k');
-  const colorPasses = [colorProgram, lineProgram, shadowProgram];
+  const colorPasses = [colorProgram, shadowProgram];
   let theme: SceneTheme = sceneThemeOf(root.dataset['theme']);
   let shadowAlpha = 0;
 
@@ -530,11 +490,6 @@ export const createHeroScene = async (
       p.mesh.program = colorProgram;
       p.mesh.draw({ camera });
     }
-
-    // The crosshair prints over the ring, like a key line on top.
-    if (lineUniforms.uAlpha.value > 0.002) {
-      for (const line of lines) if (line.visible) line.draw({ camera });
-    }
   };
 
   // ---------------------------------------------------------------------------------------------
@@ -590,28 +545,6 @@ export const createHeroScene = async (
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
     last = 0;
-  };
-
-  /** Draws a crosshair line from `span` (−1 to 1 along it) at group scale `scale` (px/unit). */
-  const placeLine = (
-    mesh: Mesh,
-    span: { from: number; to: number },
-    vertical: boolean,
-    scale: number,
-  ): void => {
-    const length = (span.to - span.from) * layout.crossReach;
-    mesh.visible = length > 1e-3;
-    if (!mesh.visible) return;
-    const mid = ((span.from + span.to) / 2) * layout.crossReach;
-    const thickness = HAIRLINE.width / Math.max(1e-4, scale);
-    // The horizontal line draws left to right, the vertical one top to bottom.
-    if (vertical) {
-      mesh.position.set(0, -mid, 0);
-      mesh.scale.set(thickness, length, 1);
-    } else {
-      mesh.position.set(mid, 0, 0);
-      mesh.scale.set(length, thickness, 1);
-    }
   };
 
   // ---------------------------------------------------------------------------------------------
@@ -752,13 +685,6 @@ export const createHeroScene = async (
       p.alpha = ink * out.ink;
       inkSum += ink;
     }
-
-    // Registration crosshair through the ring's centre (empty outside the target hold).
-    const cross = crosshairAt(loopClock);
-    const lineFade = 1 - clamp(scrolled / HAIRLINE.scrollFade);
-    lineUniforms.uAlpha.value = HAIRLINE.alpha * explode * fadeIn * (1 - toMark) * lineFade;
-    placeLine(lineH, cross.horizontal, false, scale);
-    placeLine(lineV, cross.vertical, true, scale);
 
     // Footprint of the plates (group units, y up).
     const b = poseBounds(poses, plateOutline);
@@ -946,7 +872,6 @@ export const createHeroScene = async (
       p.mesh.program = colorProgram;
       p.mesh.draw({ camera });
     }
-    lineH.draw({ camera });
     shadow.draw({ camera });
     gl.colorMask(true, true, true, true);
   };

@@ -4,13 +4,12 @@
  * lying over it as part of the composition (Header.astro, `overHero`). It has no background of its
  * own, so the site-wide living background shows through (cyan accent while it holds the centre).
  *
- * - The copy is one block: the red label, the owner's headline (painted at first paint, the LCP
- *   element), a registration hairline that ties it to the owner's intro (set as its lead), the two
- *   actions and a quiet link to the company page. Desktop: a left column, vertically centred.
- *   Below 64rem: under the art. Landscape phones: beside the art, as on desktop. Portrait phones
- *   (below 40rem) are composed to fit the first screen above the call bar: the art shrinks on
- *   short screens, the services button and the company link share a row, and the sheet foot is
- *   left out (the call bar already prints the colour bar along that edge).
+ * - The copy is one block: the owner's headline (painted at first paint, the LCP element), a
+ *   hairline that ties it to the owner's intro (set as its lead) and three actions: the quote,
+ *   the services and the company page (a cyan button, `btn-accent`). Desktop: a left column,
+ *   vertically centred. Below 64rem: under the art. Landscape phones: beside the art, as on
+ *   desktop. Portrait phones (below 40rem) are composed to fit the first screen above the call
+ *   bar: the art shrinks on short screens and the services and company buttons share a row.
  * - The art box (decorative, aria-hidden) holds the logo arches as SVG: the static composition,
  *   shown at first paint, without JS, with reduced motion and without WebGL. Its aspect ratio is
  *   the box every pose of the live scene fits in (hero-scene/choreography.ts ART, 900 × 620
@@ -24,8 +23,8 @@
  *   site-wide ink lines of the living background stay behind the page throughout.
  * - Dark theme: the scene screens light inks on black (hero-scene/theme.ts); the SVG mark, the
  *   ghosts and the rules follow the tokens, and overprint uses `--blend-ink` (screen in dark).
- * - The sheet's crop-marked trim recedes slightly on scroll (`data-parallax`). The foot carries
- *   the colour bar, the scroll cue and a registration mark.
+ * - The sheet's crop-marked trim recedes slightly on scroll (`data-parallax`). There is no foot
+ *   strip or scroll cue: once the page scrolls, the header's progress bar takes that role.
  *
  * The CSS describes the composed state. Intro start states apply only under `html.hero-intro`
  * (set before first paint by BaseLayout) and while `.hero.is-intro` / `.is-intro-svg` are set
@@ -33,24 +32,16 @@
  */
 import Logo from '~/components/Logo.astro';
 import Icon from '~/components/Icon.astro';
-import ColorBar from '~/components/ColorBar.astro';
-import RegMark from '~/components/RegMark.astro';
-import { ownerCopy, routes, site } from '~/data/site';
+import InkDrop from '~/components/InkDrop.astro';
+import { ownerCopy, routes } from '~/data/site';
 import { t } from '~/i18n/ui';
 import { heroText } from '~/i18n/pages/hero';
-import { capsEl } from '~/lib/text';
 
 // Two lines, broken after “σας…”.
 const headline = ownerCopy.el.headline;
 const cut = headline.indexOf('… ');
 const lines = cut >= 0 ? [headline.slice(0, cut + 1), headline.slice(cut + 2)] : [headline];
 const ghosts = ['c', 'm', 'y'] as const;
-// The red label names the trade, and the town once the owner sets it (“… ΣΤΗΝ ΑΘΗΝΑ”), so the
-// first words of the page say what and where for visitors and search engines alike.
-const locative = site.address.locative.trim();
-const heroLabel = locative
-  ? `${site.descriptorCaps.el} ${capsEl(locative)}`
-  : site.descriptorCaps.el;
 ---
 
 <section class="hero" aria-labelledby="hero-title" data-hero data-bg-accent="cyan">
@@ -67,7 +58,6 @@ const heroLabel = locative
 
       <div class="hero-copy" data-hero-copy>
         <span class="hero-sentinel" aria-hidden="true" data-hero-sentinel></span>
-        <p class="label hero-label">{heroLabel}</p>
         <div class="hero-headline" data-motion="off">
           <h1 id="hero-title" class="display-xl hero-title hero-h1">
             {lines.map((line, i) => (
@@ -88,7 +78,7 @@ const heroLabel = locative
           </div>
         </div>
         <div class="hero-rule" aria-hidden="true">
-          <RegMark size={14} />
+          <InkDrop size={14} />
           <span class="hero-rule-line"></span>
         </div>
         <p class="hero-lead">{ownerCopy.el.intro}</p>
@@ -98,28 +88,17 @@ const heroLabel = locative
               <span>{t('requestQuote')}</span>
               <Icon name="arrow-right" size={20} />
             </a>
-            <a href={routes.services} class="btn btn-secondary">
-              {t('ourServices')}
-            </a>
+            <div class="hero-pair">
+              <a href={routes.services} class="btn btn-secondary">
+                {t('ourServices')}
+              </a>
+              <a href={routes.about} class="btn btn-accent">
+                {heroText.el.aboutLink}
+              </a>
+            </div>
           </div>
-          <a href={routes.about} class="hero-about">
-            <span class="link">{heroText.el.aboutLink}</span>
-            <Icon name="arrow-right" size={18} />
-          </a>
         </div>
       </div>
-    </div>
-
-    <div class="hero-foot" aria-hidden="true">
-      <ColorBar tints={4} />
-      <span class="hero-foot-rule"></span>
-      <span class="hero-cue">
-        <span class="hero-cue-label">{capsEl(heroText.el.scrollCue)}</span>
-        <span class="hero-cue-track">
-          <span class="hero-cue-drop"></span>
-        </span>
-      </span>
-      <RegMark size={22} />
     </div>
   </div>
 </section>
@@ -280,9 +259,6 @@ const heroLabel = locative
       height: 1px;
       pointer-events: none;
     }
-    .hero-label {
-      margin-bottom: clamp(0.875rem, 2.2svh, 1.5rem);
-    }
     .hero-headline {
       position: relative;
     }
@@ -371,7 +347,9 @@ const heroLabel = locative
       text-wrap: pretty;
     }
 
-    /* The actions and the company link (from 40rem: the buttons in a row, the link under them). */
+    /* The three actions: the quote, then the services and company buttons as one pair that never
+       splits (from 40rem: in a row, the pair wrapping under the quote where the column is too
+       narrow; below, the quote runs across the column with the pair under it). */
     .hero-cta {
       margin-top: clamp(1.5rem, 3.5svh, 2.25rem);
     }
@@ -380,73 +358,39 @@ const heroLabel = locative
       flex-direction: column;
       gap: 0.75rem;
     }
-
-    .hero-about {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      min-height: 2.75rem;
-      margin-top: clamp(0.5rem, 1.5svh, 1rem);
-      font-family: var(--font-display);
-      font-weight: 700;
-      color: var(--color-key);
-      text-decoration: none;
-    }
-    .hero-about :global(svg) {
-      transition: transform var(--dur-base) var(--ease-out);
+    .hero-pair {
+      display: flex;
+      gap: 0.75rem;
     }
 
     /*
-     * Portrait phones: the first screen holds the art, the label, the headline, the intro and the
-     * actions, clear of the call bar. The primary action runs across the column; the services
-     * button and the company link share the next row (the button takes the room the link leaves;
-     * where both do not fit, the link drops under it). The intro steps down to 17 px on short
-     * screens (2.4svh), and the sheet foot is left out: the call bar prints the colour bar along
-     * that edge already, and a touch screen needs no scroll cue.
+     * Portrait phones: the first screen holds the art, the headline, the intro and the actions,
+     * clear of the call bar. The primary action runs across the column; the services and company
+     * buttons share the next row and its width. The intro steps down to 17 px on short
+     * screens (2.4svh).
      */
     @media (max-width: 39.99rem) {
       .hero-lead {
         font-size: min(var(--text-lead), max(1.0625rem, 2.4svh));
       }
-      .hero-cta {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 0.75rem;
-      }
-      .hero-actions {
-        display: contents;
-      }
-      .hero-actions .btn-primary {
-        flex: 1 0 100%;
-      }
-      .hero-actions .btn-secondary {
+      .hero-pair .btn {
         flex: 1 1 auto;
         padding-inline: 1rem;
       }
-      .hero-about {
-        flex: none;
-        margin-top: 0;
-        font-size: 1rem;
-      }
     }
     /*
-     * Small phones (under 360 px): the services button and the company link always share one
-     * row, so no third row reaches the call bar. The button may shrink to its longest word (its
-     * label wraps under 24rem, global.css) and takes the room the link leaves; the link drops its
-     * arrow there.
+     * Small phones (under 360 px): the services and company buttons always share one row, so no
+     * third row reaches the call bar. Each may shrink to its longest word (labels wrap under
+     * 24rem, global.css).
      */
     @media (max-width: 359.98px) {
       .hero-lead {
         font-size: 1.0625rem;
         line-height: 1.5;
       }
-      .hero-actions .btn-secondary {
+      .hero-pair .btn {
         flex: 1 1 0;
         padding-inline: 0.5rem;
-      }
-      .hero-about :global(svg) {
-        display: none;
       }
     }
     /*
@@ -462,66 +406,12 @@ const heroLabel = locative
         width: min(100%, clamp(4rem, 60vh - 21rem, (100vh - var(--header-h)) * 0.25) * 900 / 620);
         width: min(100%, clamp(4rem, 60svh - 21rem, (100svh - var(--header-h)) * 0.25) * 900 / 620);
       }
-      .hero-label {
-        margin-bottom: 0.625rem;
-      }
       .hero-rule {
         margin-top: 0.875rem;
       }
       .hero-lead {
         margin-top: 0.625rem;
         line-height: 1.45;
-      }
-    }
-
-    .hero-foot {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      margin-top: clamp(1.5rem, 4svh, 3rem);
-      color: var(--color-key);
-    }
-    .hero-foot-rule {
-      flex: 1;
-      height: 1px;
-      background-color: var(--color-line);
-    }
-    .hero-cue {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-    .hero-cue-label {
-      font-family: var(--font-display);
-      font-size: 0.75rem;
-      font-weight: 750;
-      line-height: 1;
-      letter-spacing: 0.24em;
-      color: var(--color-muted);
-    }
-    .hero-cue-track {
-      position: relative;
-      width: 1px;
-      height: 2rem;
-      overflow: hidden;
-      background-color: var(--color-line);
-    }
-    .hero-cue-drop {
-      position: absolute;
-      top: 0;
-      left: -1px;
-      width: 3px;
-      height: 0.75rem;
-      background-color: var(--color-key);
-      animation: hero-cue 2.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
-    }
-    .hero[data-offscreen] .hero-cue-drop {
-      animation-play-state: paused;
-    }
-    /* Portrait phones: no sheet foot (see the phone composition above). */
-    @media (max-width: 39.99rem) {
-      .hero-foot {
-        display: none;
       }
     }
 
@@ -578,9 +468,9 @@ const heroLabel = locative
 
     /*
      * Desktop: copy in the left 6.5 twelfths, art in the right 5.5. The block is centred
-     * vertically between the header and the foot (equal gaps above and below), and the art's
-     * centre lines up with the copy's. The art fills its column and bleeds into the right gutter;
-     * it shrinks on short viewports so the copy and the foot keep their room. The headline is
+     * vertically in the space under the header, and the art's centre lines up with the copy's.
+     * The art fills its column and bleeds into the right gutter; it shrinks on short viewports so
+     * the copy keeps its room. The headline is
      * sized to its column so it keeps two lines (the longer line is about 8.6 em).
      */
     @media (min-width: 64rem) {
@@ -639,23 +529,7 @@ const heroLabel = locative
       }
     }
 
-    /* Hover only where the pointer hovers: a tap must not leave the arrow nudged. */
-    @media (prefers-reduced-motion: no-preference) {
-      .hero-about:focus-visible :global(svg) {
-        transform: translateX(3px);
-      }
-    }
-    @media (prefers-reduced-motion: no-preference) and (hover: hover) {
-      .hero-about:hover :global(svg) {
-        transform: translateX(3px);
-      }
-    }
-
     @media (prefers-reduced-motion: reduce) {
-      .hero-cue-drop {
-        animation: none;
-        transform: translateY(0.625rem);
-      }
       /* Reduced motion switched on mid-intro: show the composed state at once. */
       .hero.is-intro .hero-ghost,
       .hero.is-intro-svg .hero-mark :global(.logo-plate) {
@@ -679,16 +553,6 @@ const heroLabel = locative
         visibility: visible;
         opacity: 1 !important;
       }
-    }
-  }
-
-  @keyframes hero-cue {
-    0% {
-      transform: translateY(-0.75rem);
-    }
-    70%,
-    100% {
-      transform: translateY(2rem);
     }
   }
 

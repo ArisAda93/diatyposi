@@ -13,7 +13,7 @@
  */
 import BaseLayout from '~/layouts/BaseLayout.astro';
 import Icon from '~/components/Icon.astro';
-import RegMark from '~/components/RegMark.astro';
+import InkDrop from '~/components/InkDrop.astro';
 import ColorBar from '~/components/ColorBar.astro';
 import { routes } from '~/data/site';
 import { notfoundText } from '~/i18n/pages/notfound';
@@ -34,7 +34,7 @@ const plates = ['c', 'm', 'y', 'k'] as const;
         </div>
       </div>
       <div class="np-foot">
-        <RegMark size={22} />
+        <InkDrop size={22} />
         <ColorBar tints={4} />
         <span class="label np-slug">{capsEl(text.slug)}</span>
       </div>

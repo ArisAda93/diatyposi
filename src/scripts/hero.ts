@@ -144,11 +144,6 @@ export const initHero = (): void => {
   };
   const reduce = matchMedia('(prefers-reduced-motion: reduce)');
 
-  // The scroll cue's loop rests while the hero is off-screen.
-  new IntersectionObserver(([entry]) => {
-    hero.toggleAttribute('data-offscreen', !(entry?.isIntersecting ?? true));
-  }).observe(hero);
-
   let prepared: HeroScene | null = null; // created, not started
   let scene: HeroScene | null = null; // running
   let loading: Promise<HeroScene | null> | null = null;

@@ -2,7 +2,7 @@
 /**
  * Shared footer: solid ink (opaque), the brand's close.
  *
- * Top: the press colour bar with a registration mark. Four columns, one row of the 12-column
+ * Top: the press colour bar with an ink drop. Four columns, one row of the 12-column
  * grid from 1024px (brand 1–4, pages 5–6, services 7–9, contact 10–12): logo with the tagline in
  * Comfortaa; pages; services (iterated from `services`, never by index, each linking to its own
  * page; long names wrap inside their column); contact details with the social links. Then the
@@ -16,7 +16,7 @@
 import Logo from './Logo.astro';
 import Icon from './Icon.astro';
 import ColorBar from './ColorBar.astro';
-import RegMark from './RegMark.astro';
+import InkDrop from './InkDrop.astro';
 import { ARCH, ARCH_PLATES } from './logo-paths';
 import { nav, routes, serviceHref, services, site } from '~/data/site';
 import { t, type Locale } from '~/i18n/ui';
@@ -55,7 +55,7 @@ const year = new Date().getFullYear();
     <div class="footer-top">
       <ColorBar tints={6} />
       <span class="footer-top-rule" aria-hidden="true"></span>
-      <RegMark size={22} class="footer-reg" />
+      <InkDrop size={22} class="footer-reg" />
     </div>
 
     <div class="grid-12 footer-cols">

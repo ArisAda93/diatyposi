@@ -4,10 +4,10 @@
  * blocks: cyan and yellow fills with ink text in both themes (`.tokens-light`), magenta only as a
  * graphic band and halftone (never behind text), and a solid ink block (`.on-ink`; darker than
  * the page with a hairline edge in the dark theme). Hovering a block sends C/M/Y ghosts of its
- * plate letter out of register and back, and turns its registration mark. The section paints
+ * plate letter out of register and back, and lifts its ink drop. The section paints
  * nothing else, so the living background shows between the blocks (`data-bg-accent`).
  */
-import RegMark from '../RegMark.astro';
+import InkDrop from '../InkDrop.astro';
 import Section from '../Section.astro';
 import { ownerCopy } from '~/data/site';
 import { aboutText } from '~/i18n/pages/about';
@@ -42,7 +42,7 @@ const blocks = ownerCopy.el.values.map((value, i) => ({
       >
         <div class="value-top" aria-hidden="true">
           <span class="value-plate">{b.plate.toUpperCase()}</span>
-          <RegMark size={22} class="value-reg" />
+          <InkDrop size={22} class="value-reg" />
         </div>
         <div>
           <h3 class="h3 value-title">{b.value}</h3>
@@ -126,7 +126,7 @@ const blocks = ownerCopy.el.values.map((value, i) => ({
         animation: value-plate-reg 700ms var(--ease-snap);
       }
       .value:hover :global(.value-reg) {
-        transform: rotate(90deg);
+        transform: translateY(-4px);
       }
     }
     .value-note {

@@ -36,7 +36,7 @@ export interface InkModel {
   paper: Rgb;
   /** `mix-blend-mode` of the canvas over the page. */
   cssBlend: 'multiply' | 'screen';
-  /** WebGL blend factors (gl.blendFunc) of every colour pass: plates, hairlines and shadow. */
+  /** WebGL blend factors (gl.blendFunc) of every colour pass: plates and shadow. */
   blend: { src: BlendFactor; dst: BlendFactor };
   /**
    * Strength of the soft patch under the plates: a contact shadow of key ink in light, a faint
@@ -108,9 +108,9 @@ export const luminance = ([r, g, b]: Rgb): number => {
 const LIGHT_KEY_HEX = ARCH_PLATES.find((plate) => plate.id === 'k')?.hex ?? '#221F20';
 
 /**
- * The key plate's ink (also the crosshair hairlines and the shadow or glow). Light: the logo's
- * key black, exactly as before. Dark: `cssKey` (the computed `--color-key`) when it parses and
- * is actually light, otherwise the contract's light key colour.
+ * The key plate's ink (also the shadow or glow). Light: the logo's key black, exactly as before.
+ * Dark: `cssKey` (the computed `--color-key`) when it parses and is actually light, otherwise the
+ * contract's light key colour.
  */
 export const keyInkFor = (theme: SceneTheme, cssKey: string | null): Rgb => {
   if (theme === 'light') return parseCssColor(LIGHT_KEY_HEX) ?? [0, 0, 0];

@@ -7,7 +7,7 @@
  * Desktop (from 64rem): two columns. Left, a sticky press plate in perspective inside crop marks,
  * showing the active service's photo, plate icon, number and lead sentence, edged in that service's
  * plate ink (the same C, M, Y, K cycle as the chapters on /ypiresies/). Behind the plate a halftone
- * under-plate and two registration targets sit at their own scroll depths (`data-parallax`, run by
+ * under-plate and two ink drops sit at their own scroll depths (`data-parallax`, run by
  * the motion layer). Right, the services as large typographic rows; each row is one link to
  * the service's own page (/ypiresies/<slug>/). Below 64rem: no plate; each row carries its own
  * thumbnail and lead.
@@ -27,7 +27,7 @@ import Section from '~/components/Section.astro';
 import Icon from '~/components/Icon.astro';
 import Photo from '~/components/Photo.astro';
 import PlateIcon from '~/components/PlateIcon.astro';
-import RegMark from '~/components/RegMark.astro';
+import InkDrop from '~/components/InkDrop.astro';
 import { ownerCopy, portfolio, routes, serviceHref, services } from '~/data/site';
 import { homeText } from '~/i18n/pages/home';
 import { t } from '~/i18n/ui';
@@ -114,8 +114,8 @@ const thumbWidths = [160, 320, 480];
               </div>
             </div>
             <div class="svc-plate-marks" data-parallax="-0.06">
-              <RegMark size={22} />
-              <RegMark size={22} />
+              <InkDrop size={22} />
+              <InkDrop size={22} />
             </div>
           </div>
         </div>
@@ -619,7 +619,7 @@ const thumbWidths = [160, 320, 480];
         }
       }
 
-      /* Registration targets centred over and under the sheet, as on a press sheet's margins. */
+      /* Ink drops centred over and under the sheet. */
       .svc-plate-marks {
         position: absolute;
         inset: -2.5rem 0;

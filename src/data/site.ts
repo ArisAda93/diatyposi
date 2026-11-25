@@ -75,7 +75,6 @@ export const site = {
    */
   alternateNames: ['Διατύπωση', 'Diatyposi', 'Diatiposi'],
   descriptor: { el: 'Διαφήμιση – Εκτυπώσεις' } satisfies Localized<string>,
-  descriptorCaps: { el: 'ΔΙΑΦΗΜΙΣΗ – ΕΚΤΥΠΩΣΕΙΣ' } satisfies Localized<string>,
   tagline: {
     el: 'Πάνω από προϊόντα, χτίζουμε σχέσεις εμπιστοσύνης.',
   } satisfies Localized<string>,

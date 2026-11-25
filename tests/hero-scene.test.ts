@@ -13,7 +13,6 @@ import {
   archMetrics,
   blendPose,
   buildLayout,
-  crosshairAt,
   easeSnap,
   handoff,
   loopTime,
@@ -409,18 +408,13 @@ describe('choreography (the plates’ metamorphosis loop)', () => {
     }
   });
 
-  it('keeps every value finite, and every pose and the crosshair inside the art box', () => {
+  it('keeps every value finite, and every pose inside the art box', () => {
     for (const t of times(0, PERIOD, 1 / 60)) {
       const poses = posesAt(t);
       for (const pose of poses) {
         for (const field of fields) expect(Number.isFinite(pose[field])).toBe(true);
       }
       const b = poseBounds(poses, plateOutline);
-      for (const span of Object.values(crosshairAt(t))) {
-        if (span.from === span.to) continue;
-        const reach = Math.max(Math.abs(span.from), Math.abs(span.to)) * layout.crossReach;
-        expect(reach).toBeLessThanOrEqual(Math.min(ART.width, ART.height) / 2);
-      }
       expect(b.minX).toBeGreaterThanOrEqual(-ART.width / 2);
       expect(b.maxX).toBeLessThanOrEqual(ART.width / 2);
       expect(b.minY).toBeGreaterThanOrEqual(-ART.height / 2);
@@ -555,25 +549,6 @@ describe('choreography (the plates’ metamorphosis loop)', () => {
     const move = segment('target');
     expect(spread((move.moveStart + move.end) / 2)).toBeGreaterThan(spread(move.end) + 50);
     expect(spread((move.moveStart + move.end) / 2)).toBeGreaterThan(spread(move.moveStart) + 50);
-  });
-
-  it('draws the crosshair through the centre during the target hold only', () => {
-    const empty = (span: { from: number; to: number }): boolean => span.from === span.to;
-    for (const t of [0, target.holdStart, target.moveStart, segment('wave').holdStart]) {
-      const cross = crosshairAt(t);
-      expect(empty(cross.horizontal)).toBe(true);
-      expect(empty(cross.vertical)).toBe(true);
-    }
-    const full = crosshairAt(targetMid);
-    expect(full.horizontal).toEqual({ from: -1, to: 1 });
-    expect(full.vertical).toEqual({ from: -1, to: 1 });
-    for (const t of times(0, PERIOD, 1 / 60)) {
-      for (const span of Object.values(crosshairAt(t))) {
-        expect(span.from).toBeGreaterThanOrEqual(-1);
-        expect(span.to).toBeLessThanOrEqual(1);
-        expect(span.from).toBeLessThanOrEqual(span.to);
-      }
-    }
   });
 
   it('hands off: to the mark, collapse, then shrink and fade while the header prints in', () => {

@@ -4,7 +4,7 @@
  * and the page's single <h1> hangs under it, as the wordmark sits under the arches in the logo.
  *
  * - The masthead rule (decorative): the press colour bar, a key hairline across the content
- *   width and a registration mark at its end. It is the same strip that opens every section
+ *   width and an ink drop at its end. It is the same strip that opens every section
  *   (Section.astro), set heavier here, so the header and the sections read as one system.
  * - The arches (decorative): drawn as four C/M/Y/K hairline outlines whose feet stand on the
  *   rule, right-aligned to where the hairline ends. They are sized from the title's type
@@ -23,7 +23,7 @@
  * The block paints no background: the living background shows through, tinted by `accent`
  * (`data-bg-accent`). Decoration is aria-hidden.
  */
-import RegMark from './RegMark.astro';
+import InkDrop from './InkDrop.astro';
 import ColorBar from './ColorBar.astro';
 import { ARCH, ARCH_PLATES } from './logo-paths';
 import { capsEl } from '~/lib/text';
@@ -99,7 +99,7 @@ const hasExtra = Astro.slots.has('default');
     <div class="ph-rule" aria-hidden="true">
       <ColorBar tints={3} class="ph-bar" />
       <span class="ph-line"></span>
-      <RegMark size={18} class="ph-reg" />
+      <InkDrop size={18} class="ph-reg" />
     </div>
 
     <p class="label ph-label">{capsEl(label)}</p>
@@ -116,7 +116,7 @@ const hasExtra = Astro.slots.has('default');
 <style>
   @layer components {
     .page-header {
-      /* The registration mark at the end of the rule, and the gap before it. */
+      /* The ink drop at the end of the rule, and the gap before it. */
       --ph-reg: 18px;
       --ph-reg-gap: 0.75rem;
       /* Width of the colour bar at the start of the rule (ColorBar.astro, 3 tints: four 1.75rem

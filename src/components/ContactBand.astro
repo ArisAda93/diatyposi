@@ -13,7 +13,7 @@
 import Icon from './Icon.astro';
 import Logo from './Logo.astro';
 import ColorBar from './ColorBar.astro';
-import RegMark from './RegMark.astro';
+import InkDrop from './InkDrop.astro';
 import Section from './Section.astro';
 import { routes, site } from '~/data/site';
 import { homeText } from '~/i18n/pages/home';
@@ -52,8 +52,8 @@ const copy = homeText.el.contactBand;
           <span class="cb-plate cb-plate-c"></span>
           <span class="cb-plate cb-plate-m"></span>
           <div class="cb-sheet">
-            <RegMark size={18} class="cb-sheet-reg cb-sheet-reg-tl" />
-            <RegMark size={18} class="cb-sheet-reg cb-sheet-reg-br" />
+            <InkDrop size={18} class="cb-sheet-reg cb-sheet-reg-tl" />
+            <InkDrop size={18} class="cb-sheet-reg cb-sheet-reg-br" />
             <Logo variant="mark" id="cb-mark" class="cb-mark" />
             <ColorBar tints={2} class="cb-sheet-bar" />
           </div>
