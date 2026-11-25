@@ -73,7 +73,10 @@ shows a print studio's work table with fictional shape-only logos, not real work
 label “Ενδεικτική εικόνα”. The tiny illegible text the model put on the cards, the invitation,
 the proof and the colour chips was removed by a second Seedream pass with the first image as the
 reference (same composition, text removed); two colour-chip labels and the out-of-focus phone
-clock keep faint, unreadable traces. The four numbered markers are drawn by the page
+clock keep faint, unreadable traces. On 2026-11-25 a third Seedream pass with that photo as the reference replaced the
+sketchbook and pencil on the left with an iMac running vector design software (the first sketch of
+the wheat logo on screen), keeping the rest of the table; the interface labels on the screen are
+tiny and unreadable. The four numbered markers are drawn by the page
 (`src/components/about/Workbench.astro`), at fixed percentages of this exact image: a replacement
 photo needs new marker positions. Its depth map for the parallax scene,
 `src/assets/about/workbench-depth.png`, is not AI-generated: `scripts/workbench-depth.mjs` computes

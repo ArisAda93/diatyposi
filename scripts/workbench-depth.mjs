@@ -7,8 +7,8 @@
  *
  * The photo looks down on a table at about 45 degrees, so its depth is mostly a perspective ramp:
  * the near edge of the table (bottom) close, the far end and the wall (top) away. On top of it sit
- * soft raised shapes for the objects standing up from the table, placed by hand on the photo. A
- * new photograph needs new shapes. Free, no network: it only computes pixels.
+ * soft raised shapes for the objects standing up from the table, and one flat depth for the iMac
+ * standing upright on the left, all placed by hand on the photo. A new photograph needs new shapes. Free, no network: it only computes pixels.
  */
 import { resolve, join } from 'node:path';
 import sharp from 'sharp';
@@ -32,9 +32,15 @@ const BUMPS = [
   { name: 'key ring', x: 0.73, y: 0.68, rx: 0.05, ry: 0.05, h: 0.05 },
   { name: 'phone', x: 0.72, y: 0.87, rx: 0.09, ry: 0.12, h: 0.04 },
   { name: 'tape roll', x: 0.38, y: 0.84, rx: 0.05, ry: 0.05, h: 0.07 },
-  { name: 'card stack', x: 0.13, y: 0.31, rx: 0.07, ry: 0.07, h: 0.08 },
-  { name: 'notebook', x: 0.14, y: 0.58, rx: 0.14, ry: 0.11, h: 0.04 },
+  { name: 'keyboard', x: 0.18, y: 0.65, rx: 0.1, ry: 0.05, h: 0.03 },
+  { name: 'mouse', x: 0.29, y: 0.57, rx: 0.03, ry: 0.025, h: 0.04 },
 ];
+
+/**
+ * Upright surfaces facing the camera: one depth across the whole box (that of where they stand on
+ * the table), soft at the edges. Box as shares of the frame.
+ */
+const PLANES = [{ name: 'iMac screen and stand', x0: 0, x1: 0.3, y0: 0.11, y1: 0.6, d: 0.6 }];
 
 const smoothstep = (a, b, x) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -53,6 +59,15 @@ for (let j = 0; j < H; j++) {
     for (const b of BUMPS) {
       const r = Math.hypot((x - b.x) / b.rx, (y - b.y) / b.ry);
       d += b.h * (1 - smoothstep(0.55, 1, r));
+    }
+    for (const p of PLANES) {
+      const edge = 0.025;
+      const inside =
+        smoothstep(p.x0 - edge, p.x0 + edge, x) *
+        (1 - smoothstep(p.x1 - edge, p.x1 + edge, x)) *
+        smoothstep(p.y0 - edge, p.y0 + edge, y) *
+        (1 - smoothstep(p.y1 - edge, p.y1 + edge, y));
+      d = d + (Math.max(d, p.d) - d) * inside;
     }
     pixels[j * W + i] = Math.round(255 * Math.min(1, Math.max(0, d)));
   }
