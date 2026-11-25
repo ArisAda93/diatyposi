@@ -33,6 +33,7 @@ const BUMPS = [
   { name: 'phone', x: 0.72, y: 0.87, rx: 0.09, ry: 0.12, h: 0.04 },
   { name: 'tape roll', x: 0.38, y: 0.84, rx: 0.05, ry: 0.05, h: 0.07 },
   { name: 'keyboard', x: 0.18, y: 0.65, rx: 0.1, ry: 0.05, h: 0.03 },
+  { name: 'business card stack', x: 0.08, y: 0.68, rx: 0.06, ry: 0.04, h: 0.04 },
   { name: 'mouse', x: 0.29, y: 0.57, rx: 0.03, ry: 0.025, h: 0.04 },
 ];
 
