@@ -504,7 +504,7 @@ Not worth it: **11880.com** is a German directory ("Deutschlands größte Branch
 In order:
 
 1. **Domain:** done: `SITE_URL` in `astro.config.mjs` is `https://diatyposi.com` (no www). Redirect the other variants (http, `www.diatyposi.com`) to it with 301 in Cloudflare (a redirect rule on the zone).
-2. **Owner values:** fill every `TODO(owner)` left (`grep -rn "TODO(owner)" src astro.config.mjs`). Phone, e-mail, Viber, WhatsApp, street, city, postcode, the map (`mapQuery`, `mapUrl`) and hours are real now. Still open: `geo` (at least 5 decimals, per [Google](https://developers.google.com/search/docs/appearance/structured-data/local-business)), `locative` and `areaServed` (step 3), Facebook and Instagram URLs, the about photo and real work photos, the privacy policy's optional registered name and ΑΦΜ.
+2. **Owner values:** fill every `TODO(owner)` left (`grep -rn "TODO(owner)" src astro.config.mjs`). Phone, e-mail, Viber, WhatsApp, street, city, postcode, the map (`mapQuery`, `mapUrl`) and hours are real now. Still open: `geo` (at least 5 decimals, per [Google](https://developers.google.com/search/docs/appearance/structured-data/local-business)), `locative` and `areaServed` (step 3), Facebook and Instagram URLs, the about photo and real work photos.
 3. **Locality:** set `site.address.locative` (e.g. "στην Αθήνα", "στο Περιστέρι", "στη Θεσσαλονίκη"; see §3.1) and `site.address.areaServed` (the municipalities the shop really serves).
 4. **Structured data switch:** set `site.contactIsPlaceholder = false` only after steps 2–3 are real.
 5. **Copy:** the ten service pages approved by the owner (`npm run content-review`), no "TODO(owner)" left in visible text, stand-in labels still shown on any stand-in image.

@@ -7,7 +7,8 @@
  * Comfortaa; pages; services (iterated from `services`, never by index, each linking to its own
  * page; long names wrap inside their column); contact details with the social links. Then the
  * wordmark set huge across the full width, its C/M/Y plates converging as it scrolls in (motion
- * layer, `data-reveal="registration"`), and the bottom row (© year, privacy). Behind it all, the
+ * layer, `data-reveal="registration"`), and the bottom row (© year and the registered name, ΑΦΜ
+ * and ΓΕΜΗ number that ΠΔ 131/2003 asks for; privacy). Behind it all, the
  * four arches drawn as plate outlines drift on a parallax layer (`data-parallax`, motion.ts).
  * Decoration is aria-hidden. Both themes: `.on-ink` keeps the light tokens inside; in the dark
  * theme global.css sinks the ink below the page and gives it a hairline edge.
@@ -129,9 +130,15 @@ const year = new Date().getFullYear();
     </div>
 
     <div class="footer-bottom">
-      <p class="muted">
-        © {year} {site.name}. {t('copyright', locale)}
-      </p>
+      <div class="footer-legal">
+        <p class="muted">
+          © {year} {site.name}. {t('copyright', locale)}
+        </p>
+        <p class="muted">
+          {/* A no-break space keeps each label on the line of its number. */}
+          {`${site.legal.name} · ${t('vatIdLabel', locale)}\u00a0${site.legal.vatId} · ${t('gemiLabel', locale)}\u00a0${site.legal.gemi}`}
+        </p>
+      </div>
       <a href={routes.privacy} class="muted inline-flex min-h-11 items-center self-start">
         <span class="link">{t('footerPrivacy', locale)}</span>
       </a>
@@ -284,6 +291,11 @@ const year = new Date().getFullYear();
       padding-top: 1.25rem;
       border-top: 1px solid var(--color-ink-line);
       font-size: var(--text-small);
+    }
+    .footer-legal {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
     }
     @media (min-width: 40rem) {
       .footer-bottom {

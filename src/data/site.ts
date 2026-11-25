@@ -80,6 +80,26 @@ export const site = {
     el: 'Πάνω από προϊόντα, χτίζουμε σχέσεις εμπιστοσύνης.',
   } satisfies Localized<string>,
 
+  /**
+   * Registered business details, as the public ΓΕΜΗ registry lists them
+   * (https://publicity.businessportal.gr/company/189676427000, checked 2026-11-25). Shown in the
+   * footer and on the privacy page: ΠΔ 131/2003 art. 4 asks a business website for its name,
+   * ΓΕΜΗ number and ΑΦΜ, and GDPR Art. 13 for the identity of the data controller.
+   */
+  legal: {
+    /** Registered name of the sole proprietorship, as in ΓΕΜΗ (surname first). */
+    name: 'Δαφνομήλης Πέτρος του Ιωάννη',
+    /** The same name in reading order, for running text. */
+    nameInText: 'Πέτρος Δαφνομήλης του Ιωάννη',
+    legalForm: { el: 'ατομική επιχείρηση' } satisfies Localized<string>,
+    /** Registered distinctive title, as written in ΓΕΜΗ. */
+    tradeName: 'ΔΙΑΤΥΠΩΣΗ ΔΙΑΦΗΜΙΣΗ – ΕΚΤΥΠΩΣΕΙΣ',
+    vatId: '132972806',
+    gemi: '189676427000',
+    /** The chamber that keeps the ΓΕΜΗ entry. */
+    chamber: { el: 'Επιμελητήριο Ηρακλείου' } satisfies Localized<string>,
+  },
+
   /** Set to false once every TODO(owner) contact value below is real. */
   contactIsPlaceholder: true,
 

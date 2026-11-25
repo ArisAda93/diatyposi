@@ -1,6 +1,6 @@
 /**
- * Strings for the privacy page (/politiki-aporritou/). The launch version, written to match what
- * this static site actually does; README lists the open owner item.
+ * Strings for the privacy page (/politiki-aporritou/), written to match what this static site
+ * actually does. The controller's registered details come from `site.legal`.
  * Listed in CONTENT_REVIEW.md.
  */
 export const privacyText = {
@@ -22,7 +22,13 @@ export const privacyText = {
     updatedDate: '25 Νοεμβρίου 2026',
     who: {
       heading: 'Ποιοι είμαστε',
-      body: 'Υπεύθυνη για τα στοιχεία που μας στέλνετε είναι η ΔΙΑΤΥΠΩΣΗ, επιχείρηση διαφήμισης και εκτυπώσεων.',
+      /** Followed by `site.legal.nameInText`, its legal form in brackets and `tradeIntro`. */
+      controllerIntro: 'Υπεύθυνος για τα στοιχεία που μας στέλνετε είναι ο',
+      /** Followed by the registered distinctive title in «» and a full stop. */
+      tradeIntro: 'με τον διακριτικό τίτλο',
+      /** Labels of the registry line: ΑΦΜ, then the ΓΕΜΗ number and its chamber. */
+      vatIdLabel: 'ΑΦΜ:',
+      gemiLabel: 'Αριθμός ΓΕΜΗ:',
       /** Followed by the shop address from src/data/site.ts. */
       addressLabel: 'Διεύθυνση:',
       /** Followed by the e-mail link, `contactOr` and the phone link. */
@@ -59,9 +65,12 @@ export const privacyText = {
         'Χρησιμοποιούμε όσα μας στέλνετε, μαζί με τα αρχεία που επισυνάπτετε (όπως λογότυπα ή φωτογραφίες), μόνο για να σας απαντήσουμε, να ετοιμάσουμε την προσφορά που ζητήσατε και, αν συμφωνήσουμε, να κάνουμε τη δουλειά. Δεν τα χρησιμοποιούμε για διαφήμιση, δεν τα πουλάμε και δεν τα δίνουμε σε άλλους για δικούς τους σκοπούς.',
       basis:
         'Η νομική βάση είναι ότι το ζητάτε εσείς, ως βήμα πριν από μια πιθανή συμφωνία μαζί μας (άρθρο 6 παρ. 1 στοιχ. β΄ του Γενικού Κανονισμού Προστασίας Δεδομένων, ΓΚΠΔ).',
-      /** Retention period proposed by the lead; the owner confirms it. */
+      /**
+       * The shop's promise: once a year it deletes quote messages older than 12 months from its
+       * e-mail, Viber and WhatsApp. Invoices: five years from the end of the tax year (tax law).
+       */
       retention:
-        'Αν το αίτημα δεν καταλήξει σε παραγγελία, διαγράφουμε το μήνυμα και τα αρχεία του το αργότερο 12 μήνες μετά την τελευταία μας επικοινωνία. Αν γίνει παραγγελία, κρατάμε όσα στοιχεία χρειάζονται για τα παραστατικά, για όσο χρόνο ορίζει η φορολογική νομοθεσία (άρθρο 6 παρ. 1 στοιχ. γ΄ ΓΚΠΔ).',
+        'Αν το αίτημα δεν γίνει παραγγελία, σβήνουμε το μήνυμα (email, Viber ή WhatsApp) και τα αρχεία του μέσα σε 12 μήνες από την τελευταία μας επικοινωνία. Αν γίνει παραγγελία, κρατάμε τα μηνύματά της έως 12 μήνες μετά την παράδοση, και τα στοιχεία που χρειάζονται για τα παραστατικά για πέντε χρόνια από το τέλος του φορολογικού έτους, όπως ορίζει η φορολογική νομοθεσία (άρθρο 6 παρ. 1 στοιχ. γ΄ ΓΚΠΔ).',
     },
     recipients: {
       heading: 'Ποιοι άλλοι λαμβάνουν στοιχεία',

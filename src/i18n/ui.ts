@@ -41,6 +41,9 @@ export const ui = {
     footerPages: 'Σελίδες',
     footerPrivacy: 'Πολιτική απορρήτου',
     copyright: 'Με επιφύλαξη παντός δικαιώματος.',
+    /** Footer line with the registered business details (followed by the numbers). */
+    vatIdLabel: 'ΑΦΜ',
+    gemiLabel: 'ΓΕΜΗ',
     floatingLabel: 'Γρήγορη επικοινωνία',
     /** Section rail (SectionRail.astro, ≥ 1280px): the landmark's accessible name. */
     sectionNavLabel: 'Ενότητες σελίδας',

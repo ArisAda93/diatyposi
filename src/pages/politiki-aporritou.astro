@@ -1,9 +1,9 @@
 ---
 /**
  * Πολιτική απορρήτου: a plain reading page that describes what this static site actually does.
- * The text (src/i18n/pages/privacy.ts) is the launch version, written to match what the site
- * does; README lists the open owner item. When the site's behaviour changes, update the text and
- * `updatedDate` / `updatedIso` together.
+ * The text (src/i18n/pages/privacy.ts) is written to match what the site does; the controller's
+ * registered details come from `site.legal`. When the site's behaviour changes, update the text
+ * and `updatedDate` / `updatedIso` together.
  *
  * Layout: a calm reading column (68ch) on the 12-column grid; from 1024px a sticky contents list
  * sits beside it (columns 1–3) and each section heading carries its number. No background is
@@ -79,9 +79,13 @@ const dataAuthority = 'https://www.dpa.gr/';
           </span>
           <span>{text.who.heading}</span>
         </h2>
-        {/* TODO(owner): registered business name, legal form and ΑΦΜ, if the owner wants them
-            shown. */}
-        <p>{text.who.body}</p>
+        <p>
+          {`${text.who.controllerIntro} ${site.legal.nameInText} (${site.legal.legalForm.el}), ${text.who.tradeIntro} «${site.legal.tradeName}».`}
+        </p>
+        <p>
+          {/* A no-break space keeps each label on the line of its number. */}
+          {`${text.who.vatIdLabel}\u00a0${site.legal.vatId} · ${text.who.gemiLabel}\u00a0${site.legal.gemi} (${site.legal.chamber.el})`}
+        </p>
         <p>{`${text.who.addressLabel} ${address}.`}</p>
         <p>
           {`${text.who.contactBefore} `}
