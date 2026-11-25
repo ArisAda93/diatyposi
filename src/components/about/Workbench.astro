@@ -23,8 +23,10 @@ const markers = [
   { x: 32, y: 66, ink: '--color-yellow' },
   { x: 61, y: 48, ink: '--ink-fixed' },
 ] as const;
-// The photo takes the full column below 64rem and 7 ⁄ 12 of the wrap (max ~ 47rem) from 64rem.
-const sizes = '(min-width: 64rem) min(47rem, 56vw), calc(100vw - 2rem)';
+// The photo takes 7 ⁄ 12 of the wrap from 64rem (about 52rem at the widest), the full column
+// below, less its 1.5rem side margins under 48rem (room for the crop marks).
+const sizes =
+  '(min-width: 64rem) min(52rem, 56vw), (min-width: 48rem) calc(100vw - 4rem), calc(100vw - 5rem)';
 ---
 
 <figure class="wb">
@@ -56,6 +58,12 @@ const sizes = '(min-width: 64rem) min(47rem, 56vw), calc(100vw - 2rem)';
   @layer components {
     .wb {
       margin: 0;
+    }
+    /* Room for the crop marks (20px outside the frame) where the gutter is narrower than that. */
+    @media (max-width: 47.98rem) {
+      .wb {
+        margin-inline: 1.5rem;
+      }
     }
     .wb-media {
       aspect-ratio: 4 / 3;

@@ -4,14 +4,14 @@
 
 The site is built the way a print job is made. Every visual device comes from the press room, used as a system:
 
-| Device                       | Where it is used                                        | Rule                                                                                                          |
-| ---------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| **CMYK overprint**           | Logo arches, journey mark, 404, icon plates             | Overlapping inks use `mix-blend-mode: multiply`, so C+M makes blue, M+Y red, C+Y green, as on press.          |
-| **Crop marks and ink drops** | Hero sheet corners, framed images, section starts       | Thin key-black hairlines, never more than one framed object per screen.                                       |
-| **Halftone dots**            | Image hover reveal, statement section, about-photo slot | CSS radial-gradient dots, low contrast, masked.                                                               |
-| **Paper**                    | Every light section                                     | Warm off-white with a faint fixed grain (SVG noise, 3.5% opacity). Dark sections read as solid key-black ink. |
-| **Plate separation**         | Service icons on hover, logo mark                       | Four stacked copies (C, M, Y, K) split by a few px, then snap back into register.                             |
-| **Colour bar**               | Footer top, values strip, section and page heads        | The control strip printed at the edge of every press sheet: four solid patches plus tints.                    |
+| Device                       | Where it is used                                  | Rule                                                                                                          |
+| ---------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **CMYK overprint**           | Logo arches, journey mark, 404, icon plates       | Overlapping inks use `mix-blend-mode: multiply`, so C+M makes blue, M+Y red, C+Y green, as on press.          |
+| **Crop marks and ink drops** | Hero sheet corners, framed images, section starts | Thin key-black hairlines, never more than one framed object per screen.                                       |
+| **Halftone dots**            | Image hover reveal, statement section             | CSS radial-gradient dots, low contrast, masked.                                                               |
+| **Paper**                    | Every light section                               | Warm off-white with a faint fixed grain (SVG noise, 3.5% opacity). Dark sections read as solid key-black ink. |
+| **Plate separation**         | Service icons on hover, logo mark                 | Four stacked copies (C, M, Y, K) split by a few px, then snap back into register.                             |
+| **Colour bar**               | Footer top, values strip, section and page heads  | The control strip printed at the edge of every press sheet: four solid patches plus tints.                    |
 
 **Signature moments.** (Round 1 limited the site to two; the owner's round-2 direction makes the whole site feel alive: see §7.)
 
@@ -114,7 +114,7 @@ Page header. Filter chips (Όλα + categories that have items), with `aria-pres
 
 ### Η εταιρεία
 
-Page header with the owner's intro. A two-column block: the photo slot (a crop-marked frame; until a real photo exists it shows a halftone print of the arches, no placeholder text) and the owner's “Για εμάς…” paragraph. Values in four plate-coloured blocks. Contact band.
+Page header with the owner's intro. A two-column block: a crop-marked 4:3 photograph of the studio's work table (AI-generated, labelled «Ενδεικτική εικόνα»; it shows the work for every service) with four numbered markers on the sketch, the logo proposals, the colours and the proof, and beside it the owner's “Για εμάς…” paragraph with the four steps listed under it, numbered like the markers. Below 64rem the list follows the photo. Values in four plate-coloured blocks. Contact band.
 
 ### Επικοινωνία
 
@@ -193,4 +193,4 @@ A dedicated pass over every page at 320–430 px (portrait) and 844 × 390 (land
 - **Motion (phones and touch).** Reveals travel less and finish sooner, parallax moves half as far, and the halftone photo print-in uses finer dots and finishes in about half a second, starting just before the photo enters the screen. The off-register number on the active home services row is desktop-only; phones keep it crisp.
 - **Services (landscape phones).** The chip bar stays in the flow instead of sticking, so the header and bar never take a third of the height.
 - **Forms.** Enter moves to the next field on touch screens (`enterkeyhint="next"`); a failed submit focuses the first invalid field; the date field matches the other fields on iOS; service tiles are tappable across the whole row.
-- **Contact and About.** Contact rows (phone, mobile, e-mail) are tappable across the whole row with a trailing icon; time ranges never break. The “Πώς δουλεύουμε” sheet is 4:3 on phones.
+- **Contact and About.** Contact rows (phone, mobile, e-mail) are tappable across the whole row with a trailing icon; time ranges never break. The “Πώς δουλεύουμε” photo keeps 1.5rem side margins on phones, so its crop marks stay inside the gutter.
