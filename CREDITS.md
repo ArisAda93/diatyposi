@@ -75,7 +75,10 @@ the proof and the colour chips was removed by a second Seedream pass with the fi
 reference (same composition, text removed); two colour-chip labels and the out-of-focus phone
 clock keep faint, unreadable traces. The four numbered markers are drawn by the page
 (`src/components/about/Workbench.astro`), at fixed percentages of this exact image: a replacement
-photo needs new marker positions.
+photo needs new marker positions. Its depth map for the parallax scene,
+`src/assets/about/workbench-depth.png`, is not AI-generated: `scripts/workbench-depth.mjs` computes
+it (a perspective ramp of the table plus soft shapes placed by hand on the standing objects), so a
+replacement photo needs new shapes there too.
 
 ## Icons
 

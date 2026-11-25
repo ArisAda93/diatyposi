@@ -19,8 +19,16 @@ import { aboutText } from '~/i18n/pages/about';
 
 const text = aboutText.el;
 const owner = ownerCopy.el;
-/** Plate ink of each numbered point, as on the photo's markers (about/Workbench.astro). */
-const stepInks = ['--color-cyan', '--color-magenta', '--color-yellow', '--ink-fixed'] as const;
+/**
+ * Plate ink of each step and the ink of its number on that plate, as on the photo's markers
+ * (about/Workbench.astro).
+ */
+const stepInks = [
+  ['--color-cyan', '--ink-fixed'],
+  ['--color-magenta', '--paper-fixed'],
+  ['--color-yellow', '--ink-fixed'],
+  ['--ink-fixed', '--paper-fixed'],
+] as const;
 ---
 
 <BaseLayout title={text.metaTitle} description={text.metaDescription}>
@@ -46,13 +54,21 @@ const stepInks = ['--color-cyan', '--color-magenta', '--color-yellow', '--ink-fi
         <p class="about-partnership">{owner.partnership}</p>
         <ol class="about-steps" role="list" aria-label={text.workbench.stepsLabel}>
           {text.workbench.steps.map((step, i) => (
-            <li class="about-step" style={`--step-ink: var(${stepInks[i]})`}>
-              <span class="about-step-num" aria-hidden="true">
-                {i + 1}
-              </span>
-              <span>
-                <strong>{step.lead}</strong> {step.text}
-              </span>
+            <li>
+              <button
+                type="button"
+                class="about-step"
+                data-wb-step
+                aria-pressed="false"
+                style={`--step-ink: var(${stepInks[i]?.[0]}); --step-on: var(${stepInks[i]?.[1]})`}
+              >
+                <span class="about-step-num" aria-hidden="true">
+                  {i + 1}
+                </span>
+                <span>
+                  <strong>{step.lead}</strong> {step.text}
+                </span>
+              </button>
             </li>
           ))}
         </ol>
@@ -79,19 +95,43 @@ const stepInks = ['--color-cyan', '--color-magenta', '--color-yellow', '--ink-fi
     }
     .about-steps {
       display: grid;
-      gap: 0.875rem;
+      gap: 0.25rem;
       max-width: 34rem;
       margin: 2rem 0 0;
       padding: 1.5rem 0 0;
       border-top: 1px solid var(--color-line);
       list-style: none;
     }
+    /* Each step is a button (src/scripts/workbench/): pointing at it, focusing it or tapping it
+       shows it on the photo. Marked, it takes a wash of its plate ink and its number fills. */
     .about-step {
       display: flex;
       align-items: baseline;
       gap: 0.875rem;
+      width: 100%;
+      min-height: 2.75rem;
+      margin: 0;
+      padding: 0.5rem 0.75rem;
+      border: 0;
+      background-color: transparent;
+      color: inherit;
+      font: inherit;
       font-size: var(--text-body);
       line-height: 1.5;
+      text-align: left;
+      cursor: pointer;
+      transition:
+        background-color var(--dur-base) var(--ease-out),
+        translate var(--dur-base) var(--ease-snap);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .about-step:global(.is-active) {
+      background-color: color-mix(in srgb, var(--step-ink) 14%, transparent);
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .about-step:global(.is-active) {
+        translate: 0.375rem 0;
+      }
     }
     .about-step strong {
       font-weight: 700;
@@ -111,6 +151,15 @@ const stepInks = ['--color-cyan', '--color-magenta', '--color-yellow', '--ink-fi
       font-size: 0.8125rem;
       font-weight: 860;
       line-height: 1;
+      transition:
+        background-color var(--dur-fast) linear,
+        color var(--dur-fast) linear,
+        scale var(--dur-base) var(--ease-snap);
+    }
+    .about-step:global(.is-active) .about-step-num {
+      background-color: var(--step-ink);
+      color: var(--step-on);
+      scale: 1.12;
     }
   }
 </style>

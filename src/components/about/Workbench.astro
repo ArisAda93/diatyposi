@@ -1,27 +1,39 @@
 ---
 /**
  * /etaireia/ section 01 (“Πώς δουλεύουμε”): the studio's work table as one photograph, with four
- * numbered points on the stages of a job (sketch, logo proposals, colours, proof). The finished
+ * numbered markers on the stages of a job (sketch, logo proposals, colours, proof). The finished
  * work around them (cards, a T-shirt, a mug, stickers, a banner, an invitation, 3D prints, a social
- * post) shows the rest of the services. The page lists the four points beside it
- * (src/pages/etaireia.astro), so the markers here are decorative.
+ * post) shows the rest of the services. The page lists the four steps beside it as buttons
+ * (src/pages/etaireia.astro), so the markers repeat them for the eye only (aria-hidden).
+ *
+ * src/scripts/workbench/ brings it to life: pointing at a step or its marker marks both, and with
+ * motion allowed and WebGL the photo becomes a depth-parallax scene (a canvas in
+ * `[data-wb-scene]`, over the photo) whose camera glides to the marked step, looks around with the
+ * pointer and breathes; the frame tilts in 3D under a faint glare (`--wb-rx`, `--wb-ry`,
+ * `--wb-gx`, `--wb-gy`, `--wb-glare`) and the markers follow their objects (`--wb-x`, `--wb-y`).
+ * Without JS, with reduced motion or without WebGL, the plain photo and the markers stay.
  *
  * The photograph is AI-generated (CREDITS.md) and carries the “Ενδεικτική εικόνα” chip, as the
  * service photos do. Its frame is 4 / 3, the photo's own ratio, so the markers' percentages
- * always sit on the same objects.
+ * always sit on the same objects; its depth map (workbench-depth.png) comes from
+ * scripts/workbench-depth.mjs.
  */
 import { Picture } from 'astro:assets';
 import workbench from '~/assets/about/workbench.jpg';
+import workbenchDepth from '~/assets/about/workbench-depth.png';
 import { aboutText } from '~/i18n/pages/about';
 import { t } from '~/i18n/ui';
 
 const text = aboutText.el.workbench;
-/** Marker positions in % of the photo (left, top), in step order; plate ink per step (fixed key). */
+/**
+ * Marker positions in % of the photo (left, top), in step order; plate ink per step (fixed key)
+ * and the ink of the number on that plate.
+ */
 const markers = [
-  { x: 12, y: 55, ink: '--color-cyan' },
-  { x: 34, y: 46, ink: '--color-magenta' },
-  { x: 32, y: 66, ink: '--color-yellow' },
-  { x: 61, y: 48, ink: '--ink-fixed' },
+  { x: 12, y: 55, ink: '--color-cyan', on: '--ink-fixed' },
+  { x: 34, y: 46, ink: '--color-magenta', on: '--paper-fixed' },
+  { x: 32, y: 66, ink: '--color-yellow', on: '--ink-fixed' },
+  { x: 61, y: 48, ink: '--ink-fixed', on: '--paper-fixed' },
 ] as const;
 // The photo takes 7 ⁄ 12 of the wrap from 64rem (about 52rem at the widest), the full column
 // below, less its 1.5rem side margins under 48rem (room for the crop marks).
@@ -29,9 +41,9 @@ const sizes =
   '(min-width: 64rem) min(52rem, 56vw), (min-width: 48rem) calc(100vw - 4rem), calc(100vw - 5rem)';
 ---
 
-<figure class="wb">
-  <div class="wb-frame crop-frame">
-    <div class="wb-media media">
+<figure class="wb" data-workbench data-depth={workbenchDepth.src}>
+  <div class="wb-frame crop-frame" data-wb-frame>
+    <div class="wb-media media" data-wb-media>
       <Picture
         src={workbench}
         alt={text.alt}
@@ -42,10 +54,18 @@ const sizes =
         loading="lazy"
         decoding="async"
       />
+      <div class="wb-scene" data-wb-scene></div>
+      <span class="wb-glare" aria-hidden="true"></span>
       <span class="wb-standin">{t('standInLabel')}</span>
       <ol class="wb-markers" role="list" aria-hidden="true">
         {markers.map((m, i) => (
-          <li class="wb-marker" style={`--wb-x: ${m.x}%; --wb-y: ${m.y}%; --wb-ink: var(${m.ink})`}>
+          <li
+            class="wb-marker"
+            data-wb-marker
+            data-x={m.x}
+            data-y={m.y}
+            style={`--wb-x: ${m.x}%; --wb-y: ${m.y}%; --wb-ink: var(${m.ink}); --wb-on: var(${m.on})`}
+          >
             {i + 1}
           </li>
         ))}
@@ -54,10 +74,17 @@ const sizes =
   </div>
 </figure>
 
+<script>
+  import { initWorkbench } from '~/scripts/workbench';
+
+  initWorkbench();
+</script>
+
 <style>
   @layer components {
     .wb {
       margin: 0;
+      perspective: 75rem;
     }
     /* Room for the crop marks (20px outside the frame) where the gutter is narrower than that. */
     @media (max-width: 47.98rem) {
@@ -89,7 +116,7 @@ const sizes =
       position: absolute;
       top: 0.75rem;
       left: 0.75rem;
-      z-index: 1;
+      z-index: 2;
       padding: 0.3rem 0.55rem;
       background-color: var(--color-yellow);
       color: var(--ink-fixed);
@@ -101,13 +128,15 @@ const sizes =
     .wb-markers {
       position: absolute;
       inset: 0;
+      z-index: 2;
       margin: 0;
       padding: 0;
       list-style: none;
       pointer-events: none;
     }
     /* A white disc with the step's plate ink as its ring; fixed colours, so it reads on the photo
-       in both themes. */
+       in both themes. Marked: it fills with its ink, grows and sends out a ring; the others step
+       back. */
     .wb-marker {
       --wb-size: clamp(1.625rem, 1.2rem + 1.2vw, 2.25rem);
       position: absolute;
@@ -127,6 +156,94 @@ const sizes =
       font-size: clamp(0.8125rem, 0.7rem + 0.3vw, 0.9375rem);
       font-weight: 860;
       line-height: 1;
+      pointer-events: auto;
+      cursor: pointer;
+      transition:
+        scale var(--dur-base) var(--ease-snap),
+        opacity var(--dur-base) var(--ease-out),
+        background-color var(--dur-fast) linear,
+        color var(--dur-fast) linear;
+    }
+    .wb-marker::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      box-shadow: 0 0 0 0.15rem var(--wb-ink);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .wb[data-active] .wb-marker:not(.is-active) {
+      opacity: 0.5;
+    }
+    .wb-marker.is-active {
+      scale: 1.22;
+      background-color: var(--wb-ink);
+      color: var(--wb-on);
+    }
+    .wb-marker.is-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* The live scene (src/scripts/workbench/): the canvas fades in over the photo, which is shown
+       at the scene's rest zoom underneath so nothing jumps. */
+    .wb-scene {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      opacity: 0;
+      transition: opacity 0.6s var(--ease-out);
+      pointer-events: none;
+    }
+    .wb-scene :global(.wb-canvas) {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .wb-glare {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      display: none;
+      background: radial-gradient(
+        circle at var(--wb-gx, 50%) var(--wb-gy, 40%),
+        rgb(255 255 255 / 0.28),
+        transparent 55%
+      );
+      mix-blend-mode: soft-light;
+      opacity: var(--wb-glare, 0);
+      pointer-events: none;
+    }
+    @media screen and (prefers-reduced-motion: no-preference) {
+      .wb:global(.is-live) .wb-scene {
+        opacity: 1;
+      }
+      .wb:global(.is-live) .wb-glare {
+        display: block;
+      }
+      .wb:global(.is-live) .wb-media :global(img) {
+        transform: scale(1.06);
+      }
+      .wb:global(.is-live) .wb-frame {
+        transform: rotateX(var(--wb-rx, 0deg)) rotateY(var(--wb-ry, 0deg));
+        transform-style: preserve-3d;
+        will-change: transform;
+      }
+      .wb-marker.is-active::after {
+        animation: wb-ring 1.6s var(--ease-out) infinite;
+      }
+    }
+  }
+
+  @keyframes wb-ring {
+    0% {
+      opacity: 0.9;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1.9);
     }
   }
 </style>
