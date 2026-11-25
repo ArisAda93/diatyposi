@@ -122,7 +122,7 @@ Page header. Two columns: left, contact details, hours table, social links, the 
 
 ### Πολιτική απορρήτου
 
-Plain reading page (max 68ch), honest about what the site does (no cookies of its own, no analytics; the Google map loads with the contact page; the quote form sends nothing through the site, it opens the visitor's own app). Marked for the owner's legal review.
+Plain reading page (max 68ch) with a numbered contents list from 1024px, honest about what the site does: no cookies or analytics, only the theme choice and the hero-intro marker in the browser; the Google map loads with the contact page; the quote form sends nothing through the site, it opens the visitor's own app. It names the controller, purposes and legal bases, retention, recipients (Cloudflare, Google/Gmail, Viber, WhatsApp), transfers outside the EU and the visitor's rights (GDPR Art. 13).
 
 ### 404
 
