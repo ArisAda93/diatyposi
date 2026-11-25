@@ -64,6 +64,19 @@ script writes a metadata-free sRGB JPEG (mozjpeg, quality 90). One retouch: a st
 model added before the first letter of the wordmark on the mug (`gift.jpg`) was removed with a
 feathered clone from the plain glaze above it.
 
+## Company page photograph
+
+`src/assets/about/workbench.jpg` (/etaireia/, section «Πώς δουλεύουμε») is an AI-generated
+illustrative image made with ByteDance Seedream 5.5 (`bytedance-seed/seedream-5-5`, through
+OpenRouter) on 2026-11-25 at 2K (2048 × 1536), resized to 2000 × 1500 (mozjpeg, quality 86). It
+shows a print studio's work table with fictional shape-only logos, not real work, and carries the
+label “Ενδεικτική εικόνα”. The tiny illegible text the model put on the cards, the invitation,
+the proof and the colour chips was removed by a second Seedream pass with the first image as the
+reference (same composition, text removed); two colour-chip labels and the out-of-focus phone
+clock keep faint, unreadable traces. The four numbered markers are drawn by the page
+(`src/components/about/Workbench.astro`), at fixed percentages of this exact image: a replacement
+photo needs new marker positions.
+
 ## Icons
 
 The Facebook, Instagram, WhatsApp and Viber brand glyphs come from

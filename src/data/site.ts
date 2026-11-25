@@ -179,9 +179,6 @@ export const site = {
     facebook: 'https://www.facebook.com/profile.php?id=61585943139657',
     instagram: 'https://www.instagram.com/diatyposi',
   },
-
-  /** About page photo (file in src/assets/portfolio/). TODO(owner): add a real shop or team photo. */
-  aboutPhoto: null as null | { image: string; alt: Localized<string> },
 } as const;
 
 // ---------------------------------------------------------------------------------------------

@@ -1,7 +1,8 @@
 ---
 /**
  * Η εταιρεία: page header with the owner's intro, then three sections (Section.astro): 01 the
- * photo slot (AboutSheet) beside the owner's “Για εμάς…” paragraph, 02 the four values
+ * work-table photograph (Workbench) beside the owner's “Για εμάς…” paragraph and the four
+ * numbered points marked on the photo, 02 the four values
  * (ValueBlocks), and the contact band. Light sections paint no background; each tints the living
  * background through `data-bg-accent`. The section label “Πώς δουλεύουμε” is the first section's
  * heading (no separate title).
@@ -11,13 +12,15 @@ import PageHeader from '~/components/PageHeader.astro';
 import Section from '~/components/Section.astro';
 import ContactBand from '~/components/ContactBand.astro';
 import SectionRail from '~/components/SectionRail.astro';
-import AboutSheet from '~/components/about/AboutSheet.astro';
+import Workbench from '~/components/about/Workbench.astro';
 import ValueBlocks from '~/components/about/ValueBlocks.astro';
 import { ownerCopy } from '~/data/site';
 import { aboutText } from '~/i18n/pages/about';
 
 const text = aboutText.el;
 const owner = ownerCopy.el;
+/** Plate ink of each numbered point, as on the photo's markers (about/Workbench.astro). */
+const stepInks = ['--color-cyan', '--color-magenta', '--color-yellow', '--ink-fixed'] as const;
 ---
 
 <BaseLayout title={text.metaTitle} description={text.metaDescription}>
@@ -35,12 +38,24 @@ const owner = ownerCopy.el;
     accent="cyan"
     class="about-approach"
   >
-    <div class="grid-12 items-center gap-y-14">
-      <div class="col-span-12 md:col-span-6 lg:col-span-5">
-        <AboutSheet />
+    <div class="grid-12 items-center gap-y-12">
+      <div class="col-span-12 lg:col-span-7">
+        <Workbench />
       </div>
-      <div class="col-span-12 md:col-span-5 md:col-start-8 lg:col-span-6 lg:col-start-7">
+      <div class="col-span-12 lg:col-span-5 lg:col-start-8">
         <p class="about-partnership">{owner.partnership}</p>
+        <ol class="about-steps" role="list" aria-label={text.workbench.stepsLabel}>
+          {text.workbench.steps.map((step, i) => (
+            <li class="about-step" style={`--step-ink: var(${stepInks[i]})`}>
+              <span class="about-step-num" aria-hidden="true">
+                {i + 1}
+              </span>
+              <span>
+                <strong>{step.lead}</strong> {step.text}
+              </span>
+            </li>
+          ))}
+        </ol>
       </div>
     </div>
   </Section>
@@ -61,6 +76,41 @@ const owner = ownerCopy.el;
       line-height: 1.3;
       letter-spacing: -0.015em;
       text-wrap: pretty;
+    }
+    .about-steps {
+      display: grid;
+      gap: 0.875rem;
+      max-width: 34rem;
+      margin: 2rem 0 0;
+      padding: 1.5rem 0 0;
+      border-top: 1px solid var(--color-line);
+      list-style: none;
+    }
+    .about-step {
+      display: flex;
+      align-items: baseline;
+      gap: 0.875rem;
+      font-size: var(--text-body);
+      line-height: 1.5;
+    }
+    .about-step strong {
+      font-weight: 700;
+    }
+    /* The photo's marker in small: a white disc with the step's plate ink as its ring. */
+    .about-step-num {
+      display: inline-grid;
+      flex: none;
+      place-items: center;
+      width: 1.625rem;
+      height: 1.625rem;
+      border-radius: 50%;
+      background-color: #ffffff;
+      box-shadow: inset 0 0 0 0.175rem var(--step-ink);
+      color: var(--ink-fixed);
+      font-family: var(--font-display);
+      font-size: 0.8125rem;
+      font-weight: 860;
+      line-height: 1;
     }
   }
 </style>

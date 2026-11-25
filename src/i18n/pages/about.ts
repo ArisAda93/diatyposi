@@ -12,6 +12,20 @@ export const aboutText = {
     headerTitle: 'Από την ιδέα στο χαρτί, μαζί σας',
     /** Label-style heading above the “Για εμάς…” paragraph (shown in capitals). */
     approachHeading: 'Πώς δουλεύουμε',
+    /**
+     * The work-table photograph in “Πώς δουλεύουμε” (about/Workbench.astro): its alt text, and the
+     * four numbered points listed beside it (`lead` in bold, then `text`).
+     */
+    workbench: {
+      alt: 'Το τραπέζι εργασίας του τυπογραφείου: ένα σκίτσο λογοτύπου σε μπλοκ, τρεις τυπωμένες προτάσεις, δείγματα χρωμάτων και ένα δοκιμαστικό, ανάμεσα σε έτοιμες δουλειές: κάρτες, μπλουζάκι, κούπα, αυτοκόλλητα, πανό, ανάγλυφο προσκλητήριο, 3D εκτυπώσεις και μια ανάρτηση στο κινητό.',
+      stepsLabel: 'Από το σκίτσο στο δοκιμαστικό',
+      steps: [
+        { lead: 'Η πρώτη ιδέα,', text: 'με μολύβι, πάνω στο τραπέζι.' },
+        { lead: 'Προτάσεις', text: 'για το σήμα σας, σε χαρτί.' },
+        { lead: 'Τα χρώματα', text: 'που διαλέγουμε μαζί.' },
+        { lead: 'Το δοκιμαστικό', text: 'που εγκρίνετε πριν τυπώσουμε.' },
+      ],
+    },
     /** Small label above the values heading (shown in capitals). */
     valuesLabel: 'Οι αξίες μας',
     valuesTitle: 'Ό,τι μας καθοδηγεί σε κάθε δουλειά',

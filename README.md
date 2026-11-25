@@ -37,12 +37,11 @@ Open http://localhost:4321. Other commands:
 
 The domain (`https://diatyposi.com`, `SITE_URL` in `astro.config.mjs`) and the contact data (phone 6974 122 163, e-mail, Viber, WhatsApp, address, map, opening hours) are real as of 2026-11-23, and the Instagram profile (`https://www.instagram.com/diatyposi`) and Facebook page (`https://www.facebook.com/profile.php?id=61585943139657`) as of 2026-11-24. Search the code for `TODO(owner)` to find the rest. Most live in **`src/data/site.ts`**. The registered business details (name, ΑΦΜ, ΓΕΜΗ number, from the public ΓΕΜΗ registry) are in `site.legal`; the footer and the privacy page show them.
 
-| Value                                                                         | Where                     | Placeholder now                                     |
-| ----------------------------------------------------------------------------- | ------------------------- | --------------------------------------------------- |
-| Shop coordinates                                                              | `site.address.geo`        | `0, 0`                                              |
-| City for service-page titles (Greek locative with article, e.g. `στην Αθήνα`) | `site.address.locative`   | empty (no city in titles)                           |
-| Areas served (Greek city or area names, for structured data)                  | `site.address.areaServed` | empty (service pages say the whole of Greece)       |
-| Photo of the shop or team                                                     | `site.aboutPhoto`         | none (a designed print-sheet graphic shows instead) |
+| Value                                                                         | Where                     | Placeholder now                               |
+| ----------------------------------------------------------------------------- | ------------------------- | --------------------------------------------- |
+| Shop coordinates                                                              | `site.address.geo`        | `0, 0`                                        |
+| City for service-page titles (Greek locative with article, e.g. `στην Αθήνα`) | `site.address.locative`   | empty (no city in titles)                     |
+| Areas served (Greek city or area names, for structured data)                  | `site.address.areaServed` | empty (service pages say the whole of Greece) |
 
 When every contact value is real, set **`site.contactIsPlaceholder = false`**. That adds the phone, e-mail, address, hours, coordinates, map link, areas served and social profiles to the `LocalBusiness` structured data that search engines read (they are left out while they are placeholders).
 
