@@ -53,12 +53,18 @@ To replace an AI-generated image with real work:
 
 ## Journey product photographs
 
-The seven photographs in `src/assets/journey/` (home section 02, “Από την ιδέα στο αποτέλεσμα”)
-are AI-generated with OpenAI GPT Image 2.6 Sunburst (`openai/gpt-image-2.6-sunburst`, through
-OpenRouter), each from the step's own line drawing as a reference so the photo lines up with the
-sketch. They show the sample brand “Η επωνυμία σας”, not real work. Re-encoded as JPEG (quality
-88), 1024 × 1024. The phone (`social.jpg`) shows an Instagram-style feed post on an iPhone, as a mock-up of the social media service. To regenerate one, render the step's still drawing at 1024 px and use it as the
-reference image, keeping the composition and the light #FAFAF7 backdrop.
+The seven photographs in `src/assets/journey/` (home section 02, “Μία ιδέα. Παντού.”) are
+AI-generated illustrative images with ByteDance Seedream 5.5 (`bytedance-seed/seedream-5-5`,
+through OpenRouter) at its highest resolution (2K, 2048 × 2048), generated on 2026-11-25. They
+show the sample brand “Η επωνυμία σας”, not real work. Each was made from the step's previous
+photograph as the reference image, so it keeps the composition of the step's line drawing it
+prints over; the phone (`social.jpg`) shows a generic feed post with grey placeholder bars, as a
+mock-up of the social media service. The prompts are in `scripts/journey-images.mjs`; to
+regenerate one, run `OPENROUTER_API_KEY=… node scripts/journey-images.mjs --only <step> --ref <dir>`
+with `--ref` pointing at a folder holding the current photographs (each image costs money). The
+script writes a metadata-free sRGB JPEG (mozjpeg, quality 90). One retouch: a stray accent the
+model added before the first letter of the wordmark on the mug (`gift.jpg`) was removed with a
+feathered clone from the plain glaze above it.
 
 ## Icons
 

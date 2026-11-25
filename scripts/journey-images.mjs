@@ -70,7 +70,8 @@ const IMAGES = [
     prompt: `A real spiral-bound sketch pad lying flat, its top page showing the hand-drawn pencil
 sketch of the logo (circle, square, arch, with faint construction lines) and the pencilled words
 «Η επωνυμία σας» underlined, real graphite strokes with grain and light smudges on textured
-drawing paper; a real wooden pencil with a sharpened graphite tip resting at the lower right, as in
+drawing paper. The logo here is ONLY grey graphite pencil outlines, exactly as in the reference:
+no colour, no fill, no paint, no ink, still an unfinished idea; a real wooden pencil with a sharpened graphite tip resting at the lower right, as in
 the reference. Metal spiral wire catching the light.`,
   },
   {
@@ -109,7 +110,11 @@ no people and no signs. The facade stands on a low pavement step on the plain li
     prompt: `A real glossy white ceramic coffee mug full of black coffee with a few wisps of steam,
 standing on a plain surface, exactly as in the reference, with the logo and the wordmark
 «Η επωνυμία σας» printed on its side as a sublimation print that follows the curve. Real glaze
-highlights, crema on the coffee, soft reflection at the base.`,
+highlights, crema on the coffee, soft reflection at the base. High-key studio lighting from
+straight above with large diffusers: the seamless backdrop is one flat, uniform very light warm
+off-white (#FAFAF7) at the same brightness in every corner, with no light falloff, vignette,
+grey gradient or horizon line; the only shadow is a small soft contact shadow directly under the
+mug.`,
   },
   {
     id: 'social',
@@ -172,7 +177,10 @@ const rawDir = resolve(args.raw);
 
 const reference = async (image) => {
   const bytes = await readFile(join(refDir, `${image.id}.jpg`));
-  return `data:image/jpeg;base64,${bytes.toString('base64')}`;
+  return {
+    type: 'image_url',
+    image_url: { url: `data:image/jpeg;base64,${bytes.toString('base64')}` },
+  };
 };
 
 const requestBody = async (image) => ({
