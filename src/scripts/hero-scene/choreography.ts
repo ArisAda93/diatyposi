@@ -1,33 +1,35 @@
 /**
- * Choreography of the hero plates, "metamorphosis": pure functions with no DOM or WebGL access, so
+ * Choreography of the hero plates, "the press run": pure functions with no DOM or WebGL access, so
  * the whole loop can be unit tested (tests/hero-scene.test.ts).
  *
- * The four arch plates (C, M, Y, K) run one seamless loop of PERIOD seconds through three poses,
- * each held briefly, then moved into the next:
- *  - mark    the plates in the logo's register, gently exploded in depth and breathing;
- *  - target  the arches turn about one common centre (C 90°, M 0°, Y 180°, K −90°) and close into a
- *            ring. Where neighbouring feet overlap the inks overprint. The ring turns slowly;
- *  - wave    the plates line up side by side, alternately upright and inverted, into one
- *            continuous ribbon of ink. A rolling ripple travels along it, like ink through the
- *            press rollers.
- * Every move interpolates position, rotation and scale per plate, staggered in print order
- * Y, M, C, K. The plates lift off the sheet during a move (depth separation peaks mid-move and
- * collapses at the holds). The move back into the mark ends in the registration snap: the plates
- * come in slightly out of register and snap into it with the small overshoot of `--ease-snap`.
- * Each plate turns back to where it started over one loop, so the loop has no seam.
+ * The four arch plates (C, M, Y, K) tell one story in a seamless loop of PERIOD seconds: a print
+ * run. The plates float apart in depth above a sheet of paper, glide into register one by one in
+ * press order, press onto the sheet, hold as the crisp logo, then lift off again. The beats:
+ *  - settle    t = 0 is the moment of contact: the plates have just pressed a little into the sheet
+ *              and come back up to lie on it;
+ *  - hold      the plates lie in register on the sheet: the logo, still;
+ *  - release   the plates lift off in reverse print order K, C, M, Y, depth first, and drift out to
+ *              their float offsets. Each leaves its halftone print on the sheet, which then fades;
+ *  - float     the plates hang apart in depth above the sheet, breathing gently;
+ *  - register  the plates glide back into register in print order Y, M, C, K, each snapping into
+ *              place with the small overshoot of `--ease-snap` and hovering just above the sheet;
+ *  - press     all four come down together and press into the sheet, which closes the loop.
+ * The sheet's response to the contact (a ripple, a bloom and a sheen) and the plates' shadows on
+ * it are given here too (effectsAt, printAlpha, plateShadow); the scene draws them.
  *
  * Space ("group space"): logo raster units, y up, origin at the centre of the mark's viewBox (the
  * scene's pivot). A plate's pose is the position of its anchor (the centre of the arch's bounding
- * box), its depth z, its turn rz about z and tip rx about x (radians), and its scale. Every pose
- * stays inside the ART box, which the hero lays out for it (Hero.astro).
+ * box), its depth z (the centre of the plate, which is extruded ±17 around it, so z = 0 lies on
+ * the sheet), its turn rz about z and tip rx about x (radians), and its scale. Every pose stays
+ * inside the ART box, which the hero lays out for it (Hero.astro).
  *
- * The visual tuning lives in the constants below, grouped by pose.
+ * The visual tuning lives in the constants below.
  */
 import { boundsOf, type Bounds, type Point } from './geometry';
-import { clamp, cubicBezier, easeInOutCubic, lerp, smoothstep } from './math';
+import { clamp, cubicBezier, easeInOutCubic, easeOutCubic, lerp, smoothstep } from './math';
 
 export type PlateId = 'c' | 'm' | 'y' | 'k';
-export type PoseName = 'mark' | 'target' | 'wave';
+export type BeatName = 'settle' | 'hold' | 'release' | 'float' | 'register' | 'press';
 
 // ------------------------------------------------------------------------------------------------
 // Tuning
@@ -40,137 +42,96 @@ export type PoseName = 'mark' | 'target' | 'wave';
  */
 export const ART = { width: 900, height: 620 } as const;
 
-/** The loop: each pose is held, then moves into the next one (seconds). Period: the sum. */
-export const TIMELINE = [
-  { pose: 'mark', hold: 3.6, move: 2.4 },
-  { pose: 'target', hold: 4.0, move: 2.4 },
-  { pose: 'wave', hold: 3.0, move: 2.6 },
-] as const satisfies readonly { pose: PoseName; hold: number; move: number }[];
+/** Length of the loop (seconds). */
+export const PERIOD = 12;
 
-/** Delay between the plates within a move, in print order Y, M, C, K (seconds). */
-export const STAGGER = 0.16;
+/**
+ * The beats of the loop, back to back from 0 to PERIOD (seconds). t = 0 is the moment of contact,
+ * when the plates have just pressed onto the sheet.
+ */
+export const BEATS: readonly { name: BeatName; start: number; end: number }[] = [
+  { name: 'settle', start: 0, end: 0.25 },
+  { name: 'hold', start: 0.25, end: 3.2 },
+  { name: 'release', start: 3.2, end: 6.2 },
+  { name: 'float', start: 6.2, end: 8.3 },
+  { name: 'register', start: 8.3, end: 11.4 },
+  { name: 'press', start: 11.4, end: PERIOD },
+];
 
-/** Every move: a slow start, a fast middle and a long, quiet settle. */
+/**
+ * Delay between the plates within the staggered beats (seconds): register in print order Y, M,
+ * C, K, release in reverse print order K, C, M, Y. Each plate's move lasts the beat less three
+ * delays, so the last plate arrives exactly as its beat ends (register 1.9 s, release 2.4 s).
+ */
+export const STAGGER = { register: 0.4, release: 0.2 } as const;
+
+/** The glide into register: a slow start, a fast middle and a long, quiet settle. */
 export const easeMove = cubicBezier(0.7, 0, 0.2, 1);
 /** The registration snap, `--ease-snap` (small overshoot). */
 export const easeSnap = cubicBezier(0.3, 1.5, 0.5, 1);
+/** The press: gathering speed all the way down, fastest at contact. */
+const easePress = cubicBezier(0.55, 0, 1, 0.45);
 
 interface PlateTuning {
   /** 0–3 in print order Y, M, C, K. */
   print: number;
-  /** Mark: depth layer (× MARK.separation), misregistration (raster units, radians), phase. */
-  depth: number;
-  dx: number;
-  dy: number;
-  rz: number;
+  /**
+   * Float: offset from register (raster units, y up; z is the height above the sheet) and turn
+   * (radians). C, printed last but one, floats highest; K, the last plate, lowest.
+   */
+  float: { x: number; y: number; z: number; rz: number };
+  /** Phase of the plate's breathing while it floats (radians). */
   phase: number;
-  /** Target: the arch's turn about the ring centre (0 = apex up, counter-clockwise). */
-  ring: number;
-  /** Wave: 0 upright, ±π inverted (the sign picks the direction it turns over). */
-  wave: number;
-  /** Registration snap: how far out of register the plate comes in before it snaps. */
-  snap: { x: number; y: number; rz: number };
 }
 
 /**
- * Per plate. Each plate ends the loop at the turn it started with (mark 0 → ring → wave → mark 0).
- * C, M and K turn by at most 180° per move. Y turns half a turn into the ring plus the ring's own
- * spin at that moment (about 195–210° in all), and back by a little less than half a turn.
+ * Per plate. The float offsets fan the plates out along one shallow diagonal: C, highest, drifts a
+ * little up and to the left, K, lowest, down and to the right. The sheet's tilt shows every unit
+ * of height higher up the screen, so the offsets stay low: raised plates keep clear of the header
+ * and inside the art box.
  */
 export const PLATES = {
-  c: {
-    print: 2,
-    depth: 1.5,
-    dx: -9,
-    dy: 6,
-    rz: 0.012,
-    phase: 0,
-    ring: Math.PI / 2,
-    wave: 0,
-    snap: { x: 28, y: 22, rz: -0.05 },
-  },
-  m: {
-    print: 1,
-    depth: 0.5,
-    dx: 7,
-    dy: -5,
-    rz: -0.009,
-    phase: 1.3,
-    ring: 0,
-    wave: -Math.PI,
-    snap: { x: -22, y: -18, rz: 0.04 },
-  },
-  y: {
-    print: 0,
-    depth: -0.5,
-    dx: -5,
-    dy: -8,
-    rz: 0.006,
-    phase: 2.6,
-    ring: Math.PI,
-    wave: 0,
-    snap: { x: 24, y: -20, rz: 0.035 },
-  },
-  k: {
-    print: 3,
-    depth: -1.5,
-    dx: 8,
-    dy: 4,
-    rz: -0.012,
-    phase: 3.9,
-    ring: -Math.PI / 2,
-    wave: -Math.PI,
-    snap: { x: -28, y: 16, rz: -0.04 },
-  },
+  c: { print: 2, float: { x: -20, y: 10, z: 380, rz: -0.08 }, phase: 0 },
+  m: { print: 1, float: { x: -6, y: -10, z: 270, rz: 0.065 }, phase: 1.3 },
+  y: { print: 0, float: { x: 6, y: -28, z: 175, rz: -0.05 }, phase: 2.6 },
+  k: { print: 3, float: { x: 16, y: -46, z: 80, rz: 0.035 }, phase: 3.9 },
 } as const satisfies Record<PlateId, PlateTuning>;
 
-/** Mark: depth between neighbouring plates, breathing amplitudes, rest tilt of the stack. */
-export const MARK = {
-  separation: 85,
-  breathe: { z: 0.1, y: 4, rz: 0.006 },
-  /** The right end recedes, the top leans in (radians). */
-  tilt: { x: 0.12, y: 0.36, z: -0.03 },
-} as const;
+/** Float: breathing amplitudes (raster units, radians). */
+const BREATHE = { y: 8, z: 12, rz: 0.008 } as const;
 
 /**
- * Target: plate scale, how far neighbouring feet overlap (raster units, before scale), depth
- * between plates, spin of the ring (radians per second, negative = clockwise), tilt and sway.
+ * The sheet: the frame the plates and the sheet share (`tilt`, radians, applied to the group: the
+ * top recedes and the right side recedes slightly), its slow drift over the loop (radians), how
+ * high the plates hover above it once in register (`hover`) and how far the press sinks them into
+ * it (`dip`), in raster units.
  */
-export const RING = {
-  scale: 0.66,
-  overlap: 36,
-  layer: 5,
-  spin: -0.12,
-  tilt: { x: 0.05, y: -0.1, z: 0 },
-  sway: 0.05,
+export const SHEET = {
+  tilt: { x: -0.28, y: 0.14, z: 0 },
+  drift: { yaw: 0.05, pitch: 0.025 },
+  hover: 26,
+  dip: 4,
 } as const;
 
+/** The halftone print each plate leaves on the sheet as it lifts off: its strongest ink. */
+export const PRINT = { alpha: 0.85 } as const;
+
+/** The prints fade out over this span of loop time (seconds), before the plates come back. */
+const PRINT_FADE = { from: 4.9, to: 6.0 } as const;
+
 /**
- * Wave: plate scale, foot overlap at the joins, depth between plates, and the travelling ripple:
- * its angular speed (rad/s), phase step between neighbours, roll (tip about x, radians), depth
- * and vertical amplitudes (raster units).
+ * The sheet's response to the contact at t = 0 (seconds after it): how long the ripple runs, how
+ * long the bloom lasts, and when the sheen crosses the mark.
  */
-export const WAVE = {
-  scale: 0.5,
-  overlap: 12,
-  layer: 3,
-  speed: 2.2,
-  step: Math.PI / 2,
-  roll: 0.2,
-  depth: 14,
-  bob: 3,
-  tilt: { x: 0.2, y: 0.16, z: 0 },
+const EFFECTS = {
+  ripple: 2.4,
+  bloom: 1.1,
+  sheen: { from: 0.9, to: 2.5 },
 } as const;
 
-/** Lift off the sheet at the peak of a move: towards the camera, and spread by mark depth. */
-export const LIFT = { forward: 40, spread: 56 } as const;
-
-/** Registration snap: share of the move back into the mark spent coming in out of register. */
-export const SNAP_AT = 0.62;
-
 /**
- * Scroll-out hand-off (progress 0–1, see handoff): blend to the mark by `toMark`, collapse into
- * register from `collapseFrom` to `collapseTo`, shrink by `shrink` from `shrinkFrom`, and fade
+ * Scroll-out hand-off (progress 0–1, see handoff): blend to the hold pose by `toMark`, collapse
+ * into register from `collapseFrom` to `collapseTo`, shrink by `shrink` from `shrinkFrom`, and fade
  * out from `fadeFrom` while the header logo's arches pulse (registrationPulse).
  */
 export const HANDOFF = {
@@ -241,143 +202,91 @@ export const archMetrics = (outline: readonly Point[]): ArchMetrics => {
 
 export interface PlateLayout {
   id: PlateId;
+  /** 0–3 in print order Y, M, C, K. */
   print: number;
   /** Anchor in the logo, in register. */
   markX: number;
   markY: number;
-  ringAngle: number;
-  /** Wave anchor (before WAVE.scale), turn, and place in the ribbon from the left. */
-  waveX: number;
-  waveY: number;
-  waveTurn: number;
-  waveIndex: number;
 }
 
 export interface Layout {
   metrics: ArchMetrics;
   /** In the logo's order, left to right. */
   plates: readonly PlateLayout[];
-  /** Distance of the ring plates' anchors from the centre (before RING.scale). */
-  ringRadius: number;
 }
 
-const isInverted = (turn: number): boolean => Math.abs(Math.cos(turn) + 1) < 1e-9;
-
 /**
- * Builds the three layouts from the arch's measurements and the logo's plate offsets (raster x)
- * around `center` (raster point of the group origin).
- *
- * Ring: an apex-up arch whose anchor sits `d` above the centre has its outer right foot corner at
- * (halfWidth, d − halfHeight); its neighbour turned −90° has its outer left foot corner at
- * (d − halfHeight, halfWidth). They meet on the diagonal when d = halfWidth + halfHeight;
- * RING.overlap pulls all four in so the feet overprint.
- *
- * Wave: an inverted arch's feet sit on the same base line as its upright neighbour's when its
- * anchor is 2 × halfHeight lower. Upright → inverted joins the two right (thin) legs, inverted →
- * upright the two left (thick) legs, so the spacing alternates; WAVE.overlap pulls each join in.
+ * Places the plates in register from the arch's measurements and the logo's plate offsets
+ * (raster x) around `center` (raster point of the group origin).
  */
 export const buildLayout = (
   metrics: ArchMetrics,
   logoPlates: readonly { id: PlateId; x: number }[],
   center: Point,
 ): Layout => {
-  const { anchor, halfWidth, halfHeight, leftFoot, rightFoot } = metrics;
-  const ordered = [...logoPlates].sort((a, b) => a.x - b.x);
-
-  const waveX: number[] = [];
-  ordered.forEach((plate, i) => {
-    if (i === 0) {
-      waveX.push(0);
-      return;
-    }
-    const before = at(ordered, i - 1);
-    const fromInverted = isInverted(PLATES[before.id].wave);
-    if (fromInverted === isInverted(PLATES[plate.id].wave)) {
-      throw new Error('Wave: neighbouring plates must alternate upright and inverted');
-    }
-    const spacing = fromInverted
-      ? -(leftFoot[0] + leftFoot[1]) - WAVE.overlap
-      : rightFoot[0] + rightFoot[1] - WAVE.overlap;
-    waveX.push(at(waveX, i - 1) + spacing);
-  });
-  const waveMid = (at(waveX, 0) + at(waveX, waveX.length - 1)) / 2;
-
-  const plates = ordered.map((plate, i): PlateLayout => {
-    const tuning = PLATES[plate.id];
-    return {
+  const { anchor } = metrics;
+  const plates = [...logoPlates]
+    .sort((a, b) => a.x - b.x)
+    .map((plate): PlateLayout => ({
       id: plate.id,
-      print: tuning.print,
+      print: PLATES[plate.id].print,
       markX: anchor.x + plate.x - center.x,
       markY: center.y - anchor.y,
-      ringAngle: tuning.ring,
-      waveX: at(waveX, i) - waveMid,
-      waveY: isInverted(tuning.wave) ? -halfHeight : halfHeight,
-      waveTurn: tuning.wave,
-      waveIndex: i,
-    };
-  });
-
-  return { metrics, plates, ringRadius: halfWidth + halfHeight - RING.overlap };
+    }));
+  return { metrics, plates };
 };
 
 // ------------------------------------------------------------------------------------------------
 // Timeline
 // ------------------------------------------------------------------------------------------------
 
-export interface Segment {
-  pose: PoseName;
-  next: PoseName;
-  holdStart: number;
-  moveStart: number;
+/** Base angular frequency: the float's breathing and the sheet's drift use whole multiples. */
+const BEAT = (Math.PI * 2) / PERIOD;
+
+/** The print slot of the last plate (K): the staggered moves end with it. */
+const LAST_PRINT = 3;
+
+interface Span {
+  start: number;
   end: number;
 }
 
-export const SEGMENTS: readonly Segment[] = (() => {
-  let t = 0;
-  return TIMELINE.map((entry, i) => {
-    const segment = {
-      pose: entry.pose,
-      next: at(TIMELINE, (i + 1) % TIMELINE.length).pose,
-      holdStart: t,
-      moveStart: t + entry.hold,
-      end: t + entry.hold + entry.move,
-    };
-    t = segment.end;
-    return segment;
-  });
-})();
-
-export const PERIOD = at(SEGMENTS, SEGMENTS.length - 1).end;
-
-/** Base angular frequency: the mark's breathing uses whole multiples, so the loop has no seam. */
-const BEAT = (Math.PI * 2) / PERIOD;
-
-const segmentOf = (pose: PoseName): Segment => {
-  const segment = SEGMENTS.find((s) => s.pose === pose);
-  if (!segment) throw new Error(`No segment for pose ${pose}`);
-  return segment;
+const beatOf = (name: BeatName): Span => {
+  const beat = BEATS.find((b) => b.name === name);
+  if (!beat) throw new Error(`No beat ${name}`);
+  return beat;
 };
 
-const TARGET = segmentOf('target');
-/** The ring is at its canonical angles (apexes on the axes) in the middle of its hold. */
-const TARGET_MID = (TARGET.holdStart + TARGET.moveStart) / 2;
+const SETTLE = beatOf('settle');
+const RELEASE = beatOf('release');
+const REGISTER = beatOf('register');
+const PRESS = beatOf('press');
 
 /** Loop time in [0, PERIOD). */
 export const loopTime = (t: number): number => t - PERIOD * Math.floor(t / PERIOD);
 
-export const segmentAt = (t: number): Segment => {
+/** The beat the loop is in at time t (seconds, any value). */
+export const beatAt = (t: number): BeatName => {
   const lt = loopTime(t);
-  return SEGMENTS.find((s) => lt < s.end) ?? at(SEGMENTS, SEGMENTS.length - 1);
+  return (BEATS.find((b) => lt < b.end) ?? at(BEATS, BEATS.length - 1)).name;
 };
 
-/**
- * Progress of one plate through the move of `segment` at loop time lt, 0–1. Plates leave and
- * arrive STAGGER apart in print order; the last one arrives exactly at the segment's end.
- */
-export const moveProgress = (lt: number, segment: Segment, print: number): number => {
-  const span = segment.end - segment.moveStart - STAGGER * 3;
-  return clamp((lt - segment.moveStart - print * STAGGER) / span);
+/** A plate's own move within a staggered beat: the plate in slot `slot` leaves `slot` delays in. */
+const staggered = (beat: Span, stagger: number, slot: number): Span => {
+  const duration = beat.end - beat.start - LAST_PRINT * stagger;
+  const start = beat.start + slot * stagger;
+  return { start, end: start + duration };
 };
+
+/** Release runs in reverse print order: K first, Y last. */
+const releaseWindow = (plate: PlateLayout): Span =>
+  staggered(RELEASE, STAGGER.release, LAST_PRINT - plate.print);
+
+/** Register runs in print order: Y first, K last. */
+const registerWindow = (plate: PlateLayout): Span =>
+  staggered(REGISTER, STAGGER.register, plate.print);
+
+const progress = (lt: number, w: Span): number => clamp((lt - w.start) / (w.end - w.start));
 
 // ------------------------------------------------------------------------------------------------
 // Poses
@@ -408,118 +317,174 @@ export const registerPose = (plate: PlateLayout): PlatePose => ({
   scale: 1,
 });
 
-export const markPose = (plate: PlateLayout, t: number): PlatePose => {
-  const p = PLATES[plate.id];
-  const { breathe } = MARK;
+/** The hold: in register, lying on the sheet (the scroll-out hand-off blends to it). */
+export const holdPose = (plate: PlateLayout): PlatePose => registerPose(plate);
+
+/** The float: out of register by the plate's float offset, apart in depth, breathing gently. */
+export const floatPose = (plate: PlateLayout, t: number): PlatePose => {
+  const { float, phase } = PLATES[plate.id];
   return {
-    x: plate.markX + p.dx,
-    y: plate.markY + p.dy + Math.sin(BEAT * 2 * t + p.phase) * breathe.y,
-    z: (p.depth + Math.sin(BEAT * 3 * t + p.phase) * breathe.z) * MARK.separation,
+    x: plate.markX + float.x,
+    y: plate.markY + float.y + Math.sin(BEAT * 2 * t + phase) * BREATHE.y,
+    z: float.z + Math.sin(BEAT * 3 * t + phase) * BREATHE.z,
     rx: 0,
-    rz: p.rz + Math.sin(BEAT * 2 * t + p.phase * 1.7) * breathe.rz,
+    rz: float.rz + Math.sin(BEAT * 2 * t + phase * 1.7) * BREATHE.rz,
     scale: 1,
   };
 };
 
-/** Turn of the whole ring at loop time t (0 in the middle of the target hold). */
-export const ringSpin = (t: number): number => RING.spin * (t - TARGET_MID);
-
-export const targetPose = (plate: PlateLayout, t: number, layout: Layout): PlatePose => {
-  const angle = plate.ringAngle + ringSpin(t);
-  const r = layout.ringRadius * RING.scale;
-  const p = PLATES[plate.id];
-  return {
-    x: -Math.sin(angle) * r,
-    y: Math.cos(angle) * r,
-    z: (p.print - 1.5) * RING.layer + Math.sin(BEAT * 3 * t + p.phase) * RING.layer * 0.5,
-    rx: 0,
-    rz: angle,
-    scale: RING.scale,
-  };
-};
-
-export const wavePose = (plate: PlateLayout, t: number): PlatePose => {
-  const phase = WAVE.speed * t - plate.waveIndex * WAVE.step;
-  const p = PLATES[plate.id];
-  return {
-    x: plate.waveX * WAVE.scale,
-    y: plate.waveY * WAVE.scale + Math.sin(phase) * WAVE.bob,
-    z: (p.print - 1.5) * WAVE.layer + Math.cos(phase) * WAVE.depth,
-    rx: Math.sin(phase) * WAVE.roll,
-    rz: plate.waveTurn,
-    scale: WAVE.scale,
-  };
-};
-
-const poseOf = (name: PoseName, plate: PlateLayout, t: number, layout: Layout): PlatePose => {
-  switch (name) {
-    case 'mark':
-      return markPose(plate, t);
-    case 'target':
-      return targetPose(plate, t, layout);
-    case 'wave':
-      return wavePose(plate, t);
-  }
-};
+/** In register at height z above the sheet. */
+const inRegisterAt = (plate: PlateLayout, z: number): PlatePose => ({
+  ...registerPose(plate),
+  z,
+});
 
 /** A plate's pose at time t (seconds, any value: the loop repeats every PERIOD). */
-export const platePoseAt = (t: number, plate: PlateLayout, layout: Layout): PlatePose => {
+export const platePoseAt = (t: number, plate: PlateLayout): PlatePose => {
   const lt = loopTime(t);
-  const segment = segmentAt(lt);
-  const from = poseOf(segment.pose, plate, lt, layout);
-  if (lt < segment.moveStart) return from;
 
-  const u = moveProgress(lt, segment, plate.print);
-  const pose = blendPose(from, poseOf(segment.next, plate, lt, layout), easeMove(u));
-
-  // Lift off the sheet: zero (and still) at both ends of the move, highest mid-move.
-  const lift = Math.sin(Math.PI * u) ** 2;
-  pose.z += lift * (LIFT.forward + LIFT.spread * PLATES[plate.id].depth);
-
-  if (segment.next === 'mark') {
-    // Registration snap: drift out of register on the way in, then snap into it (overshoot).
-    const off =
-      u < SNAP_AT ? smoothstep(0, SNAP_AT, u) : 1 - easeSnap((u - SNAP_AT) / (1 - SNAP_AT));
-    const { snap } = PLATES[plate.id];
-    pose.x += snap.x * off;
-    pose.y += snap.y * off;
-    pose.rz += snap.rz * off;
+  // Settle: just pressed into the sheet, the plate comes back up to lie on it.
+  if (lt < SETTLE.end) {
+    return inRegisterAt(plate, lerp(-SHEET.dip, 0, easeOutCubic(progress(lt, SETTLE))));
   }
-  return pose;
+
+  // Hold, then release: the plate lifts off depth first and drifts out to its float offset.
+  const release = releaseWindow(plate);
+  if (lt < release.start) return holdPose(plate);
+  if (lt < release.end) {
+    const u = progress(lt, release);
+    const hold = holdPose(plate);
+    const float = floatPose(plate, lt);
+    const glide = easeInOutCubic(u);
+    return {
+      x: lerp(hold.x, float.x, glide),
+      y: lerp(hold.y, float.y, glide),
+      z: lerp(hold.z, float.z, easeOutCubic(u)),
+      rx: 0,
+      rz: lerp(hold.rz, float.rz, glide),
+      scale: 1,
+    };
+  }
+
+  // Float, then register: the plate glides back, snaps into register and hovers above the sheet.
+  const register = registerWindow(plate);
+  if (lt < register.start) return floatPose(plate, lt);
+  if (lt < register.end) {
+    const u = progress(lt, register);
+    const reg = registerPose(plate);
+    const float = floatPose(plate, lt);
+    const snap = easeSnap(u);
+    return {
+      x: lerp(float.x, reg.x, snap),
+      y: lerp(float.y, reg.y, snap),
+      z: lerp(float.z, SHEET.hover, easeMove(u)),
+      rx: 0,
+      rz: lerp(float.rz, reg.rz, snap),
+      scale: 1,
+    };
+  }
+  if (lt < PRESS.start) return inRegisterAt(plate, SHEET.hover);
+
+  // Press: all four come down together and sink into the sheet; the loop closes at contact.
+  const u = (lt - PRESS.start) / (PRESS.end - PRESS.start);
+  return inRegisterAt(plate, lerp(SHEET.hover, -SHEET.dip, easePress(u)));
 };
 
-const tiltOf = (name: PoseName, t: number): Tilt => {
-  switch (name) {
-    case 'mark':
-      return MARK.tilt;
-    case 'target':
-      return {
-        x: RING.tilt.x,
-        y: RING.tilt.y + Math.sin((t - TARGET_MID) * 0.7) * RING.sway,
-        z: RING.tilt.z,
-      };
-    case 'wave':
-      return WAVE.tilt;
-  }
-};
-
-/** Rotation of the whole group at time t; moves blend it without the per-plate stagger. */
+/** The frame of the plates and the sheet at time t: the sheet's tilt with a slow drift. */
 export const tiltAt = (t: number): Tilt => {
   const lt = loopTime(t);
-  const segment = segmentAt(lt);
-  const from = tiltOf(segment.pose, lt);
-  if (lt < segment.moveStart) return from;
-  const w = easeMove((lt - segment.moveStart) / (segment.end - segment.moveStart));
-  return blendTilt(from, tiltOf(segment.next, lt), w);
+  return {
+    x: SHEET.tilt.x + SHEET.drift.pitch * Math.sin(BEAT * 2 * lt + 0.7),
+    y: SHEET.tilt.y + SHEET.drift.yaw * Math.sin(BEAT * lt),
+    z: SHEET.tilt.z,
+  };
 };
 
-/** The mark's group tilt: the scroll-out hand-off blends to it. */
-export const markTilt = (): Tilt => MARK.tilt;
+/** The sheet's tilt without its drift: the scroll-out hand-off blends to it. */
+export const restTilt = (): Tilt => ({ ...SHEET.tilt });
+
+// ------------------------------------------------------------------------------------------------
+// The sheet: effects of the contact, prints and shadows
+// ------------------------------------------------------------------------------------------------
+
+export interface Effects {
+  /** Reach of the ripple from the mark, as a share of its full reach (0–1). */
+  ripple: number;
+  /** Strength of the ripple (0–1): rises at once, then fades out as it spreads. */
+  rippleAlpha: number;
+  /** Brightening of the sheet under the plates at contact (0–1). */
+  bloom: number;
+  /** Position of the sheen across the mark: 0 left of it, 1 right of it. */
+  sheen: number;
+  /** Strength of the sheen (0–1). */
+  sheenAlpha: number;
+}
+
+/**
+ * The sheet's response to the contact at t = 0: a ripple spreading out from the mark, a short bloom
+ * under the plates, and a sheen crossing the mark from left to right. All are 0 outside their
+ * spans, so they never show away from the contact.
+ */
+export const effectsAt = (t: number): Effects => {
+  const age = loopTime(t);
+
+  const u = age / EFFECTS.ripple;
+  const ripple = u < 1 ? easeOutCubic(u) : 0;
+  const rippleAlpha = u < 1 ? smoothstep(0, 0.06, u) * Math.pow(1 - u, 1.6) : 0;
+
+  const v = age / EFFECTS.bloom;
+  const bloom = v < 1 ? smoothstep(0, 0.08, v) * (1 - smoothstep(0.08, 1, v)) : 0;
+
+  const { from, to } = EFFECTS.sheen;
+  const inSheen = age > from && age < to;
+  const s = (age - from) / (to - from);
+
+  return {
+    ripple,
+    rippleAlpha,
+    bloom,
+    sheen: inSheen ? easeInOutCubic(s) : 0,
+    sheenAlpha: inSheen ? Math.sin(Math.PI * s) : 0,
+  };
+};
+
+/**
+ * Strength of the halftone print a plate leaves on the sheet (0–PRINT.alpha): it inks in as the
+ * plate lifts off (K first) and fades out before the plates come back. 0 outside the release.
+ */
+export const printAlpha = (t: number, plate: PlateLayout): number => {
+  const lt = loopTime(t);
+  if (lt < RELEASE.start || lt >= PRINT_FADE.to) return 0;
+  const r = progress(lt, releaseWindow(plate));
+  const fade = 1 - smoothstep(PRINT_FADE.from, PRINT_FADE.to, lt);
+  return PRINT.alpha * smoothstep(0, 0.3, r) * fade;
+};
+
+/**
+ * The shadow a plate at height z casts on the sheet, light from the upper left: its offset (raster
+ * units, y up, so it falls down and to the right), blur radius and strength. None while the plate
+ * lies on or in the sheet; the higher it floats, the further, softer and fainter the shadow.
+ */
+export const plateShadow = (
+  z: number,
+): { x: number; y: number; softness: number; alpha: number } => {
+  const zc = Math.max(0, z);
+  return {
+    x: 0.16 * zc,
+    y: -0.24 * zc,
+    softness: 6 + 0.09 * zc,
+    alpha: smoothstep(0, 10, zc) * (1 - 0.65 * clamp(zc / 450)),
+  };
+};
+
+// ------------------------------------------------------------------------------------------------
+// Hand-off
+// ------------------------------------------------------------------------------------------------
 
 export interface Handoff {
-  /** Blend from the loop pose to the mark pose (the loop clock also slows to a stop with it). */
+  /** Blend from the loop pose to the hold pose (the loop clock also slows to a stop with it). */
   toMark: number;
-  /** From the mark into flat register. */
+  /** From the hold into flat register. */
   collapse: number;
   /** Scale of the plates (1 → 1 − HANDOFF.shrink). */
   scale: number;
@@ -530,10 +495,10 @@ export interface Handoff {
 }
 
 /**
- * The hand-off at scroll progress p (math.ts dockProgress): the plates first blend to the mark
- * from whatever pose they are in, collapse into register, then shrink a little and fade out in the
- * art column while the header logo's arches pulse out of register and snap back. Scrolling back
- * runs it in reverse.
+ * The hand-off at scroll progress p (math.ts dockProgress): the plates first blend to the hold
+ * pose from wherever they are in the press run, collapse into register, then shrink a little and
+ * fade out in the art column while the header logo's arches pulse out of register and snap back.
+ * Scrolling back runs it in reverse.
  */
 export const handoff = (p: number): Handoff => {
   const fade = smoothstep(HANDOFF.fadeFrom, 1, p);

@@ -38,11 +38,6 @@ export interface InkModel {
   cssBlend: 'multiply' | 'screen';
   /** WebGL blend factors (gl.blendFunc) of every colour pass: plates and shadow. */
   blend: { src: BlendFactor; dst: BlendFactor };
-  /**
-   * Strength of the soft patch under the plates: a contact shadow of key ink in light, a faint
-   * glow of the light key in dark.
-   */
-  shadowAlpha: number;
 }
 
 const MODELS: Record<SceneTheme, InkModel> = {
@@ -50,13 +45,11 @@ const MODELS: Record<SceneTheme, InkModel> = {
     paper: [1, 1, 1],
     cssBlend: 'multiply',
     blend: { src: 'DST_COLOR', dst: 'ZERO' },
-    shadowAlpha: 0.07,
   },
   dark: {
     paper: [0, 0, 0],
     cssBlend: 'screen',
     blend: { src: 'ONE', dst: 'ONE_MINUS_SRC_COLOR' },
-    shadowAlpha: 0.045,
   },
 };
 

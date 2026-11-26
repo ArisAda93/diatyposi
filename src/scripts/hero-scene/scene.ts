@@ -1,37 +1,49 @@
 /**
- * Home hero scene: the four arches of the logo as extruded ink plates (OGL / WebGL), running the
- * "metamorphosis" loop of choreography.ts.
+ * Home hero scene: a press run. The four arches of the logo are extruded ink plates (OGL / WebGL)
+ * above a sheet of paper, running the seamless loop of choreography.ts.
  *
- * - The plates move through a slow, seamless loop: the logo's mark (exploded in depth,
- *   breathing), the ring (the arches close into a ring that turns slowly), and a continuous
- *   wave of ink, then snap back into register. Overlaps multiply like overprinting (see
- *   shaders.ts). A soft contact shadow sits under them. The group follows the pointer with
- *   damped rotation on fine pointers (and a depth parallax per plate) and drifts on its own on
- *   touch screens.
+ * - The loop (t = 0 is contact): the plates press onto the sheet, a ring of cyan and magenta
+ *   halftone dots runs out across it from the mark with a short soft bloom, the plates hold as
+ *   the crisp logo while one sheen of light crosses their faces, then lift off in reverse press
+ *   order, leaving the logo printed on the sheet in halftone dots that fades. They float apart in
+ *   depth, glide back into register one by one in press order (Y, M, C, K) and press again.
+ *   Overlaps multiply like overprinting (see shaders.ts).
+ * - The sheet (sheet.ts) lies in the plates' frame just under a plate at rest, so the group's tilt
+ *   (choreography.ts tiltAt: the sheet's frame plus a slow camera drift) puts it in soft
+ *   perspective; it spans the hero and bleeds off its right side. It carries a hairline edge,
+ *   crop marks outside its corners, a small colour strip and, in light, a soft drop shadow; it
+ *   fades out towards the copy on its left, and its fine details stay faint under the copy and the
+ *   header band so the text reads. Each plate casts a soft arch-shaped shadow on it,
+ *   offset further and softer the higher the plate floats (choreography.ts plateShadow).
+ * - The group follows the pointer with damped rotation on fine pointers (and a depth parallax per
+ *   plate) and drifts on its own on touch screens.
  * - Every pose fits the art box the hero lays out for it (choreography.ts ART, Hero.astro
- *   `.hero-art`), so no pose is cropped or reaches the copy.
+ *   `.hero-art`), so no plate is cropped or reaches the copy; only the sheet spans the hero.
  * - Hand-off to the header logo as the hero scrolls out (scrubbed, nothing pinned; choreography.ts
- *   handoff): the plates first blend to the mark from whatever pose they are in (the loop slows to
- *   a stop), collapse into register and flatten, then shrink a little and fade out in the art
- *   column. Meanwhile the header logo's arches (always shown) pulse out of register and snap
- *   back (`--dock` 0–1 and `--dock-reg` on [data-header], styled in Hero.astro); `data-docked` is
- *   set once the plates are gone. The plates scroll with the page, held below the header band and,
- *   when the copy sits below the art, above the copy (math.ts guardY); the hand-off is short
- *   enough that they are gone before those limits meet (handoffDistance). Scrolling back reverses
- *   it, and the loop resumes once the hero is back at the top.
+ *   handoff): the plates first blend to the hold pose in register on the sheet from whatever pose
+ *   they are in (the loop slows to a stop and its effects fade), collapse and flatten while the
+ *   sheet fades, then shrink a little and fade out in the art column. Meanwhile the header logo's
+ *   arches (always shown) pulse out of register and snap back (`--dock` 0–1 and `--dock-reg` on
+ *   [data-header], styled in Hero.astro); `data-docked` is set once the plates are gone. The
+ *   plates scroll with the page, held below the header band and, when the copy sits below the
+ *   art, above the copy (math.ts guardY); the hand-off is short enough that they are gone before
+ *   those limits meet (handoffDistance). Scrolling back reverses it, and the loop resumes once
+ *   the hero is back at the top.
  * - Hand-over from the static SVG mark: the first frame draws the plates flat and in register at
- *   the SVG's exact position and size, the canvas fades in over it, then the plates come apart
- *   into the mark pose and the loop starts. With the intro, they arrive from depth instead (print
- *   order Y, M, C, K) and the loop starts once they have landed.
+ *   the SVG's exact position and size, without the sheet; the canvas fades in over it, then the
+ *   group tilts into the sheet's frame as the sheet fades in, and the loop starts at contact.
+ *   With the intro, the plates arrive from depth instead (print order Y, M, C, K) and land on the
+ *   sheet; the loop starts at contact as they land, so the ripple runs out from their landing.
  *
  * Start-up runs in short steps that yield to the main thread (startup.ts): createHeroScene is
  * async, and the canvas is only shown (and faded in) by start(), after the first real frame.
  *
- * - Themes (theme.ts): in light the plates multiply on a white canvas composited with
- *   `mix-blend-mode: multiply`; in dark they screen on a black canvas composited with
- *   `mix-blend-mode: screen`, and the key plate and the shadow (a faint glow in dark) take the
- *   light key colour. `dt:themechange` switches the blend state, the uniforms and the canvas's
- *   blend mode together and redraws at once, in the same task, without rebuilding anything.
+ * - Themes (theme.ts, sheet.ts sheetLook): in light the plates multiply on a white canvas
+ *   composited with `mix-blend-mode: multiply`; in dark they screen on a black canvas composited
+ *   with `mix-blend-mode: screen`, and the key plate, the sheet's lines and the plates' shadows (a
+ *   faint glow in dark) take the light key colour. `dt:themechange` switches the blend state, the
+ *   uniforms and the canvas's blend mode together and redraws at once, in the same task, without
+ *   rebuilding anything.
  * - Hand-over to the site-wide floating plates (handoff-signal.ts): every frame in which the
  *   hand-off progress, the art box or the plates' place changed, the scene publishes them
  *   (`dt:hero-handoff` on document, and latestHeroHandoff()).
@@ -48,13 +60,16 @@ import {
   blendPose,
   blendTilt,
   buildLayout,
+  effectsAt,
   handoff,
-  markPose,
-  markTilt,
+  holdPose,
   platePoseAt,
+  plateShadow,
   poseBounds,
+  printAlpha,
   registerPose,
   registrationPulse,
+  restTilt,
   tiltAt,
   type PlateId,
   type PlateLayout,
@@ -76,8 +91,24 @@ import {
   type Placement,
   type ViewBox,
 } from './math';
-import { depthFragment, plateFragment, plateVertex, quadVertex, shadowFragment } from './shaders';
+import {
+  depthFragment,
+  plateFragment,
+  plateShadowFragment,
+  plateVertex,
+  sheetFragment,
+  sheetVertex,
+} from './shaders';
 import { latestHeroHandoff, publishHeroHandoff } from './handoff-signal';
+import {
+  SHEET_MASK,
+  SHEET_RIPPLE,
+  deviceRect,
+  sheetLayout,
+  sheetLook,
+  type SheetLayout,
+  type SheetLook,
+} from './sheet';
 import { precompile, yieldToMain } from './startup';
 import { inkModel, keyInkFor, sceneThemeOf, type SceneTheme } from './theme';
 
@@ -91,9 +122,15 @@ export interface SceneElements {
   mark: SVGSVGElement;
   /** The art box (`[data-hero-art]`), published for the hand-over (handoff-signal.ts). */
   art: HTMLElement | null;
-  /** Hero copy: when it sits below the art, the plates never reach it while they fade. */
+  /**
+   * Hero copy (headline, lead and actions): the sheet stays faint over its box; when it sits below
+   * the art, the plates never reach it while they fade.
+   */
   copy: HTMLElement | null;
-  /** Receives `--dock`, `--dock-reg`, `data-scene` and `data-docked`. */
+  /**
+   * Receives `--dock`, `--dock-reg`, `data-scene` and `data-docked`. Fixed: the sheet stays faint
+   * under its band.
+   */
   header: HTMLElement | null;
 }
 
@@ -122,7 +159,10 @@ const POINTER_TILT = { x: 0.07, y: 0.1 };
 const PARALLAX = { x: 0.12, y: 0.08 };
 /** Canvas fade-in over the SVG mark, seconds. */
 const FADE_IN = 0.6;
-/** Without the intro: delay and duration of the plates coming apart into the mark pose. */
+/**
+ * Without the intro: delay and duration of the step from flat register (the SVG) into the press
+ * run's frame: the group tilts into the sheet's perspective and the sheet fades in.
+ */
 const ALIVE = { delay: 0.2, duration: 1.8 };
 /** Intro: stagger between plates, duration per plate, start depth (raster units). */
 const INTRO = { stagger: 0.12, duration: 1.3, depth: 1900 };
@@ -134,12 +174,47 @@ const INTRO_FROM: Record<PlateId, { x: number; y: number; rz: number }> = {
   y: { x: -120, y: -110, rz: 0.14 },
   k: { x: 160, y: -80, rz: -0.16 },
 };
+/** The sheet's plane: just under the back face of a plate whose pose z is 0 (raster units). */
+const SHEET_Z = -(THICKNESS / 2) - 1;
+/** Plate shadows and prints lie this far above the sheet (raster units), prints over shadows. */
+const SHADOW_LIFT = 0.5;
+const PRINT_LIFT = 1;
+/** Depth scale of a plate flattened onto the sheet (a shadow or a print): flat, yet invertible. */
+const FLAT = 0.001;
 /**
- * Contact shadow: size relative to the plates' bounds, offset towards the lower right (share of
- * the bounds; light from the upper left), and depth below the rearmost plate (raster units). Its
- * strength per theme is theme.ts `shadowAlpha` (0 removes it).
+ * Plate shadows are softened by drawing this many copies, each at 1/SOFT_TAPS of the strength,
+ * spread evenly over a disc of radius choreography.ts plateShadow().softness: golden-angle steps
+ * at radius √((i + ½) / n), so the copies blend into one soft edge instead of showing as rings.
  */
-const SHADOW = { spread: 1.3, offset: { x: 0.04, y: -0.1 }, depth: 40 };
+const SOFT_TAPS = 8;
+const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
+const SOFT_DISC: readonly (readonly [number, number])[] = Array.from(
+  { length: SOFT_TAPS },
+  (_, i) => {
+    const radius = Math.sqrt((i + 0.5) / SOFT_TAPS);
+    const angle = i * GOLDEN_ANGLE;
+    return [radius * Math.cos(angle), radius * Math.sin(angle)] as const;
+  },
+);
+/**
+ * Halftone print left on the sheet: dot pitch (CSS px; times the drawing DPR) and each plate's
+ * screen angle (radians; the classic angles, so the four screens form rosettes, not moiré).
+ */
+const PRINT_PITCH = 5;
+const SCREEN_ANGLE: Record<PlateId, number> = {
+  c: (15 * Math.PI) / 180,
+  m: (75 * Math.PI) / 180,
+  y: 0,
+  k: (45 * Math.PI) / 180,
+};
+/**
+ * Sheen during the hold: half-width of the band as a share of the mark's on-screen width, and
+ * its slant (horizontal shift per pixel of height; negative leans it like "/"). Its strength per
+ * theme is sheet.ts `sheen`.
+ */
+const SHEEN = { width: 0.16, slant: -0.45 };
+/** Below this, a layer is not drawn at all. */
+const MIN_ALPHA = 0.002;
 /**
  * Hand-off: gap kept below the header and above the copy (px), the mark's half-height with slack
  * for breathing, tilt and misregistration (raster units), and slack on the measured extent of the
@@ -181,6 +256,10 @@ interface Metrics {
   rest: Placement;
   /** The art box in hero coordinates (the mark's box if there is none). */
   art: Box;
+  /** The header in viewport coordinates (it is fixed; the sheet stays faint under it). */
+  headerBox: Box | null;
+  /** Where the sheet lies (sheet.ts). */
+  sheet: SheetLayout;
   /** Lowest edge the plates keep below (header bottom + gap), viewport px (the header is fixed). */
   bandBottom: number;
   /** Highest edge the plates keep above (copy top − gap) in hero coordinates; null beside it. */
@@ -237,12 +316,14 @@ export const createHeroScene = async (
   const camera = new Camera(gl, { fov: FOV, near: 1, far: 10_000 });
 
   // Shaders: linked in the background where the browser can, then one OGL program per task.
+  // Every program's sources are here (the plates and the prints share theirs).
   await precompile(
     gl,
     [
       { vertex: plateVertex, fragment: plateFragment },
       { vertex: plateVertex, fragment: depthFragment },
-      { vertex: quadVertex, fragment: shadowFragment },
+      { vertex: plateVertex, fragment: plateShadowFragment },
+      { vertex: sheetVertex, fragment: sheetFragment },
     ],
     PRECOMPILE_TIMEOUT,
   );
@@ -259,10 +340,15 @@ export const createHeroScene = async (
   // The colour that leaves the page untouched (white in light, black in dark), shared by every
   // colour pass; set with the blend state by applyTheme.
   const paper = { value: new Float32Array(3) };
+  // The plates print solid; the sheen (x: centre along the slant, y: slant, z: half-width, all
+  // device px; w: strength) is set per frame during the hold.
+  const sheen = new Float32Array([0, SHEEN.slant, 1, 0]);
   const plateUniforms = {
     uInk: { value: new Float32Array(3) },
     uPaper: paper,
     uAlpha: { value: 1 },
+    uHalftone: { value: new Float32Array(2) },
+    uSheen: { value: sheen },
   };
   const colorProgram = linked(
     new Program(gl, {
@@ -287,17 +373,71 @@ export const createHeroScene = async (
   );
 
   await yieldToMain();
-  // Key ink of the shadow (and of the key plate): set by applyTheme.
+  // Key ink of the sheet's lines, the plates' shadows and the key plate: set by applyTheme.
   const keyInk = new Float32Array(3);
-  const shadowUniforms = { uInk: { value: keyInk }, uPaper: paper, uAlpha: { value: 0 } };
-  const shadowProgram = linked(
+  const cyanInk = hexToRgb(hexOf('c'));
+  // The sheet: geometry from sheet.ts (measure), strengths from the theme (applyTheme) and the
+  // frame (tick, render). See shaders.ts sheetFragment for each uniform.
+  const sheetUniforms = {
+    uQuad: { value: new Float32Array(2) },
+    uPaper: paper,
+    uCyan: { value: cyanInk },
+    uMagenta: { value: hexToRgb(hexOf('m')) },
+    uYellow: { value: hexToRgb(hexOf('y')) },
+    uKey: { value: keyInk },
+    uBloomInk: { value: new Float32Array(3) },
+    uGeom: { value: new Float32Array(4) },
+    uLines: { value: new Float32Array(4) },
+    uShadow: { value: new Float32Array(4) },
+    uStrip: { value: new Float32Array(4) },
+    uWave: { value: new Float32Array(4) },
+    uLook: { value: new Float32Array(4) },
+    uMix: { value: new Float32Array(4) },
+    uCopyRect: { value: deviceRect(null, 0, 1) },
+    uBandRect: { value: deviceRect(null, 0, 1) },
+  };
+  const sheetProgram = linked(
     new Program(gl, {
-      vertex: quadVertex,
-      fragment: shadowFragment,
-      uniforms: shadowUniforms,
+      vertex: sheetVertex,
+      fragment: sheetFragment,
+      uniforms: sheetUniforms,
       depthTest: false,
       depthWrite: false,
       cullFace: false,
+    }),
+  );
+
+  await yieldToMain();
+  // The plates' shadows: each plate flattened onto the sheet in key ink.
+  const shadowUniforms = { uInk: { value: keyInk }, uPaper: paper, uAlpha: { value: 0 } };
+  const shadowProgram = linked(
+    new Program(gl, {
+      vertex: plateVertex,
+      fragment: plateShadowFragment,
+      uniforms: shadowUniforms,
+      depthTest: false,
+      depthWrite: false,
+      cullFace: gl.BACK,
+    }),
+  );
+
+  await yieldToMain();
+  // The halftone prints: each plate flattened in register on the sheet, in dots of its ink.
+  const printUniforms = {
+    uInk: { value: new Float32Array(3) },
+    uPaper: paper,
+    uAlpha: { value: 0 },
+    uHalftone: { value: new Float32Array(2) },
+    uSheen: { value: new Float32Array(4) },
+  };
+  const printProgram = linked(
+    new Program(gl, {
+      vertex: plateVertex,
+      fragment: plateFragment,
+      uniforms: printUniforms,
+      depthTest: false,
+      depthWrite: false,
+      cullFace: gl.BACK,
     }),
   );
 
@@ -318,37 +458,56 @@ export const createHeroScene = async (
       frustumCulled: false,
     });
     mesh.setParent(group);
-    return { layout: plateLayout, ink: hexToRgb(hexOf(plateLayout.id)), mesh, alpha: 1 };
+    return {
+      layout: plateLayout,
+      ink: hexToRgb(hexOf(plateLayout.id)),
+      mesh,
+      /** In register on the sheet: where its print lies. */
+      home: registerPose(plateLayout),
+      /** Ink of the plate (intro and hand-off). */
+      alpha: 1,
+      /** Strength of the halftone print it leaves on the sheet (choreography.ts printAlpha). */
+      print: 0,
+    };
   });
 
-  // Flat quad (−0.5 to 0.5) for the contact shadow.
+  // One more plate mesh, drawn flattened onto the sheet for every shadow and print.
+  const flat = new Mesh(gl, {
+    geometry: plateGeometry,
+    program: shadowProgram,
+    frustumCulled: false,
+  });
+  flat.setParent(group);
+
+  // The sheet: one quad (−0.5 to 0.5), placed and scaled by measure().
   const quadGeometry = new Geometry(gl, {
     position: { size: 2, data: new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5]) },
     index: { data: new Uint16Array([0, 1, 2, 0, 2, 3]) },
   });
-  const shadow = new Mesh(gl, {
+  const sheet = new Mesh(gl, {
     geometry: quadGeometry,
-    program: shadowProgram,
+    program: sheetProgram,
     frustumCulled: false,
   });
-  shadow.setParent(group);
+  sheet.setParent(group);
 
   // ---------------------------------------------------------------------------------------------
   // Theme (theme.ts): blend state, neutral colour, key ink and the canvas's CSS blend mode.
   // ---------------------------------------------------------------------------------------------
 
   const keyPlate = plates.find((p) => p.layout.id === 'k');
-  const colorPasses = [colorProgram, shadowProgram];
+  const colorPasses = [colorProgram, sheetProgram, shadowProgram, printProgram];
   let theme: SceneTheme = sceneThemeOf(root.dataset['theme']);
-  let shadowAlpha = 0;
+  /** Strengths of the sheet, the plates' shadows and the sheen in the current theme. */
+  let look: SheetLook = sheetLook(theme);
 
   const applyTheme = (next: SceneTheme): void => {
     theme = next;
-    const look = inkModel(next);
-    paper.value.set(look.paper);
-    gl.clearColor(look.paper[0], look.paper[1], look.paper[2], 1);
+    const model = inkModel(next);
+    paper.value.set(model.paper);
+    gl.clearColor(model.paper[0], model.paper[1], model.paper[2], 1);
     for (const program of colorPasses) {
-      program.setBlendFunc(gl[look.blend.src], gl[look.blend.dst]);
+      program.setBlendFunc(gl[model.blend.src], gl[model.blend.dst]);
     }
     // Dark: the light key colour of the page (a style read, no layout); light: the logo's key.
     const key = keyInkFor(
@@ -357,10 +516,17 @@ export const createHeroScene = async (
     );
     keyInk.set(key);
     keyPlate?.ink.set(key);
-    // Rescale the shadow of the frame already set up, for a redraw before the next frame.
-    if (shadowAlpha > 0) shadowUniforms.uAlpha.value *= look.shadowAlpha / shadowAlpha;
-    shadowAlpha = look.shadowAlpha;
-    canvas.style.mixBlendMode = look.cssBlend;
+    // The sheet's theme strengths. Those that multiply a per-frame value (the bloom, the plates'
+    // shadows, the sheen) are combined in render(), so a redraw right after a switch is right.
+    look = sheetLook(next);
+    const strengths = sheetUniforms.uLook.value;
+    strengths[0] = look.face;
+    strengths[1] = look.shadow;
+    strengths[2] = look.lines;
+    strengths[3] = look.strip;
+    sheetUniforms.uMix.value[3] = look.dots;
+    sheetUniforms.uBloomInk.value.set(look.bloomInk === 'cyan' ? cyanInk : keyInk);
+    canvas.style.mixBlendMode = model.cssBlend;
   };
   applyTheme(theme);
 
@@ -369,6 +535,36 @@ export const createHeroScene = async (
   // ---------------------------------------------------------------------------------------------
 
   let m: Metrics | null = null;
+
+  /**
+   * Places the sheet's quad (group units) and sets the sheet's geometry uniforms (on every
+   * measure). The shader's lengths are in sheet units, group units divided by `place.unit`, so
+   * they stay near 1 (shaders.ts sheetVertex).
+   */
+  const placeSheet = (place: SheetLayout): void => {
+    const { marks } = place;
+    const quadWidth = place.width + place.margin * 2;
+    const quadHeight = place.height + place.margin * 2;
+    sheet.position.set(place.x, place.y, SHEET_Z);
+    sheet.scale.set(quadWidth, quadHeight, 1);
+    const k = 1 / place.unit;
+    const u = sheetUniforms;
+    u.uQuad.value[0] = quadWidth * k;
+    u.uQuad.value[1] = quadHeight * k;
+    // The mark (the group's origin) relative to the sheet's centre.
+    u.uGeom.value.set([(place.width / 2) * k, (place.height / 2) * k, -place.x * k, -place.y * k]);
+    u.uLines.value.set([marks.line * k, marks.aa * k, marks.cropLength * k, marks.cropGap * k]);
+    // Shadow offset down and to the right (y up in group space).
+    u.uShadow.value.set([
+      marks.shadowX * k,
+      -marks.shadowY * k,
+      marks.shadowBlur * k,
+      marks.pitch * k,
+    ]);
+    u.uStrip.value.set([place.stripX * k, place.stripY * k, marks.patch * k, marks.patchGap * k]);
+    u.uWave.value[1] = place.ringWidth * k;
+    u.uWave.value[3] = SHEET_RIPPLE.bloomRadius * k;
+  };
 
   const measure = (): Metrics => {
     const heroRect = hero.getBoundingClientRect();
@@ -426,18 +622,44 @@ export const createHeroScene = async (
     camera.position.set(0, 0, distance);
 
     const artBox = artRect && artRect.width > 0 ? artRect : markRect;
+    const artInHero: Box = {
+      left: artBox.left - heroRect.left,
+      top: artBox.top - heroRect.top,
+      width: artBox.width,
+      height: artBox.height,
+    };
+    const copyBox: Box | null =
+      copyRect && copyRect.width > 0
+        ? {
+            left: copyRect.left - heroRect.left,
+            top: copyRect.top - heroRect.top,
+            width: copyRect.width,
+            height: copyRect.height,
+          }
+        : null;
+    const sheetPlace = sheetLayout(artInHero, { width, height }, rest);
+    placeSheet(sheetPlace);
+    // Readability mask: the copy scrolls with the canvas, so its rectangle only changes here; the
+    // header band follows the scroll (tick).
+    deviceRect(copyBox, height, dpr, sheetUniforms.uCopyRect.value);
+    sheetUniforms.uMix.value[2] = SHEET_MASK.feather * dpr;
     return {
       width,
       height,
       heroTop: heroRect.top + scrollY,
       heroLeft: heroRect.left,
       rest,
-      art: {
-        left: artBox.left - heroRect.left,
-        top: artBox.top - heroRect.top,
-        width: artBox.width,
-        height: artBox.height,
-      },
+      art: artInHero,
+      headerBox:
+        headerRect && headerRect.width > 0
+          ? {
+              left: headerRect.left,
+              top: headerRect.top,
+              width: headerRect.width,
+              height: headerRect.height,
+            }
+          : null,
+      sheet: sheetPlace,
       bandBottom,
       copyTop,
       // Hero coordinates are viewport coordinates with the hero at the top.
@@ -464,6 +686,22 @@ export const createHeroScene = async (
     gl.disable(gl.POLYGON_OFFSET_FILL);
   };
 
+  /**
+   * What tick() worked out for the frame and render() combines with the theme's strengths (so a
+   * redraw after a theme switch is right without a new tick): the overall alpha of the sheet and
+   * everything on it, and the bloom and sheen of the loop (already faded by the hand-off).
+   */
+  const frameState = { alpha: 0, bloom: 0, sheen: 0 };
+
+  /** Draws the flat mesh as it is placed: a plate flattened onto the sheet. */
+  const drawFlat = (x: number, y: number, z: number, rz: number, scale: number): void => {
+    flat.position.set(x, y, z);
+    flat.rotation.set(0, 0, rz);
+    flat.scale.set(scale, scale, FLAT);
+    flat.updateMatrixWorld();
+    flat.draw({ camera });
+  };
+
   const render = (): void => {
     renderer.bindFramebuffer();
     renderer.setViewport(renderer.width * renderer.dpr, renderer.height * renderer.dpr);
@@ -474,12 +712,54 @@ export const createHeroScene = async (
     renderer.setDepthMask(true);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    // The shadow lies on the sheet, under everything.
-    if (shadowUniforms.uAlpha.value > 0.002) shadow.draw({ camera });
+    const alpha = frameState.alpha;
+    if (alpha > MIN_ALPHA) {
+      // 1. The sheet, under everything.
+      sheetUniforms.uMix.value[0] = alpha;
+      sheetUniforms.uMix.value[1] = frameState.bloom * look.bloom;
+      sheet.draw({ camera });
 
-    // Each plate prints once: its nearest surface only (own depth pass), multiplied onto the rest.
+      // 2. Each plate's shadow: the plate flattened onto the sheet, offset away from the light
+      //    and softened by jittered copies, further and softer the higher it floats.
+      if (look.plateShadow > 0) {
+        flat.program = shadowProgram;
+        for (const p of plates) {
+          if (p.alpha <= MIN_ALPHA) continue;
+          const { position, rotation, scale } = p.mesh;
+          const cast = plateShadow(position.z);
+          const strength = look.plateShadow * cast.alpha * alpha;
+          if (strength <= MIN_ALPHA) continue;
+          shadowUniforms.uAlpha.value = strength / SOFT_TAPS;
+          for (const [jx, jy] of SOFT_DISC) {
+            drawFlat(
+              position.x + cast.x + jx * cast.softness,
+              position.y + cast.y + jy * cast.softness,
+              SHEET_Z + SHADOW_LIFT,
+              rotation.z,
+              scale.x,
+            );
+          }
+        }
+      }
+
+      // 3. The halftone prints the plates leave as they lift, in register on the sheet.
+      flat.program = printProgram;
+      printUniforms.uHalftone.value[0] = PRINT_PITCH * renderer.dpr;
+      for (const p of plates) {
+        const strength = p.print * alpha;
+        if (strength <= MIN_ALPHA) continue;
+        printUniforms.uInk.value.set(p.ink);
+        printUniforms.uAlpha.value = strength;
+        printUniforms.uHalftone.value[1] = SCREEN_ANGLE[p.layout.id];
+        drawFlat(p.home.x, p.home.y, SHEET_Z + PRINT_LIFT, p.home.rz, p.home.scale);
+      }
+    }
+
+    // 4. The plates. Each prints once: its nearest surface only (own depth pass), multiplied onto
+    //    the rest. The sheen crosses their front faces during the hold.
+    sheen[3] = frameState.sheen * look.sheen;
     for (const p of plates) {
-      if (p.alpha <= 0.002) continue;
+      if (p.alpha <= MIN_ALPHA) continue;
       renderer.setDepthMask(true);
       gl.clear(gl.DEPTH_BUFFER_BIT);
       gl.colorMask(false, false, false, false);
@@ -513,6 +793,8 @@ export const createHeroScene = async (
   const pointer = { x: 0, y: 0, amount: 0 };
   const cursor = { x: 0, y: 0, inside: false };
   const poses: PlatePose[] = [];
+  /** The header's box in canvas coordinates this frame (reused). */
+  const headerInHero: Box = { left: 0, top: 0, width: 0, height: 0 };
 
   /**
    * `--dock` (0–1): how far the hand-off to the header logo has gone. `--dock-reg`: how far out of
@@ -621,8 +903,11 @@ export const createHeroScene = async (
     const alive = intro ? 1 : easeInOutCubic((clock - ALIVE.delay) / ALIVE.duration);
     const explode = alive * (1 - out.collapse);
     const introDone = !intro || clock >= INTRO_TOTAL;
+    /** 1 while the loop runs; falls to 0 as it slows to a stop on scroll-out. */
+    const running = 1 - toMark;
 
-    // The loop starts once the plates have landed, and slows to a stop as they blend to the mark.
+    // The loop starts at contact once the plates have landed, and slows to a stop as they blend to
+    // the hold pose on scroll-out.
     if (introDone && alive >= 1) loopClock += dt * (1 - toMark);
 
     // Pointer (fine pointers) or a slow autonomous drift (touch), damped.
@@ -638,7 +923,8 @@ export const createHeroScene = async (
     pointer.amount += ((fine && cursor.inside ? 1 : 0) - pointer.amount) * damp(2.5, dt);
 
     const scale = m.rest.scale * out.scale;
-    const tilt = blendTilt(tiltAt(loopClock), markTilt(), toMark);
+    // The sheet's frame with the slow camera drift, settling to the frame at rest on scroll-out.
+    const tilt = blendTilt(tiltAt(loopClock), restTilt(), toMark);
     group.scale.set(scale, scale, scale);
     group.rotation.set(
       explode * (tilt.x - pointer.y * POINTER_TILT.x),
@@ -646,16 +932,13 @@ export const createHeroScene = async (
       explode * tilt.z,
     );
 
-    // Plates: the loop pose, blended to the mark on scroll-out, then towards flat register by
-    // `explode` (the hand-over at the start, the collapse during the hand-off).
+    // Plates: the loop pose, blended to the hold pose (in register on the sheet) on scroll-out,
+    // then towards flat register by `explode` (the hand-over at the start, the collapse during
+    // the hand-off).
     poses.length = 0;
     let inkSum = 0;
     for (const p of plates) {
-      const live = blendPose(
-        platePoseAt(loopClock, p.layout, layout),
-        markPose(p.layout, loopClock),
-        toMark,
-      );
+      const live = blendPose(platePoseAt(loopClock, p.layout), holdPose(p.layout), toMark);
       const pose = blendPose(registerPose(p.layout), live, explode);
       // Depth parallax with the pointer.
       pose.x += pointer.x * pose.z * PARALLAX.x;
@@ -683,6 +966,8 @@ export const createHeroScene = async (
       p.mesh.rotation.set(pose.rx, 0, pose.rz + away * from.rz);
       p.mesh.scale.set(pose.scale, pose.scale, pose.scale * Math.max(0.001, explode));
       p.alpha = ink * out.ink;
+      // Faded with the loop on scroll-out: the plates settle back over their print otherwise.
+      p.print = printAlpha(loopClock, p.layout) * running;
       inkSum += ink;
     }
 
@@ -699,19 +984,41 @@ export const createHeroScene = async (
     );
     group.position.set(m.rest.x - m.width / 2, m.height / 2 - (y + scrolled), 0);
 
-    // Contact shadow: under the plates' current footprint, offset away from the light.
+    // The sheet and everything on it: in with the plates' frame and ink, out with the hand-off.
+    // The loop's effects fade as it slows to a stop on scroll-out, so none freezes mid-way.
     const ink = inkSum / plates.length;
-    shadowUniforms.uAlpha.value = shadowAlpha * explode * fadeIn * ink * out.ink;
-    if (shadowUniforms.uAlpha.value > 0.002) {
-      const w = b.maxX - b.minX;
-      const h = b.maxY - b.minY;
-      const back = Math.min(...poses.map((pose) => pose.z));
-      shadow.position.set(
-        (b.minX + b.maxX) / 2 + w * SHADOW.offset.x,
-        (b.minY + b.maxY) / 2 + h * SHADOW.offset.y,
-        back - SHADOW.depth,
-      );
-      shadow.scale.set(w * SHADOW.spread, h * SHADOW.spread, 1);
+    frameState.alpha = explode * fadeIn * ink * out.ink;
+    const effects = effectsAt(loopClock);
+    const wave = sheetUniforms.uWave.value;
+    wave[0] = (effects.ripple * m.sheet.reach) / m.sheet.unit;
+    wave[2] = effects.rippleAlpha * running;
+    frameState.bloom = effects.bloom * running;
+    frameState.sheen = effects.sheenAlpha * running;
+
+    // The header is fixed: its band, in canvas coordinates, moves down the canvas as the page
+    // scrolls (the canvas scrolls with the hero).
+    const dpr = renderer.dpr;
+    const band = m.headerBox;
+    if (band) {
+      headerInHero.left = band.left - m.heroLeft;
+      headerInHero.top = band.top + scrolled;
+      headerInHero.width = band.width;
+      headerInHero.height = band.height;
+    }
+    deviceRect(band ? headerInHero : null, m.height, dpr, sheetUniforms.uBandRect.value);
+
+    // Sheen: a slanted band crossing the mark's on-screen extent from left to right (device px,
+    // gl_FragCoord space: y up from the canvas's bottom).
+    if (frameState.sheen > MIN_ALPHA) {
+      const left = m.rest.x + b.minX * scale;
+      const right = m.rest.x + b.maxX * scale;
+      const halfHeight = ((b.maxY - b.minY) / 2) * scale;
+      const halfWidth = Math.max(1, (right - left) * SHEEN.width);
+      const travel = halfWidth + Math.abs(SHEEN.slant) * halfHeight;
+      const centreX = left - travel + (right - left + travel * 2) * effects.sheen;
+      const pivotY = (m.height - (y + scrolled)) * dpr;
+      sheen[0] = centreX * dpr + SHEEN.slant * pivotY;
+      sheen[2] = halfWidth * dpr;
     }
 
     render();
@@ -867,12 +1174,16 @@ export const createHeroScene = async (
     camera.updateMatrixWorld();
     group.updateMatrixWorld();
     gl.colorMask(false, false, false, false);
+    sheet.draw({ camera });
+    flat.program = shadowProgram;
+    flat.draw({ camera });
+    flat.program = printProgram;
+    flat.draw({ camera });
     for (const p of plates) {
       drawDepth(p.mesh);
       p.mesh.program = colorProgram;
       p.mesh.draw({ camera });
     }
-    shadow.draw({ camera });
     gl.colorMask(true, true, true, true);
   };
 

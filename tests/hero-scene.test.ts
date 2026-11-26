@@ -2,30 +2,37 @@ import { describe, expect, it } from 'vitest';
 import { ARCH, ARCH_PLATES } from '../src/components/logo-paths';
 import {
   ART,
+  BEATS,
   HANDOFF,
-  MARK,
   PERIOD,
+  PLATES,
+  PRINT,
   PULSE_PEAK,
-  RING,
-  SEGMENTS,
+  SHEET,
   STAGGER,
-  WAVE,
   archMetrics,
+  beatAt,
   blendPose,
   buildLayout,
   easeSnap,
+  effectsAt,
+  floatPose,
   handoff,
+  holdPose,
   loopTime,
-  markPose,
+  plateShadow,
   platePoseAt,
   poseBounds,
+  printAlpha,
   registerPose,
   registrationPulse,
+  restTilt,
   tiltAt,
+  type BeatName,
   type PlateId,
   type PlateLayout,
   type PlatePose,
-  type Segment,
+  type Tilt,
 } from '../src/scripts/hero-scene/choreography';
 import {
   boundsOf,
@@ -328,7 +335,7 @@ describe('hand-off (the plates never reach the header band or the copy)', () => 
   });
 });
 
-describe('choreography (the plates’ metamorphosis loop)', () => {
+describe('choreography (the press run)', () => {
   const outline = sampleOutline(ARCH, 9);
   const metrics = archMetrics(outline);
   // The mark's viewBox is 690 50 840 205: the group pivots on its centre.
@@ -339,17 +346,41 @@ describe('choreography (the plates’ metamorphosis loop)', () => {
     if (!found) throw new Error(`missing plate ${id}`);
     return found;
   };
-  const segment = (pose: Segment['pose']): Segment => {
-    const found = SEGMENTS.find((s) => s.pose === pose);
-    if (!found) throw new Error(`missing segment ${pose}`);
+  const beat = (name: BeatName): { start: number; end: number } => {
+    const found = BEATS.find((b) => b.name === name);
+    if (!found) throw new Error(`missing beat ${name}`);
     return found;
   };
   const times = (from: number, to: number, step: number): number[] =>
     Array.from({ length: Math.floor((to - from) / step) + 1 }, (_, i) => from + i * step);
-  const posesAt = (t: number): PlatePose[] => layout.plates.map((p) => platePoseAt(t, p, layout));
+  const posesAt = (t: number): PlatePose[] => layout.plates.map((p) => platePoseAt(t, p));
   const fields = ['x', 'y', 'z', 'rx', 'rz', 'scale'] as const;
-  const target = segment('target');
-  const targetMid = (target.holdStart + target.moveStart) / 2;
+  const spread = (t: number): number => {
+    const z = posesAt(t).map((pose) => pose.z);
+    return Math.max(...z) - Math.min(...z);
+  };
+  // Each plate's own move (seconds), and when it starts: register in print order, release in
+  // reverse print order.
+  const REGISTER_MOVE = 1.9;
+  const RELEASE_MOVE = 2.4;
+  const registerStart = (p: PlateLayout): number =>
+    beat('register').start + p.print * STAGGER.register;
+  const releaseStart = (p: PlateLayout): number =>
+    beat('release').start + (3 - p.print) * STAGGER.release;
+  /** Half the plates' depth: they are extruded ±17 about their pose's z (scene.ts THICKNESS 34). */
+  const HALF_THICKNESS = 17;
+  /**
+   * Where a group-space point shows on screen, straight on (no perspective), once the group is
+   * turned by `tilt`. The scene sets the tilt as the group's Euler rotation in OGL's default order
+   * YXZ (ogl Euler, QuatFunc.fromEuler), whose matrix is Ry·Rx·Rz: turn about z, then x, then y.
+   */
+  const project = (tilt: Tilt, x: number, y: number, z: number): { x: number; y: number } => {
+    const x1 = x * Math.cos(tilt.z) - y * Math.sin(tilt.z);
+    const y1 = x * Math.sin(tilt.z) + y * Math.cos(tilt.z);
+    const y2 = y1 * Math.cos(tilt.x) - z * Math.sin(tilt.x);
+    const z2 = y1 * Math.sin(tilt.x) + z * Math.cos(tilt.x);
+    return { x: x1 * Math.cos(tilt.y) + z2 * Math.sin(tilt.y), y: y2 };
+  };
 
   it('measures the arch: anchor at its box centre, feet on the base line', () => {
     expect(metrics.anchor.x).toBeCloseTo(932, 6);
@@ -374,11 +405,18 @@ describe('choreography (the plates’ metamorphosis loop)', () => {
 
   it('is seamless: the end of the loop meets its start', () => {
     for (const p of layout.plates) {
-      const start = platePoseAt(0, p, layout);
-      const end = platePoseAt(PERIOD - 1e-6, p, layout);
-      for (const field of fields) expect(end[field]).toBeCloseTo(start[field], 3);
-      const again = platePoseAt(PERIOD * 3 + 1.25, p, layout);
-      const once = platePoseAt(1.25, p, layout);
+      const start = platePoseAt(0, p);
+      // The press is fastest at contact (an ease-in into the sheet), so a microsecond before the
+      // seam a plate is still a few hundredths of a raster unit above it: far below a pixel.
+      const end = platePoseAt(PERIOD - 1e-6, p);
+      for (const field of ['x', 'y', 'z'] as const) {
+        expect(Math.abs(end[field] - start[field])).toBeLessThan(0.1);
+      }
+      for (const field of ['rx', 'rz', 'scale'] as const) {
+        expect(end[field]).toBeCloseTo(start[field], 6);
+      }
+      const again = platePoseAt(PERIOD * 3 + 7, p);
+      const once = platePoseAt(7, p);
       for (const field of fields) expect(again[field]).toBeCloseTo(once[field], 9);
     }
     const tiltStart = tiltAt(0);
@@ -386,7 +424,24 @@ describe('choreography (the plates’ metamorphosis loop)', () => {
     expect(tiltEnd.x).toBeCloseTo(tiltStart.x, 6);
     expect(tiltEnd.y).toBeCloseTo(tiltStart.y, 6);
     expect(tiltEnd.z).toBeCloseTo(tiltStart.z, 6);
+    expect(tiltAt(PERIOD * 2 + 5).y).toBeCloseTo(tiltAt(5).y, 9);
     expect(loopTime(-1)).toBeCloseTo(PERIOD - 1, 9);
+    expect(loopTime(PERIOD)).toBe(0);
+    expect(loopTime(PERIOD * 2 + 3)).toBeCloseTo(3, 9);
+  });
+
+  it('tilts the plates and the sheet in one frame that only drifts slightly', () => {
+    const rest = restTilt();
+    expect(rest).toEqual(SHEET.tilt);
+    let furthest = 0;
+    for (const t of times(0, PERIOD, 0.05)) {
+      const tilt = tiltAt(t);
+      expect(Math.abs(tilt.x - rest.x)).toBeLessThanOrEqual(SHEET.drift.pitch + 1e-12);
+      expect(Math.abs(tilt.y - rest.y)).toBeLessThanOrEqual(SHEET.drift.yaw + 1e-12);
+      expect(tilt.z).toBe(rest.z);
+      furthest = Math.max(furthest, Math.abs(tilt.y - rest.y));
+    }
+    expect(furthest).toBeGreaterThan(SHEET.drift.yaw / 2);
   });
 
   it('never jumps: every frame moves each plate by a small step only', () => {
@@ -419,139 +474,261 @@ describe('choreography (the plates’ metamorphosis loop)', () => {
       expect(b.maxX).toBeLessThanOrEqual(ART.width / 2);
       expect(b.minY).toBeGreaterThanOrEqual(-ART.height / 2);
       expect(b.maxY).toBeLessThanOrEqual(ART.height / 2);
-    }
-  });
 
-  it('holds the mark still apart from its gentle breathing', () => {
-    const mark = segment('mark');
-    for (const p of layout.plates) {
-      const rest = registerPose(p);
-      for (const t of times(mark.holdStart, mark.moveStart, 0.05)) {
-        const pose = platePoseAt(t, p, layout);
-        expect(Math.abs(pose.x - rest.x)).toBeLessThan(12);
-        expect(Math.abs(pose.y - rest.y)).toBeLessThan(14);
-        expect(Math.abs(pose.z)).toBeLessThan(1.7 * MARK.separation);
-        expect(Math.abs(pose.rz)).toBeLessThan(0.03);
-        expect(pose.scale).toBe(1);
-      }
-    }
-  });
-
-  it('closes the ring: four arches at 90° steps about one centre, apexes outwards', () => {
-    const radius = layout.ringRadius * RING.scale;
-    for (const t of times(target.holdStart, target.moveStart, 0.1)) {
-      const poses = posesAt(t);
-      const turns = poses.map((pose) => pose.rz).sort((a, b) => a - b);
-      for (let i = 1; i < turns.length; i++) {
-        expect((turns[i] ?? 0) - (turns[i - 1] ?? 0)).toBeCloseTo(Math.PI / 2, 9);
-      }
+      // In 3D: the front and back faces of every plate, seen through the group's tilt.
+      const tilt = tiltAt(t);
+      const seen = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
       for (const pose of poses) {
-        expect(Math.hypot(pose.x, pose.y)).toBeCloseTo(radius, 9);
-        // The apex points away from the centre.
-        expect(pose.x).toBeCloseTo(-Math.sin(pose.rz) * radius, 9);
-        expect(pose.y).toBeCloseTo(Math.cos(pose.rz) * radius, 9);
-        expect(pose.scale).toBe(RING.scale);
+        const cos = Math.cos(pose.rz) * pose.scale;
+        const sin = Math.sin(pose.rz) * pose.scale;
+        for (const face of [-1, 1]) {
+          const z = pose.z + face * HALF_THICKNESS * pose.scale;
+          for (const q of plateOutline) {
+            const x = pose.x + q.x * cos - q.y * sin;
+            const y = pose.y + q.x * sin + q.y * cos;
+            const on = project(tilt, x, y, z);
+            seen.minX = Math.min(seen.minX, on.x);
+            seen.minY = Math.min(seen.minY, on.y);
+            seen.maxX = Math.max(seen.maxX, on.x);
+            seen.maxY = Math.max(seen.maxY, on.y);
+          }
+        }
+      }
+      expect(seen.minX).toBeGreaterThanOrEqual(-ART.width / 2);
+      expect(seen.maxX).toBeLessThanOrEqual(ART.width / 2);
+      expect(seen.minY).toBeGreaterThanOrEqual(-ART.height / 2);
+      expect(seen.maxY).toBeLessThanOrEqual(ART.height / 2);
+    }
+  });
+
+  it('runs the beats back to back, from contact to the next press, over one period', () => {
+    expect(BEATS.map((b) => b.name)).toEqual([
+      'settle',
+      'hold',
+      'release',
+      'float',
+      'register',
+      'press',
+    ]);
+    expect(BEATS[0]?.start).toBe(0);
+    expect(BEATS[BEATS.length - 1]?.end).toBe(PERIOD);
+    for (let i = 1; i < BEATS.length; i++) expect(BEATS[i]?.start).toBe(BEATS[i - 1]?.end);
+    for (const b of BEATS) {
+      expect(b.end).toBeGreaterThan(b.start);
+      expect(beatAt(b.start)).toBe(b.name);
+      expect(beatAt((b.start + b.end) / 2)).toBe(b.name);
+      expect(beatAt(b.end - 1e-6)).toBe(b.name);
+      expect(beatAt((b.start + b.end) / 2 + PERIOD * 2)).toBe(b.name);
+    }
+    expect(beatAt(PERIOD)).toBe('settle');
+    expect(beatAt(-0.3)).toBe('press');
+  });
+
+  it('starts at contact, pressed into the sheet in register, then settles and holds', () => {
+    const settle = beat('settle');
+    const hold = beat('hold');
+    for (const p of layout.plates) {
+      const rest = holdPose(p);
+      expect(rest).toEqual(registerPose(p));
+      expect(platePoseAt(0, p)).toEqual({ ...rest, z: -SHEET.dip });
+      let previousZ = -SHEET.dip;
+      for (const t of times(0, settle.end, 0.01)) {
+        const pose = platePoseAt(t, p);
+        expect(pose.x).toBe(rest.x);
+        expect(pose.y).toBe(rest.y);
+        expect(pose.rz).toBe(0);
+        expect(pose.z).toBeGreaterThanOrEqual(previousZ);
+        expect(pose.z).toBeLessThanOrEqual(0);
+        previousZ = pose.z;
+      }
+      expect(platePoseAt(settle.end, p)).toEqual(rest);
+      for (const t of times(hold.start, hold.end - 1e-3, 0.05)) {
+        expect(platePoseAt(t, p)).toEqual(rest);
       }
     }
-    // In the middle of the hold the ring sits square: C left, M top, Y bottom, K right.
-    const mid = layout.plates.map((p) => [p.id, platePoseAt(targetMid, p, layout)] as const);
-    const turnOf = (id: PlateId): number => mid.find(([pid]) => pid === id)?.[1].rz ?? NaN;
-    expect(turnOf('c')).toBeCloseTo(Math.PI / 2, 9);
-    expect(turnOf('m')).toBeCloseTo(0, 9);
-    expect(turnOf('y')).toBeCloseTo(Math.PI, 9);
-    expect(turnOf('k')).toBeCloseTo(-Math.PI / 2, 9);
   });
 
-  it('turns the ring slowly during its hold', () => {
-    const early = platePoseAt(target.holdStart, plate('m'), layout).rz;
-    const late = platePoseAt(target.moveStart, plate('m'), layout).rz;
-    expect(Math.abs(late - early)).toBeGreaterThan(0.1);
-    expect(Math.abs(late - early)).toBeLessThan(Math.PI / 4);
-  });
-
-  it('meets the neighbouring feet of the ring, overlapping by RING.overlap', () => {
-    const s = RING.scale;
-    const h = metrics.halfHeight;
-    const corner = (pose: PlatePose, x: number): { x: number; y: number } => ({
-      x: pose.x + (x * Math.cos(pose.rz) + h * Math.sin(pose.rz)) * s,
-      y: pose.y + (x * Math.sin(pose.rz) - h * Math.cos(pose.rz)) * s,
-    });
-    const poses = posesAt(targetMid);
-    for (const p of poses) {
-      // The neighbour a quarter turn clockwise.
-      const next = poses.find(
-        (q) => Math.abs(Math.cos(q.rz - (p.rz - Math.PI / 2)) - 1) < 1e-9 && q !== p,
-      );
-      if (!next) throw new Error('ring has a gap');
-      const a = corner(p, metrics.rightFoot[1]);
-      const b = corner(next, metrics.leftFoot[0]);
-      expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeCloseTo(RING.overlap * Math.SQRT2 * s, 6);
+  it('releases in reverse print order K, C, M, Y, lifting each plate depth first', () => {
+    const t = beat('release').start + STAGGER.release * 1.5;
+    expect(platePoseAt(t, plate('k'))).not.toEqual(holdPose(plate('k')));
+    expect(platePoseAt(t, plate('c'))).not.toEqual(holdPose(plate('c')));
+    expect(platePoseAt(t, plate('m'))).toEqual(holdPose(plate('m')));
+    expect(platePoseAt(t, plate('y'))).toEqual(holdPose(plate('y')));
+    for (const p of layout.plates) {
+      const start = releaseStart(p);
+      const { float } = PLATES[p.id];
+      expect(platePoseAt(start - 0.01, p)).toEqual(holdPose(p));
+      // A quarter of the way in, the plate has risen much further (as a share of its float height)
+      // than it has drifted out of register (as a share of its float offset).
+      const early = platePoseAt(start + RELEASE_MOVE / 4, p);
+      const risen = early.z / float.z;
+      const drifted = (early.x - p.markX) / float.x;
+      expect(risen).toBeGreaterThan(0.4);
+      expect(risen).toBeGreaterThan(drifted * 2);
+      // Each plate is still on its way just before its move ends, and floating just after it (Y,
+      // the last, as the release beat ends).
+      const end = start + RELEASE_MOVE;
+      expect(platePoseAt(end - 0.05, p)).not.toEqual(floatPose(p, end - 0.05));
+      expect(platePoseAt(end + 0.01, p)).toEqual(floatPose(p, end + 0.01));
     }
   });
 
-  it('lines the wave up into one ribbon: alternating plates, feet joined on one base line', () => {
-    const plates = [...layout.plates].sort((a, b) => a.waveIndex - b.waveIndex);
-    const nth = (i: number): PlateLayout => {
-      const found = plates[i];
-      if (!found) throw new Error(`missing plate ${i}`);
-      return found;
-    };
-    const h = metrics.halfHeight;
-    /** Foot intervals (x) and base line (y) of a plate in the wave, before WAVE.scale. */
-    const feet = (p: PlateLayout) => {
-      const inverted = Math.cos(p.waveTurn) < 0;
-      const flip = (f: readonly [number, number]): [number, number] =>
-        inverted ? [p.waveX - f[1], p.waveX - f[0]] : [p.waveX + f[0], p.waveX + f[1]];
-      const both = [flip(metrics.leftFoot), flip(metrics.rightFoot)].sort((a, b) => a[0] - b[0]);
-      return {
-        inverted,
-        base: inverted ? p.waveY + h : p.waveY - h,
-        left: both[0] ?? [NaN, NaN],
-        right: both[1] ?? [NaN, NaN],
-      };
-    };
-    for (let i = 1; i < plates.length; i++) {
-      const a = feet(nth(i - 1));
-      const b = feet(nth(i));
-      expect(a.inverted).not.toBe(b.inverted);
-      expect(b.base).toBeCloseTo(a.base, 9);
-      expect(b.left[0]).toBeCloseTo(a.right[0] - WAVE.overlap, 9);
-      expect(b.left[1]).toBeCloseTo(a.right[1] - WAVE.overlap, 9);
-    }
-    expect(nth(0).waveX + nth(plates.length - 1).waveX).toBeCloseTo(0, 9);
-
-    // During the hold the ribbon only ripples: x and turn stay, y moves by the bob at most.
-    const wave = segment('wave');
-    for (const t of times(wave.holdStart, wave.moveStart, 0.1)) {
+  it('floats the plates apart in depth, breathing gently about their float offsets', () => {
+    const float = beat('float');
+    for (const t of times(float.start + 0.01, float.end - 0.01, 0.05)) {
       for (const p of layout.plates) {
-        const pose = platePoseAt(t, p, layout);
-        expect(pose.x).toBeCloseTo(p.waveX * WAVE.scale, 9);
-        expect(pose.rz).toBe(p.waveTurn);
-        expect(Math.abs(pose.y - p.waveY * WAVE.scale)).toBeLessThanOrEqual(WAVE.bob + 1e-9);
+        const pose = platePoseAt(t, p);
+        const offset = PLATES[p.id].float;
+        expect(pose).toEqual(floatPose(p, t));
+        expect(pose.x).toBeCloseTo(p.markX + offset.x, 9);
+        expect(Math.abs(pose.y - (p.markY + offset.y))).toBeLessThanOrEqual(8 + 1e-9);
+        expect(Math.abs(pose.z - offset.z)).toBeLessThanOrEqual(12 + 1e-9);
+        expect(Math.abs(pose.rz - offset.rz)).toBeLessThanOrEqual(0.008 + 1e-9);
+      }
+      expect(spread(t)).toBeGreaterThan(spread(beat('hold').start + 1) + 200);
+    }
+    expect(spread(beat('hold').start + 1)).toBe(0);
+  });
+
+  it('registers in print order Y, M, C, K, snapping in with a small overshoot, then hovers', () => {
+    const t = beat('register').start + STAGGER.register * 1.5;
+    expect(platePoseAt(t, plate('y'))).not.toEqual(floatPose(plate('y'), t));
+    expect(platePoseAt(t, plate('m'))).not.toEqual(floatPose(plate('m'), t));
+    expect(platePoseAt(t, plate('c'))).toEqual(floatPose(plate('c'), t));
+    expect(platePoseAt(t, plate('k'))).toEqual(floatPose(plate('k'), t));
+    for (const p of layout.plates) {
+      const { float } = PLATES[p.id];
+      const start = registerStart(p);
+      const end = start + REGISTER_MOVE;
+      // The snap carries the plate a little past register, to the side away from where it floated.
+      const past = times(start, end, 0.01).map(
+        (s) => (platePoseAt(s, p).x - p.markX) * -Math.sign(float.x),
+      );
+      expect(Math.max(...past)).toBeGreaterThan(0);
+      expect(Math.max(...past)).toBeLessThan(0.15 * Math.abs(float.x));
+      // Still on its way just before its move ends, all but there at the end, hovering after it.
+      const hovering = { ...registerPose(p), z: SHEET.hover };
+      expect(platePoseAt(end - 0.05, p)).not.toEqual(hovering);
+      const arriving = platePoseAt(end - 1e-4, p);
+      expect(arriving.x).toBeCloseTo(p.markX, 3);
+      expect(arriving.y).toBeCloseTo(p.markY, 3);
+      expect(arriving.z).toBeCloseTo(SHEET.hover, 2);
+      for (const s of times(end + 0.01, beat('press').start - 0.01, 0.05)) {
+        expect(platePoseAt(s, p)).toEqual(hovering);
       }
     }
   });
 
-  it('staggers every move in print order Y, M, C, K', () => {
-    const first = segment('mark');
-    const t = first.moveStart + STAGGER * 1.5;
-    expect(platePoseAt(t, plate('y'), layout)).not.toEqual(markPose(plate('y'), t));
-    expect(platePoseAt(t, plate('m'), layout)).not.toEqual(markPose(plate('m'), t));
-    expect(platePoseAt(t, plate('c'), layout)).toEqual(markPose(plate('c'), t));
-    expect(platePoseAt(t, plate('k'), layout)).toEqual(markPose(plate('k'), t));
+  it('presses every plate from its hover into the sheet, gathering speed to contact', () => {
+    const press = beat('press');
+    for (const p of layout.plates) {
+      expect(platePoseAt(press.start, p).z).toBeCloseTo(SHEET.hover, 6);
+      let previousZ = Infinity;
+      for (const t of times(press.start, PERIOD - 1e-3, 0.01)) {
+        const pose = platePoseAt(t, p);
+        expect(pose.x).toBeCloseTo(p.markX, 9);
+        expect(pose.y).toBeCloseTo(p.markY, 9);
+        expect(pose.rz).toBeCloseTo(0, 9);
+        expect(pose.z).toBeLessThanOrEqual(previousZ);
+        previousZ = pose.z;
+      }
+      expect(platePoseAt(PERIOD - 1e-6, p).z).toBeLessThan(-SHEET.dip + 0.1);
+      const first = platePoseAt(press.start, p).z - platePoseAt(press.start + 0.1, p).z;
+      const last = platePoseAt(PERIOD - 0.1, p).z - platePoseAt(PERIOD - 1e-6, p).z;
+      expect(last).toBeGreaterThan(first);
+    }
   });
 
-  it('separates the plates in depth mid-move and sets them down at the holds', () => {
-    const spread = (t: number): number => {
-      const z = posesAt(t).map((pose) => pose.z);
-      return Math.max(...z) - Math.min(...z);
-    };
-    const move = segment('target');
-    expect(spread((move.moveStart + move.end) / 2)).toBeGreaterThan(spread(move.end) + 50);
-    expect(spread((move.moveStart + move.end) / 2)).toBeGreaterThan(spread(move.moveStart) + 50);
+  it('answers the contact on the sheet: a ripple, a bloom and a sheen from left to right', () => {
+    // Ripple: from nothing at contact, spreading steadily, faded out after 2.4 s.
+    const contact = effectsAt(0);
+    expect(contact.ripple).toBe(0);
+    expect(contact.rippleAlpha).toBe(0);
+    let previous = contact;
+    for (const t of times(0, 2.39, 0.01)) {
+      const e = effectsAt(t);
+      expect(e.ripple).toBeGreaterThanOrEqual(previous.ripple);
+      expect(e.ripple).toBeLessThanOrEqual(1);
+      expect(e.rippleAlpha).toBeGreaterThanOrEqual(0);
+      expect(e.rippleAlpha).toBeLessThanOrEqual(1);
+      previous = e;
+    }
+    const strongest = Math.max(...times(0, 2.39, 0.01).map((t) => effectsAt(t).rippleAlpha));
+    expect(strongest).toBeGreaterThan(0.5);
+    expect(effectsAt(2.39).rippleAlpha).toBeLessThan(0.01);
+    for (const t of times(2.4, PERIOD - 0.01, 0.05)) {
+      expect(effectsAt(t).ripple).toBe(0);
+      expect(effectsAt(t).rippleAlpha).toBe(0);
+    }
+
+    // Bloom: only in the first 1.1 s.
+    expect(contact.bloom).toBe(0);
+    for (const t of times(0.01, 1.09, 0.01)) {
+      expect(effectsAt(t).bloom).toBeGreaterThan(0);
+      expect(effectsAt(t).bloom).toBeLessThanOrEqual(1);
+    }
+    for (const t of times(1.1, PERIOD - 0.01, 0.05)) expect(effectsAt(t).bloom).toBe(0);
+
+    // Sheen: crosses the mark from left to right between 0.9 s and 2.5 s, nowhere else.
+    for (const t of [0, 0.5, 0.9, 2.5, 3, 6, PERIOD - 0.01]) {
+      expect(effectsAt(t).sheen).toBe(0);
+      expect(effectsAt(t).sheenAlpha).toBe(0);
+    }
+    let left = -Infinity;
+    for (const t of times(0.91, 2.49, 0.01)) {
+      const e = effectsAt(t);
+      expect(e.sheen).toBeGreaterThan(left);
+      expect(e.sheenAlpha).toBeGreaterThan(0);
+      left = e.sheen;
+    }
+    expect(effectsAt(0.91).sheen).toBeLessThan(0.01);
+    expect(effectsAt(2.49).sheen).toBeGreaterThan(0.99);
+    expect(effectsAt(PERIOD + 1)).toEqual(effectsAt(1));
   });
 
-  it('hands off: to the mark, collapse, then shrink and fade while the header prints in', () => {
+  it('leaves each plate’s print on the sheet as it lifts off, fading before the press', () => {
+    const t = beat('release').start + STAGGER.release / 2;
+    expect(printAlpha(t, plate('k'))).toBeGreaterThan(0);
+    expect(printAlpha(t, plate('c'))).toBe(0);
+    expect(printAlpha(t, plate('m'))).toBe(0);
+    expect(printAlpha(t, plate('y'))).toBe(0);
+    for (const p of layout.plates) {
+      const start = releaseStart(p);
+      for (const s of times(0, start - 0.01, 0.05)) expect(printAlpha(s, p)).toBe(0);
+      expect(printAlpha(start - 0.01, p)).toBe(0);
+      let previous = 0;
+      for (const s of times(start, 4.9, 0.02)) {
+        const alpha = printAlpha(s, p);
+        expect(alpha).toBeGreaterThanOrEqual(previous);
+        expect(alpha).toBeLessThanOrEqual(PRINT.alpha);
+        previous = alpha;
+      }
+      expect(printAlpha(start + 0.5, p)).toBeGreaterThan(0);
+      expect(printAlpha(start + 0.8, p)).toBeCloseTo(PRINT.alpha, 9);
+      for (const s of times(4.9, 6, 0.02)) {
+        expect(printAlpha(s, p)).toBeLessThanOrEqual(PRINT.alpha);
+      }
+      for (const s of times(6, PERIOD - 0.01, 0.05)) expect(printAlpha(s, p)).toBe(0);
+    }
+  });
+
+  it('casts no shadow from a plate on the sheet, and a further, softer one higher up', () => {
+    for (const z of [-SHEET.dip, -1, 0]) expect(plateShadow(z).alpha).toBe(0);
+    let previous = plateShadow(0);
+    for (const z of [2, SHEET.hover, 85, 190, 300, 420, 600]) {
+      const shadow = plateShadow(z);
+      expect(shadow.alpha).toBeGreaterThan(0);
+      expect(shadow.alpha).toBeLessThanOrEqual(1);
+      // Light from the upper left: the shadow falls down and to the right.
+      expect(shadow.x).toBeGreaterThan(previous.x);
+      expect(shadow.y).toBeLessThan(previous.y);
+      expect(shadow.softness).toBeGreaterThan(previous.softness);
+      previous = shadow;
+    }
+    expect(plateShadow(420).alpha).toBeLessThan(plateShadow(SHEET.hover).alpha);
+  });
+
+  it('hands off: to the hold, collapse, then shrink and fade while the header prints in', () => {
     const atTop = handoff(0);
     expect(atTop).toEqual({ toMark: 0, collapse: 0, scale: 1, ink: 1, dock: 0 });
     const blended = handoff(HANDOFF.toMark);
@@ -573,12 +750,12 @@ describe('choreography (the plates’ metamorphosis loop)', () => {
       expect(now.ink + now.dock).toBeCloseTo(1, 9);
       previous = now;
     }
-    // Whatever the loop shows, a full blend lands on the mark pose.
-    for (const t of [targetMid, segment('wave').holdStart + 1]) {
+    // Whatever the loop shows, a full blend lands on the hold pose.
+    for (const t of [0.1, 4, 7, 9.5, 11.7]) {
       for (const p of layout.plates) {
-        const out = blendPose(platePoseAt(t, p, layout), markPose(p, t), blended.toMark);
-        const mark = markPose(p, t);
-        for (const field of fields) expect(out[field]).toBeCloseTo(mark[field], 9);
+        const out = blendPose(platePoseAt(t, p), holdPose(p), blended.toMark);
+        const rest = holdPose(p);
+        for (const field of fields) expect(out[field]).toBeCloseTo(rest[field], 9);
       }
     }
   });
@@ -595,16 +772,6 @@ describe('choreography (the plates’ metamorphosis loop)', () => {
     expect(Math.max(...values)).toBeLessThanOrEqual(1 + 1e-9);
     for (let i = 1; i < values.length; i++) {
       expect(Math.abs((values[i] ?? 0) - (values[i - 1] ?? 0))).toBeLessThan(0.1);
-    }
-  });
-
-  it('turns C, M and K by at most half a turn per move', () => {
-    for (const move of SEGMENTS) {
-      for (const id of ['c', 'm', 'k'] as const) {
-        const before = platePoseAt(move.moveStart, plate(id), layout).rz;
-        const after = platePoseAt(move.end, plate(id), layout).rz;
-        expect(Math.abs(after - before)).toBeLessThanOrEqual(Math.PI + 1e-9);
-      }
     }
   });
 
@@ -776,12 +943,6 @@ describe('theme (light ink on paper, light on a dark sheet)', () => {
     // The order of printing does not change the result in either theme.
     expect(print('dark', [m, c])).toEqual(dark.map((v) => expect.closeTo(v, 9)));
     expect(print('light', [m, c])).toEqual(light.map((v) => expect.closeTo(v, 9)));
-  });
-
-  it('keeps the shadow faint in both themes (a glow in dark)', () => {
-    expect(inkModel('light').shadowAlpha).toBe(0.07);
-    expect(inkModel('dark').shadowAlpha).toBeGreaterThan(0);
-    expect(inkModel('dark').shadowAlpha).toBeLessThanOrEqual(inkModel('light').shadowAlpha);
   });
 
   it('parses the colours getComputedStyle reports', () => {

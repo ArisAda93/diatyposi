@@ -13,14 +13,17 @@
  * - The art box (decorative, aria-hidden) holds the logo arches as SVG: the static composition,
  *   shown at first paint, without JS, with reduced motion and without WebGL. Its aspect ratio is
  *   the box every pose of the live scene fits in (hero-scene/choreography.ts ART, 900 × 620
- *   raster units, the 840-wide mark centred in it), so the mark, the ring and the wave are never
- *   cropped and never reach the copy. Desktop: the right column, bleeding into the gutter.
- *   Below 64rem: above the copy, capped by the screen height.
+ *   raster units, the 840-wide mark centred in it), so the plates, floating apart or in register,
+ *   are never cropped and never reach the copy. Desktop: the right column, bleeding into the
+ *   gutter. Below 64rem: above the copy, capped by the screen height.
  * - The stage (decorative, aria-hidden) fills the hero; src/scripts/hero.ts inserts the scene's
  *   canvas there after first paint (src/scripts/hero-scene/). Its first frame draws the arches
- *   exactly where the SVG has them, then it fades in over it. On scroll the plates fade out in
- *   the art column while the header logo's arches pulse in register (the rules are below); the
- *   site-wide ink lines of the living background stay behind the page throughout.
+ *   exactly where the SVG has them, then it fades in over it and the press run starts: the
+ *   plates float above a sheet of paper that spans the hero (its fine details kept faint under
+ *   the copy and the header), register in press order, press onto it and lift off again. On
+ *   scroll the plates fade out in the art column while the header logo's arches pulse in
+ *   register (the rules are below); the site-wide ink lines of the living background stay
+ *   behind the page throughout.
  * - Dark theme: the scene screens light inks on black (hero-scene/theme.ts); the SVG mark, the
  *   ghosts and the rules follow the tokens, and overprint uses `--blend-ink` (screen in dark).
  * - The sheet's crop-marked trim recedes slightly on scroll (`data-parallax`). There is no foot
