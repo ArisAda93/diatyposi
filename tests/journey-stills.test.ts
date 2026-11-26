@@ -156,9 +156,10 @@ describe('printWait', () => {
     expect(printWait(1000, 1000 + sketchTime + 5000)).toBe(0);
   });
 
-  it('gives the sketch a watchable moment of its own', () => {
-    expect(STILL_DRAW_MS).toBeGreaterThanOrEqual(1200);
-    expect(STILL_HOLD_MS).toBeGreaterThanOrEqual(300);
+  it('gives the sketch a watchable moment of its own, without keeping a scrolling visitor waiting', () => {
+    expect(STILL_DRAW_MS).toBeGreaterThanOrEqual(900);
+    expect(STILL_HOLD_MS).toBeGreaterThanOrEqual(200);
+    expect(STILL_DRAW_MS + STILL_HOLD_MS).toBeLessThanOrEqual(1600);
   });
 
   it('prints at once for non-finite input', () => {

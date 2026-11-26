@@ -61,13 +61,13 @@ export const STILL_DRAW_TRIGGER = 0.3;
 export const STILL_PRINT_TRIGGER = 0.85;
 
 /** How long the sketch takes to draw in (ms); keep in step with the still rules in JourneyArt.astro. */
-export const STILL_DRAW_MS = 1700;
+export const STILL_DRAW_MS = 1100;
 
 /** How long the finished sketch holds on its own before it may print (ms). */
-export const STILL_HOLD_MS = 450;
+export const STILL_HOLD_MS = 300;
 
 /** How long the press takes to print the product over the sketch (ms). */
-export const STILL_PRESS_MS = 2600;
+export const STILL_PRESS_MS = 1700;
 
 /** The observer's thresholds: every twentieth, so both triggers are reported for any still height. */
 export const STILL_THRESHOLDS: readonly number[] = Array.from({ length: 21 }, (_, i) => i / 20);
@@ -158,7 +158,7 @@ const MOTION_QUERY = '(prefers-reduced-motion: no-preference)';
 const CELL = 6;
 
 /** How long the still's own picture takes to take over from the finished press (ms; CSS too). */
-const HANDOVER_MS = 320;
+const HANDOVER_MS = 240;
 
 /** What a still is doing right now. */
 type Phase = 'blank' | 'sketch' | 'press' | 'product';
