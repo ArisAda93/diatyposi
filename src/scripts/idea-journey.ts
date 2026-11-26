@@ -25,9 +25,9 @@
  * that idles when the stage is settled or off screen.
  *
  * Below 64rem, under reduced motion or without JS, each step shows its own still illustration
- * (src/scripts/journey-stills.ts prints its photo over its sketch on scroll where motion is
- * allowed), and the stage part does nothing: no scroll listener, no frames, and the print layer
- * is never loaded.
+ * (where motion is allowed, src/scripts/journey-stills.ts draws its sketch in and then prints its
+ * photo over it on the same WebGL press, journey-print/gl.ts), and the stage part does nothing: no
+ * scroll listener, no frames, and the stage's print layer is never loaded.
  *
  * Chooser. Toggle chips (aria-pressed) pick what to make; the button's href is the quote form
  * with every picked service pre-selected, and its label counts them. A polite live region

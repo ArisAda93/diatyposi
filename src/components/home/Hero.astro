@@ -111,11 +111,16 @@ const ghosts = ['c', 'm', 'y'] as const;
 
 <style>
   @layer components {
+    /*
+     * Height: below 64rem the hero is as tall as its content (phones and tablets are composed to
+     * fit the first screen; a taller screen shows the next section's head under it instead of an
+     * empty band). From 64rem it fills the first screen less a peek (`--hero-peek`), so the space
+     * above and below the vertically centred block is about the same and the services head shows
+     * at the foot of the first screen.
+     */
     .hero {
       position: relative;
       display: flex;
-      min-height: 100vh;
-      min-height: 100svh;
       overflow: clip;
     }
 
@@ -174,13 +179,10 @@ const ghosts = ['c', 'm', 'y'] as const;
       position: relative;
       display: flex;
       flex-direction: column;
-      min-height: 100vh;
-      min-height: 100svh;
       padding-top: calc(var(--header-h) + clamp(0.25rem, 1svh, 0.75rem));
-      /* Clear of the mobile call/Viber bar (`--float-bar-h`, safe area included), with some air. */
-      padding-bottom: calc(
-        var(--float-bar-h, calc(4rem + env(safe-area-inset-bottom, 0px))) + 0.75rem
-      );
+      /* The services section follows right under the actions. On phones the actions still clear
+         the call/Viber bar on the first screen: the art and type are sized for that (below). */
+      padding-bottom: clamp(1.75rem, 4svh, 2.75rem);
     }
 
     /* Mobile and tablet: art on top, copy right under it. */
@@ -460,12 +462,6 @@ const ghosts = ['c', 'm', 'y'] as const;
       }
     }
 
-    @media (min-width: 48rem) {
-      .hero-inner {
-        padding-bottom: clamp(1.75rem, 4svh, 2.75rem);
-      }
-    }
-
     /*
      * Desktop: copy in the left 6.5 twelfths, art in the right 5.5. The block is centred
      * vertically in the space under the header, and the art's centre lines up with the copy's.
@@ -474,8 +470,14 @@ const ghosts = ['c', 'm', 'y'] as const;
      * sized to its column so it keeps two lines (the longer line is about 8.6 em).
      */
     @media (min-width: 64rem) {
+      .hero {
+        --hero-peek: clamp(6rem, 18svh, 11rem);
+        min-height: calc(100vh - var(--hero-peek));
+        min-height: calc(100svh - var(--hero-peek));
+      }
       .hero-inner {
         padding-top: calc(var(--header-h) + clamp(1.5rem, 4svh, 3rem));
+        padding-bottom: 0;
       }
       .hero-grid {
         grid-template-columns: minmax(0, 6.5fr) minmax(0, 5.5fr);

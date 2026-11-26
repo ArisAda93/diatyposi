@@ -177,6 +177,13 @@ const caps = capsEl(label);
     .sec:is(.sec--plain, .sec--sheet) + .sec:is(.sec--plain, .sec--sheet) {
       padding-top: 0;
     }
+    /* Right after the home hero, which brings its own space under its actions (Hero.astro), so
+       the services head follows the hero closely instead of after an empty band. The hero's
+       <script> is rendered between the two. */
+    :global(.hero) + .sec:is(.sec--plain, .sec--sheet),
+    :global(.hero) + :global(script) + .sec:is(.sec--plain, .sec--sheet) {
+      padding-top: clamp(1.5rem, 0.75rem + 2vw, 2.75rem);
+    }
     /* Right after an inner page's header (PageHeader.astro), whose masthead rule already opened
        the page and which brings its own bottom space. */
     :global(.page-header) + .sec:is(.sec--plain, .sec--sheet) {

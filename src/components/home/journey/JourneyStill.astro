@@ -9,11 +9,16 @@
  * any pixel density. By default the photo simply shows; in light theme its edges fade into the
  * paper over 7 % of each side (as the desktop stage's sheet does), in dark theme they stay crisp.
  *
- * With motion allowed and the desktop live stage off, src/scripts/journey-stills.ts adds
- * `is-reveal` (the photo is off and the sketch shows) and, once the still is well in view,
- * `is-printed`: the photo prints over the sketch by itself, fading in while the sheet settles into
- * register from slightly enlarged and off-centre. Opacity and transform only, so the compositor
- * runs it; only the way in is animated, a reset to the sketch (off screen) is immediate.
+ * With motion allowed and the desktop live stage off, src/scripts/journey-stills.ts plays the
+ * still in three beats: `is-reveal` (a blank sheet: the photo is off and the drawing waits),
+ * `is-drawn` (the sketch draws itself in; JourneyArt.astro's still rules) and, once the still is
+ * all in view and the sketch has held, the print: the script prints the photo over the sketch on
+ * a WebGL press in `[data-journey-press]` (under the drawing, so the sketch's lines stay on top of
+ * the first inks) while `is-pressing` is set, then `is-printed` and `is-pressed` hand over to the
+ * picture with a short fade and the press canvas goes. Without WebGL, `is-printed` alone fades the
+ * photo in while the sheet settles into register from slightly enlarged and off-centre (opacity
+ * and transform only). Only the way in is animated; a reset to the blank sheet (off screen) is
+ * immediate.
  *
  * Photos: src/assets/journey/{step}.jpg, square (2048 px from scripts/journey-images.mjs),
  * composed to match the drawing.
@@ -54,6 +59,7 @@ const widths = [
 ---
 
 <div class="ijs" data-journey-still>
+  <div class="ijs-press" data-journey-press></div>
   <JourneyArt mode="still" step={step} />
   <div class="ijs-print">
     <Picture
@@ -80,6 +86,23 @@ const widths = [
       background-color: var(--color-paper);
       background-image: var(--grain);
       background-size: 160px 160px;
+    }
+    /* The press canvas (journey-stills.ts) lies under the drawing, which is positioned so it paints
+       over it; the photo lies over both. */
+    .ijs-press {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .ijs-press :global(canvas) {
+      position: absolute;
+      inset: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .ijs > :global(.ij-art) {
+      position: relative;
     }
     .ijs-print {
       position: absolute;
@@ -126,14 +149,28 @@ const widths = [
       .ijs.is-reveal .ijs-print :global(.ijs-photo) {
         transform: translate(1.5%, -1%) scale(1.04);
       }
+      /* Without the press: a slow fade while the sheet is pulled into the lay, a gentle settle
+         with a barely visible overshoot. */
       .ijs.is-reveal.is-printed .ijs-print {
         opacity: 1;
-        transition: opacity 0.8s var(--ease-out) 0.08s;
+        transition: opacity 1.4s var(--ease-out) 0.08s;
       }
-      /* The sheet pulled into the lay: a gentle settle with a barely visible overshoot. */
       .ijs.is-reveal.is-printed .ijs-print :global(.ijs-photo) {
         transform: none;
-        transition: transform 1.2s cubic-bezier(0.2, 1.2, 0.4, 1);
+        transition: transform 1.8s cubic-bezier(0.2, 1.2, 0.4, 1);
+      }
+      /* After the press: the press already put the sheet in register, so the picture only takes
+         over from the canvas (the same image at that point) in a short fade. */
+      .ijs.is-reveal.is-printed.is-pressed .ijs-print {
+        transition: opacity 0.32s linear;
+      }
+      .ijs.is-reveal.is-printed.is-pressed .ijs-print :global(.ijs-photo) {
+        transition: none;
+      }
+    }
+    @media print {
+      .ijs-press {
+        display: none;
       }
     }
   }

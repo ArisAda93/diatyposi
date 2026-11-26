@@ -9,7 +9,12 @@
  *   out and fades its fills; the sketch's `--sk` draws its strokes in turn; the plates and the
  *   mark get inline transforms and opacity. Until the script runs the stage is blank paper.
  * mode="still": one step in its final state (phones, reduced motion, no JS): the sketch for
- *   `idea`, the printed mark on its object for every other step. Nothing animates.
+ *   `idea`, the printed mark on its object for every other step. Where src/scripts/journey-stills.ts
+ *   plays the still (JourneyStill.astro), the drawing starts as a blank sheet (`is-reveal`) and
+ *   draws itself in (`is-drawn`): the lines along their length, the fills after them, the pencil
+ *   sketch stroke by stroke and the mark's plates sliding into register in print order. While the
+ *   photo prints under it (`is-pressing`), `--ijs-fill`, `--ijs-line`, `--ijs-mark` and
+ *   `--ijs-plate` clear its paper, lift its lines and hand the mark over, as on the stage.
  *
  * Objects are drawn to real proportions: a 9 × 12 sketchbook, an 85 × 55 business card, a
  * T-shirt, a shop front, a mug and a current iPhone (71.9 × 150 mm body, Dynamic Island) with a
@@ -105,8 +110,11 @@ const IG_TABS =
 
 // The mark: Y disc, M arch, C square, K wordmark (offsets in MARK_PLATES, print order).
 const ARCH_M = 'M-46 22A46 46 0 0 1 46 22H22A22 22 0 0 0 -22 22Z';
-/** Stage mode: each sketch stroke starts a fifth of the sketch later than the one before. */
-const sketchStroke = (k: number): string | undefined => (stage ? `--k:${k}` : undefined);
+/** Each sketch stroke starts a fifth of the sketch later than the one before (both modes). */
+const sketchStroke = (k: number): string => `--k:${k}`;
+/** Still mode: each plate's out-of-register offset, for the plates sliding in as it draws. */
+const plateOffset = (ox: number, oy: number): string | undefined =>
+  stage ? undefined : `--pox:${ox}px;--poy:${oy}px`;
 ---
 
 <svg
@@ -302,7 +310,11 @@ const sketchStroke = (k: number): string | undefined => (stage ? `--k:${k}` : un
     )}
     {showPlates &&
       MARK_PLATES.map((p) => (
-        <g class={`ij-plate ij-plate-${p.id}`} data-journey-plate={stage ? p.id : undefined}>
+        <g
+          class={`ij-plate ij-plate-${p.id}`}
+          data-journey-plate={stage ? p.id : undefined}
+          style={plateOffset(p.ox, p.oy)}
+        >
           {p.id === 'y' && <circle class="ij-y" cx="-16" cy="-42" r="36" />}
           {p.id === 'm' && <path class="ij-m" d={ARCH_M} />}
           {p.id === 'c' && <rect class="ij-c" x="-14" y="-56" width="58" height="58" />}
@@ -470,6 +482,146 @@ const sketchStroke = (k: number): string | undefined => (stage ? `--k:${k}` : un
     .ij-art-stage .ij-plate {
       opacity: 0;
     }
+    /* ---------------------------------------------------------------------------------------- */
+    /* Still: journey-stills.ts plays it (JourneyStill.astro sets the classes on `.ijs`)          */
+    /* ---------------------------------------------------------------------------------------- */
+
+    /*
+     * The blank sheet (`is-reveal`): nothing drawn yet. No transitions here, so a reset (off
+     * screen) is immediate. Lines draw along their length (pathLength 1, dash 1, gap 2), hidden
+     * at 0 so no round cap is left behind as a dot.
+     */
+    @media screen and (prefers-reduced-motion: no-preference) {
+      :global(.ijs.is-reveal) .ij-art-still .ij-draw {
+        stroke-dasharray: 1 2;
+        stroke-dashoffset: 1;
+        opacity: 0;
+      }
+      :global(.ijs.is-reveal)
+        .ij-art-still
+        .ij-obj
+        :is(.ij-paper, .ij-tint, .ij-ink, .ij-c, .ij-m, .ij-y, .ij-k) {
+        fill-opacity: 0;
+      }
+      :global(.ijs.is-reveal) .ij-art-still :is(.ij-guide, .ij-sketch-word, .ij-overprint) {
+        opacity: 0;
+      }
+      :global(.ijs.is-reveal) .ij-art-still .ij-plate {
+        opacity: 0;
+        transform: translate(calc(var(--pox, 0px) * 1.6), calc(var(--poy, 0px) * 1.6));
+      }
+
+      /*
+       * The sketch draws itself in (`is-drawn`), about 1.7 s in all (STILL_DRAW_MS in
+       * journey-stills.ts): the object's outlines, its finer lines a beat later, the fills from
+       * the middle of the draw; on the sketchbook, the pencil sketch stroke by stroke (`--k`) and
+       * the name last; on every other object, the mark's plates in print order (Y, M, C, K), each
+       * sliding into register with a small overshoot.
+       */
+      :global(.ijs.is-reveal.is-drawn) .ij-art-still .ij-draw {
+        stroke-dashoffset: 0;
+        opacity: var(--ijs-line, 1);
+        transition:
+          stroke-dashoffset 0.8s cubic-bezier(0.45, 0, 0.2, 1),
+          opacity 0.06s linear;
+      }
+      :global(.ijs.is-reveal.is-drawn) .ij-art-still .ij-obj .ij-hair {
+        transition-delay: 0.14s;
+      }
+      :global(.ijs.is-reveal.is-drawn) .ij-art-still .ij-sketch .ij-draw {
+        transition-duration: 0.55s, 0.06s;
+        transition-delay: calc(0.5s + var(--k, 0) * 1.1s);
+      }
+      :global(.ijs.is-reveal.is-drawn)
+        .ij-art-still
+        .ij-obj
+        :is(.ij-paper, .ij-tint, .ij-ink, .ij-c, .ij-m, .ij-y, .ij-k) {
+        fill-opacity: var(--ijs-fill, 1);
+        transition: fill-opacity 0.6s var(--ease-out) 0.45s;
+      }
+      :global(.ijs.is-reveal.is-drawn) .ij-art-still .ij-overprint {
+        opacity: 1;
+        transition: opacity 0.5s var(--ease-out) 0.9s;
+      }
+      :global(.ijs.is-reveal.is-drawn) .ij-art-still .ij-guide {
+        opacity: 0.55;
+        transition: opacity 0.4s var(--ease-out) 0.3s;
+      }
+      :global(.ijs.is-reveal.is-drawn) .ij-art-still .ij-sketch-word {
+        opacity: 1;
+        transition: opacity 0.4s var(--ease-out) 1.3s;
+      }
+      :global(.ijs.is-reveal.is-drawn) .ij-art-still .ij-plate {
+        opacity: 1;
+        transform: none;
+        transition:
+          opacity 0.25s var(--ease-out),
+          transform 0.55s cubic-bezier(0.3, 1.5, 0.5, 1);
+      }
+      :global(.ijs.is-reveal.is-drawn) .ij-art-still .ij-plate-y {
+        transition-delay: 0.7s;
+      }
+      :global(.ijs.is-reveal.is-drawn) .ij-art-still .ij-plate-m {
+        transition-delay: 0.82s;
+      }
+      :global(.ijs.is-reveal.is-drawn) .ij-art-still .ij-plate-c {
+        transition-delay: 0.94s;
+      }
+      :global(.ijs.is-reveal.is-drawn) .ij-art-still .ij-plate-k {
+        transition-delay: 1.06s;
+      }
+
+      /*
+       * The print (`is-pressing`): the script writes the amounts every frame, so nothing
+       * transitions (each rule outranks its `is-drawn` counterpart). The fills clear for the
+       * photo's sheet (`--ijs-fill`), the lines stay over the first inks and lift off as the photo
+       * resolves (`--ijs-line`, already read by the drawn lines above), and the vector mark, with
+       * the pencil sketch on the sketchbook, hands over to the photographed one (`--ijs-mark`).
+       */
+      :global(.ijs.is-reveal.is-drawn.is-pressing) .ij-art-still .ij-draw,
+      :global(.ijs.is-reveal.is-drawn.is-pressing)
+        .ij-art-still
+        .ij-obj
+        :is(.ij-paper, .ij-tint, .ij-ink, .ij-c, .ij-m, .ij-y, .ij-k) {
+        transition: none;
+      }
+      :global(.ijs.is-reveal.is-drawn.is-pressing) .ij-art-still .ij-overprint {
+        fill-opacity: var(--ijs-fill, 1);
+      }
+      :global(.ijs.is-reveal.is-drawn.is-pressing) .ij-art-still .ij-mark {
+        opacity: var(--ijs-mark, 1);
+      }
+      /* Dark theme: the screen-blended plates would vanish on the light sheet, so they leave as it
+         lands (`--ijs-plate`, 1 in light theme). */
+      :global(.ijs.is-reveal.is-drawn.is-pressing) .ij-art-still .ij-plate {
+        opacity: var(--ijs-plate, 1);
+        transition: none;
+      }
+      /* Dark theme: the photo's sheet is light, so as it lands the light lines turn to the fixed
+         key ink and stay readable over the first inks. */
+      :global(html[data-theme='dark'] .ijs.is-pressing) .ij-art-still .ij-line {
+        stroke: color-mix(
+          in srgb,
+          var(--color-key) calc(var(--ijs-fill, 1) * 100%),
+          var(--ink-fixed)
+        );
+      }
+      :global(html[data-theme='dark'] .ijs.is-pressing) .ij-art-still .ij-sketch .ij-line {
+        stroke: color-mix(
+          in srgb,
+          var(--color-muted) calc(var(--ijs-fill, 1) * 100%),
+          var(--ink-fixed)
+        );
+      }
+      :global(html[data-theme='dark'] .ijs.is-pressing) .ij-art-still .ij-sketch-word {
+        fill: color-mix(
+          in srgb,
+          var(--color-muted) calc(var(--ijs-fill, 1) * 100%),
+          var(--ink-fixed)
+        );
+      }
+    }
+
     /* A wide, invisible target for hovering the mark (fine pointers; the plates split). */
     .ij-mark-hit {
       fill: none;
