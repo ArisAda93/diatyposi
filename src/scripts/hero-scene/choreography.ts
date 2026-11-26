@@ -1,35 +1,45 @@
 /**
- * Choreography of the hero plates, "the press run": pure functions with no DOM or WebGL access, so
- * the whole loop can be unit tested (tests/hero-scene.test.ts).
+ * Choreography of the hero plates, "registration in depth": pure functions with no DOM or WebGL
+ * access, so the whole loop can be unit tested (tests/hero-scene.test.ts).
  *
- * The four arch plates (C, M, Y, K) tell one story in a seamless loop of PERIOD seconds: a print
- * run. The plates float apart in depth above a sheet of paper, glide into register one by one in
- * press order, press onto the sheet, hold as the crisp logo, then lift off again. The beats:
- *  - settle    t = 0 is the moment of contact: the plates have just pressed a little into the sheet
- *              and come back up to lie on it;
- *  - hold      the plates lie in register on the sheet: the logo, still;
- *  - release   the plates lift off in reverse print order K, C, M, Y, depth first, and drift out to
- *              their float offsets. Each leaves its halftone print on the sheet, which then fades;
- *  - float     the plates hang apart in depth above the sheet, breathing gently;
- *  - register  the plates glide back into register in print order Y, M, C, K, each snapping into
- *              place with the small overshoot of `--ease-snap` and hovering just above the sheet;
- *  - press     all four come down together and press into the sheet, which closes the loop.
- * The sheet's response to the contact (a ripple, a bloom and a sheen) and the plates' shadows on
- * it are given here too (effectsAt, printAlpha, plateShadow); the scene draws them.
+ * The four arch plates (C, M, Y, K) hang at different depths in open space: C nearest the viewer,
+ * then M and Y, K furthest back. From one viewpoint only, perspective lines them up exactly into
+ * the logo. The camera (the scene turns the group about the mark's centre instead, which looks the
+ * same) moves away from that viewpoint so the plates come apart in parallax, then glides back to
+ * it and they click into register. Registration happens through perspective alone: the plates
+ * never move sideways. A seamless loop of PERIOD seconds, in beats:
+ *  - hold      t = 0 is the click: seen straight on, the plates read as the logo. They breathe
+ *              slowly in depth, which the alignment to the camera hides;
+ *  - depart    the camera eases away, turning to one side and tipping down;
+ *  - orbit     it swings slowly up over the mark, mostly in pitch, staying on that side, the
+ *              plates sliding past one another as it goes;
+ *  - approach  it glides back and passes the straight-on view by a little: the click;
+ *  - settle    it comes back to rest straight on, exactly as the loop closes.
+ * The orbit swings mostly in pitch because there is far more room above and below the mark than
+ * beside it, and it stays on one side in yaw so it never passes the straight-on view on the way
+ * round: the plates line up only at the click. The view's path is made of cubic Hermite segments
+ * whose velocities match at every join, so it never jerks. At the ends of the orbit the pitch is
+ * already moving on as it turns, so the camera traces a loop and only comes to rest at the click.
+ * The effects tied to the loop (the sheen after the click, the ink dust drawn into the plates
+ * around it, and how close the plates are to register) are given here too (effectsAt); the scene
+ * draws them.
  *
  * Space ("group space"): logo raster units, y up, origin at the centre of the mark's viewBox (the
- * scene's pivot). A plate's pose is the position of its anchor (the centre of the arch's bounding
- * box), its depth z (the centre of the plate, which is extruded ±17 around it, so z = 0 lies on
- * the sheet), its turn rz about z and tip rx about x (radians), and its scale. Every pose stays
- * inside the ART box, which the hero lays out for it (Hero.astro).
+ * scene's pivot), z towards the camera. A plate's pose is the position of its anchor (the centre
+ * of the arch's bounding box), its depth z (the centre of the plate, which is extruded ±17 around
+ * it), its turn rz about z and tip rx about x (radians), and its scale. The loop puts each plate
+ * in register at its depth; alignToView then slides it along the camera's line of sight and
+ * scales it, so that seen straight on it covers its place in the logo exactly. The view (viewAt)
+ * is the group's rotation: pitch about x, yaw about y. Every plate must stay inside the ART box as
+ * seen on screen, which the hero lays out for it (Hero.astro).
  *
  * The visual tuning lives in the constants below.
  */
 import { boundsOf, type Bounds, type Point } from './geometry';
-import { clamp, cubicBezier, easeInOutCubic, easeOutCubic, lerp, smoothstep } from './math';
+import { clamp, cubicBezier, easeInOutCubic, lerp, smoothstep } from './math';
 
 export type PlateId = 'c' | 'm' | 'y' | 'k';
-export type BeatName = 'settle' | 'hold' | 'release' | 'float' | 'register' | 'press';
+export type BeatName = 'hold' | 'depart' | 'orbit' | 'approach' | 'settle';
 
 // ------------------------------------------------------------------------------------------------
 // Tuning
@@ -43,96 +53,81 @@ export type BeatName = 'settle' | 'hold' | 'release' | 'float' | 'register' | 'p
 export const ART = { width: 900, height: 620 } as const;
 
 /** Length of the loop (seconds). */
-export const PERIOD = 12;
+export const PERIOD = 14;
 
 /**
- * The beats of the loop, back to back from 0 to PERIOD (seconds). t = 0 is the moment of contact,
- * when the plates have just pressed onto the sheet.
+ * The beats of the loop, back to back from 0 to PERIOD (seconds). t = 0 is the click: the view is
+ * straight on and the plates are in register.
  */
 export const BEATS: readonly { name: BeatName; start: number; end: number }[] = [
-  { name: 'settle', start: 0, end: 0.25 },
-  { name: 'hold', start: 0.25, end: 3.2 },
-  { name: 'release', start: 3.2, end: 6.2 },
-  { name: 'float', start: 6.2, end: 8.3 },
-  { name: 'register', start: 8.3, end: 11.4 },
-  { name: 'press', start: 11.4, end: PERIOD },
+  { name: 'hold', start: 0, end: 3 },
+  { name: 'depart', start: 3, end: 5.5 },
+  { name: 'orbit', start: 5.5, end: 10.5 },
+  { name: 'approach', start: 10.5, end: 13.2 },
+  { name: 'settle', start: 13.2, end: PERIOD },
 ];
 
-/**
- * Delay between the plates within the staggered beats (seconds): register in print order Y, M,
- * C, K, release in reverse print order K, C, M, Y. Each plate's move lasts the beat less three
- * delays, so the last plate arrives exactly as its beat ends (register 1.9 s, release 2.4 s).
- */
-export const STAGGER = { register: 0.4, release: 0.2 } as const;
-
-/** The glide into register: a slow start, a fast middle and a long, quiet settle. */
+/** A glide: a slow start, a fast middle and a long, quiet settle. */
 export const easeMove = cubicBezier(0.7, 0, 0.2, 1);
 /** The registration snap, `--ease-snap` (small overshoot). */
 export const easeSnap = cubicBezier(0.3, 1.5, 0.5, 1);
-/** The press: gathering speed all the way down, fastest at contact. */
-const easePress = cubicBezier(0.55, 0, 1, 0.45);
 
 interface PlateTuning {
   /** 0–3 in print order Y, M, C, K. */
   print: number;
-  /**
-   * Float: offset from register (raster units, y up; z is the height above the sheet) and turn
-   * (radians). C, printed last but one, floats highest; K, the last plate, lowest.
-   */
-  float: { x: number; y: number; z: number; rz: number };
-  /** Phase of the plate's breathing while it floats (radians). */
+  /** Depth of the plate's centre (raster units, + towards the camera). */
+  depth: number;
+  /** Phase of the plate's breathing and drift (radians). */
   phase: number;
 }
 
 /**
- * Per plate. The float offsets fan the plates out along one shallow diagonal: C, highest, drifts a
- * little up and to the left, K, lowest, down and to the right. The sheet's tilt shows every unit
- * of height higher up the screen, so the offsets stay low: raised plates keep clear of the header
- * and inside the art box.
+ * Per plate. The depths step evenly back from C, nearest, to K, furthest: equal steps make the
+ * plates slide past one another at an even pace as the camera moves.
  */
 export const PLATES = {
-  c: { print: 2, float: { x: -20, y: 10, z: 380, rz: -0.08 }, phase: 0 },
-  m: { print: 1, float: { x: -6, y: -10, z: 270, rz: 0.065 }, phase: 1.3 },
-  y: { print: 0, float: { x: 6, y: -28, z: 175, rz: -0.05 }, phase: 2.6 },
-  k: { print: 3, float: { x: 16, y: -46, z: 80, rz: 0.035 }, phase: 3.9 },
+  c: { print: 2, depth: 300, phase: 0 },
+  m: { print: 1, depth: 100, phase: 1.3 },
+  y: { print: 0, depth: -100, phase: 2.6 },
+  k: { print: 3, depth: -300, phase: 3.9 },
 } as const satisfies Record<PlateId, PlateTuning>;
 
-/** Float: breathing amplitudes (raster units, radians). */
-const BREATHE = { y: 8, z: 12, rz: 0.008 } as const;
+/** Breathing of each plate in depth, at any time (raster units). */
+const BREATHE = { depth: 14 } as const;
+
+/** The plates' slow turn about z while the camera is away, at its strongest (radians). */
+const DRIFT = { rz: 0.025 } as const;
 
 /**
- * The sheet: the frame the plates and the sheet share (`tilt`, radians, applied to the group: the
- * top recedes and the right side recedes slightly), its slow drift over the loop (radians), how
- * high the plates hover above it once in register (`hover`) and how far the press sinks them into
- * it (`dip`), in raster units.
+ * The camera's reach (radians): the view at the start and the end of the orbit, and how far past
+ * straight on the approach carries it, as a share of the orbit's end, on the other side. The
+ * orbit swings from below the mark to above it and keeps a positive yaw throughout, which slides
+ * the near plates over the far ones; a negative yaw would fan them out sideways, and the logo
+ * leaves only about 40 raster units beside it in the art box.
  */
-export const SHEET = {
-  tilt: { x: -0.28, y: 0.14, z: 0 },
-  drift: { yaw: 0.05, pitch: 0.025 },
-  hover: 26,
-  dip: 4,
+export const VIEW = {
+  orbitStart: { yaw: 0.34, pitch: -0.22 },
+  orbitEnd: { yaw: 0.16, pitch: 0.24 },
+  overshoot: 0.07,
 } as const;
 
-/** The halftone print each plate leaves on the sheet as it lifts off: its strongest ink. */
-export const PRINT = { alpha: 0.85 } as const;
-
-/** The prints fade out over this span of loop time (seconds), before the plates come back. */
-const PRINT_FADE = { from: 4.9, to: 6.0 } as const;
-
 /**
- * The sheet's response to the contact at t = 0 (seconds after it): how long the ripple runs, how
- * long the bloom lasts, and when the sheen crosses the mark.
+ * The effects tied to the loop (seconds of loop time): the sheen crosses the mark just after the
+ * click; the ink dust gathers into the plates over the approach and the settle and is released
+ * after the click; `align` is the view's angle (radians) beyond which the plates count as fully
+ * out of register.
  */
 const EFFECTS = {
-  ripple: 2.4,
-  bloom: 1.1,
-  sheen: { from: 0.9, to: 2.5 },
+  sheen: { from: 0.1, to: 1.5 },
+  absorb: { gather: { from: 12.2, to: PERIOD }, release: { from: 0.3, to: 2.5 } },
+  align: 0.12,
 } as const;
 
 /**
- * Scroll-out hand-off (progress 0–1, see handoff): blend to the hold pose by `toMark`, collapse
- * into register from `collapseFrom` to `collapseTo`, shrink by `shrink` from `shrinkFrom`, and fade
- * out from `fadeFrom` while the header logo's arches pulse (registrationPulse).
+ * Scroll-out hand-off (progress 0–1, see handoff): blend to the hold pose and the rest view by
+ * `toMark`, collapse into register from `collapseFrom` to `collapseTo`, shrink by `shrink` from
+ * `shrinkFrom`, and fade out from `fadeFrom` while the header logo's arches pulse
+ * (registrationPulse).
  */
 export const HANDOFF = {
   toMark: 0.25,
@@ -240,11 +235,8 @@ export const buildLayout = (
 // Timeline
 // ------------------------------------------------------------------------------------------------
 
-/** Base angular frequency: the float's breathing and the sheet's drift use whole multiples. */
+/** Base angular frequency: the breathing and the drift use whole multiples, so they loop. */
 const BEAT = (Math.PI * 2) / PERIOD;
-
-/** The print slot of the last plate (K): the staggered moves end with it. */
-const LAST_PRINT = 3;
 
 interface Span {
   start: number;
@@ -257,10 +249,10 @@ const beatOf = (name: BeatName): Span => {
   return beat;
 };
 
+const DEPART = beatOf('depart');
+const ORBIT = beatOf('orbit');
+const APPROACH = beatOf('approach');
 const SETTLE = beatOf('settle');
-const RELEASE = beatOf('release');
-const REGISTER = beatOf('register');
-const PRESS = beatOf('press');
 
 /** Loop time in [0, PERIOD). */
 export const loopTime = (t: number): number => t - PERIOD * Math.floor(t / PERIOD);
@@ -271,22 +263,114 @@ export const beatAt = (t: number): BeatName => {
   return (BEATS.find((b) => lt < b.end) ?? at(BEATS, BEATS.length - 1)).name;
 };
 
-/** A plate's own move within a staggered beat: the plate in slot `slot` leaves `slot` delays in. */
-const staggered = (beat: Span, stagger: number, slot: number): Span => {
-  const duration = beat.end - beat.start - LAST_PRINT * stagger;
-  const start = beat.start + slot * stagger;
-  return { start, end: start + duration };
+// ------------------------------------------------------------------------------------------------
+// The view
+// ------------------------------------------------------------------------------------------------
+
+/** The camera's angle (radians): yaw is the group's rotation about y, pitch about x. */
+export interface View {
+  yaw: number;
+  pitch: number;
+}
+
+/** Straight on: the plates line up into the logo (the scroll-out hand-off blends to it). */
+export const restView = (): View => ({ yaw: 0, pitch: 0 });
+
+/** Where the approach turns back: past straight on, on the other side from the orbit's end. */
+const OVERSHOOT: View = {
+  yaw: -VIEW.overshoot * VIEW.orbitEnd.yaw,
+  pitch: -VIEW.overshoot * VIEW.orbitEnd.pitch,
 };
 
-/** Release runs in reverse print order: K first, Y last. */
-const releaseWindow = (plate: PlateLayout): Span =>
-  staggered(RELEASE, STAGGER.release, LAST_PRINT - plate.print);
+/** A point the view's path passes through: when, where, and how fast (radians a second). */
+interface Knot {
+  t: number;
+  view: View;
+  rate: View;
+}
 
-/** Register runs in print order: Y first, K last. */
-const registerWindow = (plate: PlateLayout): Span =>
-  staggered(REGISTER, STAGGER.register, plate.print);
+/** Mean pace (radians a second) of a move from a to b over a span. */
+const paceOf = (a: number, b: number, span: Span): number => (b - a) / (span.end - span.start);
 
-const progress = (lt: number, w: Span): number => clamp((lt - w.start) / (w.end - w.start));
+/**
+ * The rate at a knot that never carries a value past it: 0 where the value turns round there,
+ * otherwise the harmonic mean of the paces either side (Fritsch–Carlson).
+ */
+const steadyRate = (before: number, after: number): number =>
+  before * after > 0 ? (2 * before * after) / (before + after) : 0;
+
+/**
+ * The view's path, knot to knot. It leaves the hold and comes to rest at the click (and turns back
+ * at the far end of the overshoot) with no speed. At the ends of the orbit the yaw takes a steady
+ * rate, so it never runs past either end: it turns round exactly at orbitStart and passes through
+ * orbitEnd on its way to the overshoot. The pitch carries on at the mean pace of the move it is
+ * starting, so the camera never stops there.
+ */
+const KNOTS: readonly Knot[] = [
+  { t: DEPART.start, view: restView(), rate: restView() },
+  {
+    t: ORBIT.start,
+    view: VIEW.orbitStart,
+    rate: {
+      yaw: steadyRate(
+        paceOf(0, VIEW.orbitStart.yaw, DEPART),
+        paceOf(VIEW.orbitStart.yaw, VIEW.orbitEnd.yaw, ORBIT),
+      ),
+      pitch: paceOf(VIEW.orbitStart.pitch, VIEW.orbitEnd.pitch, ORBIT),
+    },
+  },
+  {
+    t: APPROACH.start,
+    view: VIEW.orbitEnd,
+    rate: {
+      yaw: steadyRate(
+        paceOf(VIEW.orbitStart.yaw, VIEW.orbitEnd.yaw, ORBIT),
+        paceOf(VIEW.orbitEnd.yaw, OVERSHOOT.yaw, APPROACH),
+      ),
+      pitch: paceOf(VIEW.orbitEnd.pitch, OVERSHOOT.pitch, APPROACH),
+    },
+  },
+  { t: SETTLE.start, view: OVERSHOOT, rate: restView() },
+  { t: PERIOD, view: restView(), rate: restView() },
+];
+
+/**
+ * Cubic Hermite step from p0 (rate m0) to p1 (rate m1) over h seconds, at s (0–1): it starts and
+ * ends exactly at p0 and p1 with exactly those rates, so neighbouring steps join smoothly.
+ */
+const hermite = (p0: number, m0: number, p1: number, m1: number, h: number, s: number): number => {
+  const s2 = s * s;
+  const s3 = s2 * s;
+  return (
+    (2 * s3 - 3 * s2 + 1) * p0 +
+    (s3 - 2 * s2 + s) * h * m0 +
+    (3 * s2 - 2 * s3) * p1 +
+    (s3 - s2) * h * m1
+  );
+};
+
+/**
+ * The view at time t (seconds, any value): exactly straight on through the hold; away from it
+ * otherwise, along a path whose position and velocity are continuous everywhere, the seam
+ * included.
+ */
+export const viewAt = (t: number): View => {
+  const lt = loopTime(t);
+  if (lt < at(KNOTS, 0).t) return restView();
+  for (let i = 1; i < KNOTS.length; i++) {
+    const b = at(KNOTS, i);
+    if (lt < b.t) {
+      const a = at(KNOTS, i - 1);
+      const h = b.t - a.t;
+      const s = (lt - a.t) / h;
+      return {
+        yaw: hermite(a.view.yaw, a.rate.yaw, b.view.yaw, b.rate.yaw, h, s),
+        pitch: hermite(a.view.pitch, a.rate.pitch, b.view.pitch, b.rate.pitch, h, s),
+      };
+    }
+  }
+  return restView();
+};
 
 // ------------------------------------------------------------------------------------------------
 // Poses
@@ -317,163 +401,105 @@ export const registerPose = (plate: PlateLayout): PlatePose => ({
   scale: 1,
 });
 
-/** The hold: in register, lying on the sheet (the scroll-out hand-off blends to it). */
-export const holdPose = (plate: PlateLayout): PlatePose => registerPose(plate);
+/** A plate's depth at time t: its own depth, breathing gently (seconds, any value). */
+export const depthAt = (plate: PlateLayout, t: number): number => {
+  const { depth, phase } = PLATES[plate.id];
+  return depth + BREATHE.depth * Math.sin(BEAT * 3 * loopTime(t) + phase);
+};
 
-/** The float: out of register by the plate's float offset, apart in depth, breathing gently. */
-export const floatPose = (plate: PlateLayout, t: number): PlatePose => {
-  const { float, phase } = PLATES[plate.id];
+/** The hold: in register at the plate's depth (the scroll-out hand-off blends to it). */
+export const holdPose = (plate: PlateLayout, t: number): PlatePose => ({
+  ...registerPose(plate),
+  z: depthAt(plate, t),
+});
+
+/** How much of the plates' drift shows: none in the hold and the settle, all of it mid-orbit. */
+const driftShare = (lt: number): number =>
+  smoothstep(DEPART.start, DEPART.end, lt) * (1 - smoothstep(APPROACH.start, APPROACH.end, lt));
+
+/**
+ * A plate's pose at time t (seconds, any value: the loop repeats every PERIOD). It stays in
+ * register at its depth throughout; only while the camera is away does it turn slightly about z.
+ */
+export const platePoseAt = (t: number, plate: PlateLayout): PlatePose => {
+  const lt = loopTime(t);
+  const share = driftShare(lt);
   return {
-    x: plate.markX + float.x,
-    y: plate.markY + float.y + Math.sin(BEAT * 2 * t + phase) * BREATHE.y,
-    z: float.z + Math.sin(BEAT * 3 * t + phase) * BREATHE.z,
+    x: plate.markX,
+    y: plate.markY,
+    z: depthAt(plate, lt),
     rx: 0,
-    rz: float.rz + Math.sin(BEAT * 2 * t + phase * 1.7) * BREATHE.rz,
+    rz: share > 0 ? DRIFT.rz * share * Math.sin(BEAT * 2 * lt + PLATES[plate.id].phase * 1.7) : 0,
     scale: 1,
   };
 };
 
-/** In register at height z above the sheet. */
-const inRegisterAt = (plate: PlateLayout, z: number): PlatePose => ({
-  ...registerPose(plate),
-  z,
-});
+/**
+ * The camera in the group's unrotated frame, in group raster units: its position over the plane
+ * z = 0 (x, y) and its distance from it. The scene: x = −groupPos.x / scale, y = −groupPos.y /
+ * scale, distance = camera distance (px) / scale.
+ */
+export interface Camera {
+  x: number;
+  y: number;
+  distance: number;
+}
 
-/** A plate's pose at time t (seconds, any value: the loop repeats every PERIOD). */
-export const platePoseAt = (t: number, plate: PlateLayout): PlatePose => {
-  const lt = loopTime(t);
-
-  // Settle: just pressed into the sheet, the plate comes back up to lie on it.
-  if (lt < SETTLE.end) {
-    return inRegisterAt(plate, lerp(-SHEET.dip, 0, easeOutCubic(progress(lt, SETTLE))));
-  }
-
-  // Hold, then release: the plate lifts off depth first and drifts out to its float offset.
-  const release = releaseWindow(plate);
-  if (lt < release.start) return holdPose(plate);
-  if (lt < release.end) {
-    const u = progress(lt, release);
-    const hold = holdPose(plate);
-    const float = floatPose(plate, lt);
-    const glide = easeInOutCubic(u);
-    return {
-      x: lerp(hold.x, float.x, glide),
-      y: lerp(hold.y, float.y, glide),
-      z: lerp(hold.z, float.z, easeOutCubic(u)),
-      rx: 0,
-      rz: lerp(hold.rz, float.rz, glide),
-      scale: 1,
-    };
-  }
-
-  // Float, then register: the plate glides back, snaps into register and hovers above the sheet.
-  const register = registerWindow(plate);
-  if (lt < register.start) return floatPose(plate, lt);
-  if (lt < register.end) {
-    const u = progress(lt, register);
-    const reg = registerPose(plate);
-    const float = floatPose(plate, lt);
-    const snap = easeSnap(u);
-    return {
-      x: lerp(float.x, reg.x, snap),
-      y: lerp(float.y, reg.y, snap),
-      z: lerp(float.z, SHEET.hover, easeMove(u)),
-      rx: 0,
-      rz: lerp(float.rz, reg.rz, snap),
-      scale: 1,
-    };
-  }
-  if (lt < PRESS.start) return inRegisterAt(plate, SHEET.hover);
-
-  // Press: all four come down together and sink into the sheet; the loop closes at contact.
-  const u = (lt - PRESS.start) / (PRESS.end - PRESS.start);
-  return inRegisterAt(plate, lerp(SHEET.hover, -SHEET.dip, easePress(u)));
-};
-
-/** The frame of the plates and the sheet at time t: the sheet's tilt with a slow drift. */
-export const tiltAt = (t: number): Tilt => {
-  const lt = loopTime(t);
+/**
+ * Slides a plate along the camera's line of sight to its anchor and scales it with the distance,
+ * so that seen from the camera with the group unturned it covers exactly what it would at z = 0:
+ * the nearer plates shrink and the further ones grow. Depth, tip and turn are unchanged.
+ */
+export const alignToView = (pose: PlatePose, camera: Camera): PlatePose => {
+  const k = (camera.distance - pose.z) / camera.distance;
   return {
-    x: SHEET.tilt.x + SHEET.drift.pitch * Math.sin(BEAT * 2 * lt + 0.7),
-    y: SHEET.tilt.y + SHEET.drift.yaw * Math.sin(BEAT * lt),
-    z: SHEET.tilt.z,
+    x: camera.x + (pose.x - camera.x) * k,
+    y: camera.y + (pose.y - camera.y) * k,
+    z: pose.z,
+    rx: pose.rx,
+    rz: pose.rz,
+    scale: pose.scale * k,
   };
 };
 
-/** The sheet's tilt without its drift: the scroll-out hand-off blends to it. */
-export const restTilt = (): Tilt => ({ ...SHEET.tilt });
-
 // ------------------------------------------------------------------------------------------------
-// The sheet: effects of the contact, prints and shadows
+// Effects
 // ------------------------------------------------------------------------------------------------
 
 export interface Effects {
-  /** Reach of the ripple from the mark, as a share of its full reach (0–1). */
-  ripple: number;
-  /** Strength of the ripple (0–1): rises at once, then fades out as it spreads. */
-  rippleAlpha: number;
-  /** Brightening of the sheet under the plates at contact (0–1). */
-  bloom: number;
   /** Position of the sheen across the mark: 0 left of it, 1 right of it. */
   sheen: number;
   /** Strength of the sheen (0–1). */
   sheenAlpha: number;
+  /** How much of the ink dust near the mark is drawn into the plates (0–1): 1 at the click. */
+  absorb: number;
+  /** How close the plates are to register (0–1): 1 straight on, 0 well away (damps the tilt). */
+  align: number;
 }
 
 /**
- * The sheet's response to the contact at t = 0: a ripple spreading out from the mark, a short bloom
- * under the plates, and a sheen crossing the mark from left to right. All are 0 outside their
- * spans, so they never show away from the contact.
+ * The effects at time t: a sheen crossing the mark from left to right just after the click, the
+ * ink dust gathering into the plates as the camera comes home and released again after the click,
+ * and how close the view is to straight on. The sheen and the dust are 0 outside their spans.
  */
 export const effectsAt = (t: number): Effects => {
   const age = loopTime(t);
 
-  const u = age / EFFECTS.ripple;
-  const ripple = u < 1 ? easeOutCubic(u) : 0;
-  const rippleAlpha = u < 1 ? smoothstep(0, 0.06, u) * Math.pow(1 - u, 1.6) : 0;
-
-  const v = age / EFFECTS.bloom;
-  const bloom = v < 1 ? smoothstep(0, 0.08, v) * (1 - smoothstep(0.08, 1, v)) : 0;
-
   const { from, to } = EFFECTS.sheen;
   const inSheen = age > from && age < to;
-  const s = (age - from) / (to - from);
+  const u = (age - from) / (to - from);
+
+  const { gather, release } = EFFECTS.absorb;
+  const view = viewAt(age);
 
   return {
-    ripple,
-    rippleAlpha,
-    bloom,
-    sheen: inSheen ? easeInOutCubic(s) : 0,
-    sheenAlpha: inSheen ? Math.sin(Math.PI * s) : 0,
-  };
-};
-
-/**
- * Strength of the halftone print a plate leaves on the sheet (0–PRINT.alpha): it inks in as the
- * plate lifts off (K first) and fades out before the plates come back. 0 outside the release.
- */
-export const printAlpha = (t: number, plate: PlateLayout): number => {
-  const lt = loopTime(t);
-  if (lt < RELEASE.start || lt >= PRINT_FADE.to) return 0;
-  const r = progress(lt, releaseWindow(plate));
-  const fade = 1 - smoothstep(PRINT_FADE.from, PRINT_FADE.to, lt);
-  return PRINT.alpha * smoothstep(0, 0.3, r) * fade;
-};
-
-/**
- * The shadow a plate at height z casts on the sheet, light from the upper left: its offset (raster
- * units, y up, so it falls down and to the right), blur radius and strength. None while the plate
- * lies on or in the sheet; the higher it floats, the further, softer and fainter the shadow.
- */
-export const plateShadow = (
-  z: number,
-): { x: number; y: number; softness: number; alpha: number } => {
-  const zc = Math.max(0, z);
-  return {
-    x: 0.16 * zc,
-    y: -0.24 * zc,
-    softness: 6 + 0.09 * zc,
-    alpha: smoothstep(0, 10, zc) * (1 - 0.65 * clamp(zc / 450)),
+    sheen: inSheen ? easeInOutCubic(u) : 0,
+    sheenAlpha: inSheen ? Math.sin(Math.PI * u) : 0,
+    absorb: Math.max(
+      1 - smoothstep(release.from, release.to, age),
+      smoothstep(gather.from, gather.to, age),
+    ),
+    align: 1 - smoothstep(0, EFFECTS.align, Math.max(Math.abs(view.yaw), Math.abs(view.pitch))),
   };
 };
 
@@ -496,9 +522,9 @@ export interface Handoff {
 
 /**
  * The hand-off at scroll progress p (math.ts dockProgress): the plates first blend to the hold
- * pose from wherever they are in the press run, collapse into register, then shrink a little and
- * fade out in the art column while the header logo's arches pulse out of register and snap back.
- * Scrolling back runs it in reverse.
+ * pose (and the view to straight on) from wherever they are in the loop, collapse into register,
+ * then shrink a little and fade out in the art column while the header logo's arches pulse out of
+ * register and snap back. Scrolling back runs it in reverse.
  */
 export const handoff = (p: number): Handoff => {
   const fade = smoothstep(HANDOFF.fadeFrom, 1, p);

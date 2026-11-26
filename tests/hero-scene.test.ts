@@ -6,33 +6,31 @@ import {
   HANDOFF,
   PERIOD,
   PLATES,
-  PRINT,
   PULSE_PEAK,
-  SHEET,
-  STAGGER,
+  VIEW,
+  alignToView,
   archMetrics,
   beatAt,
   blendPose,
   buildLayout,
+  depthAt,
   easeSnap,
   effectsAt,
-  floatPose,
   handoff,
   holdPose,
   loopTime,
-  plateShadow,
   platePoseAt,
   poseBounds,
-  printAlpha,
   registerPose,
   registrationPulse,
-  restTilt,
-  tiltAt,
+  restView,
+  viewAt,
   type BeatName,
+  type Camera,
   type PlateId,
   type PlateLayout,
   type PlatePose,
-  type Tilt,
+  type View,
 } from '../src/scripts/hero-scene/choreography';
 import {
   boundsOf,
@@ -335,7 +333,7 @@ describe('hand-off (the plates never reach the header band or the copy)', () => 
   });
 });
 
-describe('choreography (the press run)', () => {
+describe('choreography (registration in depth)', () => {
   const outline = sampleOutline(ARCH, 9);
   const metrics = archMetrics(outline);
   // The mark's viewBox is 690 50 840 205: the group pivots on its centre.
@@ -355,31 +353,52 @@ describe('choreography (the press run)', () => {
     Array.from({ length: Math.floor((to - from) / step) + 1 }, (_, i) => from + i * step);
   const posesAt = (t: number): PlatePose[] => layout.plates.map((p) => platePoseAt(t, p));
   const fields = ['x', 'y', 'z', 'rx', 'rz', 'scale'] as const;
-  const spread = (t: number): number => {
-    const z = posesAt(t).map((pose) => pose.z);
-    return Math.max(...z) - Math.min(...z);
-  };
-  // Each plate's own move (seconds), and when it starts: register in print order, release in
-  // reverse print order.
-  const REGISTER_MOVE = 1.9;
-  const RELEASE_MOVE = 2.4;
-  const registerStart = (p: PlateLayout): number =>
-    beat('register').start + p.print * STAGGER.register;
-  const releaseStart = (p: PlateLayout): number =>
-    beat('release').start + (3 - p.print) * STAGGER.release;
+  const effectKeys = ['sheen', 'sheenAlpha', 'absorb', 'align'] as const;
   /** Half the plates' depth: they are extruded ±17 about their pose's z (scene.ts THICKNESS 34). */
   const HALF_THICKNESS = 17;
   /**
-   * Where a group-space point shows on screen, straight on (no perspective), once the group is
-   * turned by `tilt`. The scene sets the tilt as the group's Euler rotation in OGL's default order
-   * YXZ (ogl Euler, QuatFunc.fromEuler), whose matrix is Ry·Rx·Rz: turn about z, then x, then y.
+   * Representative cameras (group raster units, see Camera): a desktop hero, with the art column
+   * right of the canvas centre, and a phone (a 390 × ~760 hero, the art at its top right at about
+   * 0.31 px a unit, the camera about 1306 px away), so the camera sits well below the mark.
    */
-  const project = (tilt: Tilt, x: number, y: number, z: number): { x: number; y: number } => {
-    const x1 = x * Math.cos(tilt.z) - y * Math.sin(tilt.z);
-    const y1 = x * Math.sin(tilt.z) + y * Math.cos(tilt.z);
-    const y2 = y1 * Math.cos(tilt.x) - z * Math.sin(tilt.x);
-    const z2 = y1 * Math.sin(tilt.x) + z * Math.cos(tilt.x);
-    return { x: x1 * Math.cos(tilt.y) + z2 * Math.sin(tilt.y), y: y2 };
+  const DESKTOP: Camera = { x: -700, y: 0, distance: 2400 };
+  const PHONE: Camera = { x: -130, y: -700, distance: 4200 };
+  const CAMERAS: readonly Camera[] = [DESKTOP, PHONE];
+  /** A point of the arch outline (plate space) placed by a pose: turned by rz, scaled, moved. */
+  const placed = (pose: PlatePose, q: Point): Point => {
+    const cos = Math.cos(pose.rz) * pose.scale;
+    const sin = Math.sin(pose.rz) * pose.scale;
+    return { x: pose.x + q.x * cos - q.y * sin, y: pose.y + q.x * sin + q.y * cos };
+  };
+  /**
+   * A group-space point turned by the view. The scene sets the view as the group's Euler rotation
+   * (pitch, yaw, 0) in OGL's default order YXZ (ogl Euler, QuatFunc.fromEuler), whose matrix is
+   * Ry·Rx·Rz: turn about z, then x, then y.
+   */
+  const turn = (
+    view: View,
+    x: number,
+    y: number,
+    z: number,
+  ): { x: number; y: number; z: number } => {
+    const y1 = y * Math.cos(view.pitch) - z * Math.sin(view.pitch);
+    const z1 = y * Math.sin(view.pitch) + z * Math.cos(view.pitch);
+    return {
+      x: x * Math.cos(view.yaw) + z1 * Math.sin(view.yaw),
+      y: y1,
+      z: -x * Math.sin(view.yaw) + z1 * Math.cos(view.yaw),
+    };
+  };
+  /** Where a point shows from the camera, on the plane z = 0 (a pinhole projection). */
+  const seenFrom = (camera: Camera, x: number, y: number, z: number): Point => {
+    const s = camera.distance / (camera.distance - z);
+    return { x: camera.x + (x - camera.x) * s, y: camera.y + (y - camera.y) * s };
+  };
+  /** The view's velocity (radians a second) over [t, t + h]. */
+  const rate = (t: number, h: number): View => {
+    const a = viewAt(t);
+    const b = viewAt(t + h);
+    return { yaw: (b.yaw - a.yaw) / h, pitch: (b.pitch - a.pitch) / h };
   };
 
   it('measures the arch: anchor at its box centre, feet on the base line', () => {
@@ -403,113 +422,85 @@ describe('choreography (the press run)', () => {
     }
   });
 
-  it('is seamless: the end of the loop meets its start', () => {
+  it('is seamless: the end of the loop meets its start, poses, view and effects alike', () => {
     for (const p of layout.plates) {
       const start = platePoseAt(0, p);
-      // The press is fastest at contact (an ease-in into the sheet), so a microsecond before the
-      // seam a plate is still a few hundredths of a raster unit above it: far below a pixel.
       const end = platePoseAt(PERIOD - 1e-6, p);
-      for (const field of ['x', 'y', 'z'] as const) {
-        expect(Math.abs(end[field] - start[field])).toBeLessThan(0.1);
-      }
-      for (const field of ['rx', 'rz', 'scale'] as const) {
-        expect(end[field]).toBeCloseTo(start[field], 6);
-      }
+      for (const field of fields) expect(end[field]).toBeCloseTo(start[field], 3);
       const again = platePoseAt(PERIOD * 3 + 7, p);
       const once = platePoseAt(7, p);
       for (const field of fields) expect(again[field]).toBeCloseTo(once[field], 9);
     }
-    const tiltStart = tiltAt(0);
-    const tiltEnd = tiltAt(PERIOD - 1e-6);
-    expect(tiltEnd.x).toBeCloseTo(tiltStart.x, 6);
-    expect(tiltEnd.y).toBeCloseTo(tiltStart.y, 6);
-    expect(tiltEnd.z).toBeCloseTo(tiltStart.z, 6);
-    expect(tiltAt(PERIOD * 2 + 5).y).toBeCloseTo(tiltAt(5).y, 9);
+    const viewEnd = viewAt(PERIOD - 1e-6);
+    expect(viewEnd.yaw).toBeCloseTo(0, 9);
+    expect(viewEnd.pitch).toBeCloseTo(0, 9);
+    expect(viewAt(PERIOD * 2 + 7.3).yaw).toBeCloseTo(viewAt(7.3).yaw, 9);
+    expect(viewAt(PERIOD * 2 + 7.3).pitch).toBeCloseTo(viewAt(7.3).pitch, 9);
+    const effectsEnd = effectsAt(PERIOD - 1e-6);
+    const effectsStart = effectsAt(0);
+    for (const key of effectKeys) expect(effectsEnd[key]).toBeCloseTo(effectsStart[key], 6);
+    expect(effectsAt(PERIOD + 1)).toEqual(effectsAt(1));
     expect(loopTime(-1)).toBeCloseTo(PERIOD - 1, 9);
     expect(loopTime(PERIOD)).toBe(0);
     expect(loopTime(PERIOD * 2 + 3)).toBeCloseTo(3, 9);
   });
 
-  it('tilts the plates and the sheet in one frame that only drifts slightly', () => {
-    const rest = restTilt();
-    expect(rest).toEqual(SHEET.tilt);
-    let furthest = 0;
-    for (const t of times(0, PERIOD, 0.05)) {
-      const tilt = tiltAt(t);
-      expect(Math.abs(tilt.x - rest.x)).toBeLessThanOrEqual(SHEET.drift.pitch + 1e-12);
-      expect(Math.abs(tilt.y - rest.y)).toBeLessThanOrEqual(SHEET.drift.yaw + 1e-12);
-      expect(tilt.z).toBe(rest.z);
-      furthest = Math.max(furthest, Math.abs(tilt.y - rest.y));
-    }
-    expect(furthest).toBeGreaterThan(SHEET.drift.yaw / 2);
-  });
-
-  it('never jumps: every frame moves each plate by a small step only', () => {
+  it('never jumps: at 240 fps every frame moves the plates, view and effects a little', () => {
     const step = 1 / 240;
     let previous = posesAt(0);
-    for (const t of times(step, PERIOD, step)) {
+    let previousView = viewAt(0);
+    let previousEffects = effectsAt(0);
+    // On past the seam, into the next loop.
+    for (const t of times(step, PERIOD + 0.5, step)) {
       const current = posesAt(t);
       current.forEach((pose, i) => {
         const before = previous[i];
         if (!before) throw new Error('missing pose');
-        expect(Math.abs(pose.x - before.x)).toBeLessThan(5);
-        expect(Math.abs(pose.y - before.y)).toBeLessThan(5);
-        expect(Math.abs(pose.z - before.z)).toBeLessThan(5);
-        expect(Math.abs(pose.rz - before.rz)).toBeLessThan(0.05);
-        expect(Math.abs(pose.rx - before.rx)).toBeLessThan(0.05);
-        expect(Math.abs(pose.scale - before.scale)).toBeLessThan(0.01);
+        expect(Math.abs(pose.x - before.x)).toBeLessThan(1);
+        expect(Math.abs(pose.y - before.y)).toBeLessThan(1);
+        expect(Math.abs(pose.z - before.z)).toBeLessThan(1);
+        expect(Math.abs(pose.rz - before.rz)).toBeLessThan(0.005);
+        expect(Math.abs(pose.rx - before.rx)).toBeLessThan(0.005);
+        expect(Math.abs(pose.scale - before.scale)).toBeLessThan(0.001);
       });
+      const view = viewAt(t);
+      expect(Math.abs(view.yaw - previousView.yaw)).toBeLessThan(0.005);
+      expect(Math.abs(view.pitch - previousView.pitch)).toBeLessThan(0.005);
+      // The sheen's position only matters while it shows, so only its strength must not jump.
+      const effects = effectsAt(t);
+      for (const key of ['sheenAlpha', 'absorb', 'align'] as const) {
+        expect(Math.abs(effects[key] - previousEffects[key])).toBeLessThan(0.05);
+      }
       previous = current;
+      previousView = view;
+      previousEffects = effects;
     }
   });
 
-  it('keeps every value finite, and every pose inside the art box', () => {
+  it('keeps every value finite, aligned poses included, and every effect within 0–1', () => {
     for (const t of times(0, PERIOD, 1 / 60)) {
-      const poses = posesAt(t);
-      for (const pose of poses) {
-        for (const field of fields) expect(Number.isFinite(pose[field])).toBe(true);
+      const view = viewAt(t);
+      expect(Number.isFinite(view.yaw)).toBe(true);
+      expect(Number.isFinite(view.pitch)).toBe(true);
+      const effects = effectsAt(t);
+      for (const key of effectKeys) {
+        expect(effects[key]).toBeGreaterThanOrEqual(0);
+        expect(effects[key]).toBeLessThanOrEqual(1);
       }
-      const b = poseBounds(poses, plateOutline);
-      expect(b.minX).toBeGreaterThanOrEqual(-ART.width / 2);
-      expect(b.maxX).toBeLessThanOrEqual(ART.width / 2);
-      expect(b.minY).toBeGreaterThanOrEqual(-ART.height / 2);
-      expect(b.maxY).toBeLessThanOrEqual(ART.height / 2);
-
-      // In 3D: the front and back faces of every plate, seen through the group's tilt.
-      const tilt = tiltAt(t);
-      const seen = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
-      for (const pose of poses) {
-        const cos = Math.cos(pose.rz) * pose.scale;
-        const sin = Math.sin(pose.rz) * pose.scale;
-        for (const face of [-1, 1]) {
-          const z = pose.z + face * HALF_THICKNESS * pose.scale;
-          for (const q of plateOutline) {
-            const x = pose.x + q.x * cos - q.y * sin;
-            const y = pose.y + q.x * sin + q.y * cos;
-            const on = project(tilt, x, y, z);
-            seen.minX = Math.min(seen.minX, on.x);
-            seen.minY = Math.min(seen.minY, on.y);
-            seen.maxX = Math.max(seen.maxX, on.x);
-            seen.maxY = Math.max(seen.maxY, on.y);
-          }
+      for (const p of layout.plates) {
+        const pose = platePoseAt(t, p);
+        for (const field of fields) expect(Number.isFinite(pose[field])).toBe(true);
+        for (const camera of CAMERAS) {
+          const aligned = alignToView(pose, camera);
+          for (const field of fields) expect(Number.isFinite(aligned[field])).toBe(true);
+          expect(aligned.scale).toBeGreaterThan(0);
         }
       }
-      expect(seen.minX).toBeGreaterThanOrEqual(-ART.width / 2);
-      expect(seen.maxX).toBeLessThanOrEqual(ART.width / 2);
-      expect(seen.minY).toBeGreaterThanOrEqual(-ART.height / 2);
-      expect(seen.maxY).toBeLessThanOrEqual(ART.height / 2);
     }
   });
 
-  it('runs the beats back to back, from contact to the next press, over one period', () => {
-    expect(BEATS.map((b) => b.name)).toEqual([
-      'settle',
-      'hold',
-      'release',
-      'float',
-      'register',
-      'press',
-    ]);
+  it('runs the beats back to back over one period, from the click to the next', () => {
+    expect(BEATS.map((b) => b.name)).toEqual(['hold', 'depart', 'orbit', 'approach', 'settle']);
     expect(BEATS[0]?.start).toBe(0);
     expect(BEATS[BEATS.length - 1]?.end).toBe(PERIOD);
     for (let i = 1; i < BEATS.length; i++) expect(BEATS[i]?.start).toBe(BEATS[i - 1]?.end);
@@ -520,212 +511,232 @@ describe('choreography (the press run)', () => {
       expect(beatAt(b.end - 1e-6)).toBe(b.name);
       expect(beatAt((b.start + b.end) / 2 + PERIOD * 2)).toBe(b.name);
     }
-    expect(beatAt(PERIOD)).toBe('settle');
-    expect(beatAt(-0.3)).toBe('press');
+    expect(beatAt(0)).toBe('hold');
+    expect(beatAt(PERIOD)).toBe('hold');
+    expect(beatAt(-0.3)).toBe('settle');
   });
 
-  it('starts at contact, pressed into the sheet in register, then settles and holds', () => {
-    const settle = beat('settle');
+  it('holds straight on, with every plate exactly in register at its depth', () => {
     const hold = beat('hold');
-    for (const p of layout.plates) {
-      const rest = holdPose(p);
-      expect(rest).toEqual(registerPose(p));
-      expect(platePoseAt(0, p)).toEqual({ ...rest, z: -SHEET.dip });
-      let previousZ = -SHEET.dip;
-      for (const t of times(0, settle.end, 0.01)) {
-        const pose = platePoseAt(t, p);
-        expect(pose.x).toBe(rest.x);
-        expect(pose.y).toBe(rest.y);
-        expect(pose.rz).toBe(0);
-        expect(pose.z).toBeGreaterThanOrEqual(previousZ);
-        expect(pose.z).toBeLessThanOrEqual(0);
-        previousZ = pose.z;
-      }
-      expect(platePoseAt(settle.end, p)).toEqual(rest);
-      for (const t of times(hold.start, hold.end - 1e-3, 0.05)) {
-        expect(platePoseAt(t, p)).toEqual(rest);
-      }
-    }
-  });
-
-  it('releases in reverse print order K, C, M, Y, lifting each plate depth first', () => {
-    const t = beat('release').start + STAGGER.release * 1.5;
-    expect(platePoseAt(t, plate('k'))).not.toEqual(holdPose(plate('k')));
-    expect(platePoseAt(t, plate('c'))).not.toEqual(holdPose(plate('c')));
-    expect(platePoseAt(t, plate('m'))).toEqual(holdPose(plate('m')));
-    expect(platePoseAt(t, plate('y'))).toEqual(holdPose(plate('y')));
-    for (const p of layout.plates) {
-      const start = releaseStart(p);
-      const { float } = PLATES[p.id];
-      expect(platePoseAt(start - 0.01, p)).toEqual(holdPose(p));
-      // A quarter of the way in, the plate has risen much further (as a share of its float height)
-      // than it has drifted out of register (as a share of its float offset).
-      const early = platePoseAt(start + RELEASE_MOVE / 4, p);
-      const risen = early.z / float.z;
-      const drifted = (early.x - p.markX) / float.x;
-      expect(risen).toBeGreaterThan(0.4);
-      expect(risen).toBeGreaterThan(drifted * 2);
-      // Each plate is still on its way just before its move ends, and floating just after it (Y,
-      // the last, as the release beat ends).
-      const end = start + RELEASE_MOVE;
-      expect(platePoseAt(end - 0.05, p)).not.toEqual(floatPose(p, end - 0.05));
-      expect(platePoseAt(end + 0.01, p)).toEqual(floatPose(p, end + 0.01));
-    }
-  });
-
-  it('floats the plates apart in depth, breathing gently about their float offsets', () => {
-    const float = beat('float');
-    for (const t of times(float.start + 0.01, float.end - 0.01, 0.05)) {
+    expect(restView()).toEqual({ yaw: 0, pitch: 0 });
+    for (const t of [...times(hold.start, hold.end - 1e-3, 0.05), PERIOD * 2 + 1.5]) {
+      expect(viewAt(t)).toEqual(restView());
+      expect(effectsAt(t).align).toBe(1);
       for (const p of layout.plates) {
         const pose = platePoseAt(t, p);
-        const offset = PLATES[p.id].float;
-        expect(pose).toEqual(floatPose(p, t));
-        expect(pose.x).toBeCloseTo(p.markX + offset.x, 9);
-        expect(Math.abs(pose.y - (p.markY + offset.y))).toBeLessThanOrEqual(8 + 1e-9);
-        expect(Math.abs(pose.z - offset.z)).toBeLessThanOrEqual(12 + 1e-9);
-        expect(Math.abs(pose.rz - offset.rz)).toBeLessThanOrEqual(0.008 + 1e-9);
+        expect(pose).toEqual(holdPose(p, t));
+        expect(pose.x).toBe(p.markX);
+        expect(pose.y).toBe(p.markY);
+        expect(pose.z).toBe(depthAt(p, t));
+        expect(pose.rx).toBe(0);
+        expect(pose.rz).toBe(0);
+        expect(pose.scale).toBe(1);
       }
-      expect(spread(t)).toBeGreaterThan(spread(beat('hold').start + 1) + 200);
     }
-    expect(spread(beat('hold').start + 1)).toBe(0);
   });
 
-  it('registers in print order Y, M, C, K, snapping in with a small overshoot, then hovers', () => {
-    const t = beat('register').start + STAGGER.register * 1.5;
-    expect(platePoseAt(t, plate('y'))).not.toEqual(floatPose(plate('y'), t));
-    expect(platePoseAt(t, plate('m'))).not.toEqual(floatPose(plate('m'), t));
-    expect(platePoseAt(t, plate('c'))).toEqual(floatPose(plate('c'), t));
-    expect(platePoseAt(t, plate('k'))).toEqual(floatPose(plate('k'), t));
-    for (const p of layout.plates) {
-      const { float } = PLATES[p.id];
-      const start = registerStart(p);
-      const end = start + REGISTER_MOVE;
-      // The snap carries the plate a little past register, to the side away from where it floated.
-      const past = times(start, end, 0.01).map(
-        (s) => (platePoseAt(s, p).x - p.markX) * -Math.sign(float.x),
+  it('moves the view smoothly: no jump in angle or speed at any beat boundary or the seam', () => {
+    const h = 1e-4;
+    for (const { end } of BEATS) {
+      const edge = viewAt(end);
+      const before = viewAt(end - 1e-9);
+      expect(Math.abs(before.yaw - edge.yaw)).toBeLessThan(1e-6);
+      expect(Math.abs(before.pitch - edge.pitch)).toBeLessThan(1e-6);
+      // Velocity just before and just after the boundary (at PERIOD: the hold that follows).
+      const left = rate(end - h, h);
+      const right = rate(end, h);
+      expect(Math.abs(left.yaw - right.yaw)).toBeLessThan(2e-3);
+      expect(Math.abs(left.pitch - right.pitch)).toBeLessThan(2e-3);
+    }
+  });
+
+  it('keeps the camera moving from the depart to the click, and brings it to rest there', () => {
+    const h = 1e-4;
+    for (const t of times(beat('depart').start + 0.5, beat('settle').start - 0.2, 0.01)) {
+      const v = rate(t - h / 2, h);
+      expect(Math.hypot(v.yaw, v.pitch)).toBeGreaterThan(0.02);
+    }
+    const last = rate(PERIOD - 2 * h, h);
+    expect(Math.hypot(last.yaw, last.pitch)).toBeLessThan(1e-3);
+  });
+
+  it('departs to the orbit, approaches past straight on by the overshoot, settles exactly', () => {
+    const orbit = beat('orbit');
+    const approach = beat('approach');
+    // The path passes exactly through the ends of the orbit.
+    expect(viewAt(orbit.start).yaw).toBeCloseTo(VIEW.orbitStart.yaw, 9);
+    expect(viewAt(orbit.start).pitch).toBeCloseTo(VIEW.orbitStart.pitch, 9);
+    expect(viewAt(orbit.end).yaw).toBeCloseTo(VIEW.orbitEnd.yaw, 9);
+    expect(viewAt(orbit.end).pitch).toBeCloseTo(VIEW.orbitEnd.pitch, 9);
+    for (const axis of ['yaw', 'pitch'] as const) {
+      const end = VIEW.orbitEnd[axis];
+      // Past straight on, on the side away from the orbit's end.
+      const past = times(approach.start, PERIOD - 1e-3, 0.005).map(
+        (t) => -Math.sign(end) * viewAt(t)[axis],
       );
-      expect(Math.max(...past)).toBeGreaterThan(0);
-      expect(Math.max(...past)).toBeLessThan(0.15 * Math.abs(float.x));
-      // Still on its way just before its move ends, all but there at the end, hovering after it.
-      const hovering = { ...registerPose(p), z: SHEET.hover };
-      expect(platePoseAt(end - 0.05, p)).not.toEqual(hovering);
-      const arriving = platePoseAt(end - 1e-4, p);
-      expect(arriving.x).toBeCloseTo(p.markX, 3);
-      expect(arriving.y).toBeCloseTo(p.markY, 3);
-      expect(arriving.z).toBeCloseTo(SHEET.hover, 2);
-      for (const s of times(end + 0.01, beat('press').start - 0.01, 0.05)) {
-        expect(platePoseAt(s, p)).toEqual(hovering);
-      }
+      const furthest = Math.max(...past);
+      expect(furthest).toBeGreaterThan(0.8 * VIEW.overshoot * Math.abs(end));
+      expect(furthest).toBeLessThan(1.2 * VIEW.overshoot * Math.abs(end));
+      expect(past[0]).toBeLessThan(0);
     }
+    const last = viewAt(PERIOD - 1e-6);
+    expect(Math.abs(last.yaw)).toBeLessThan(1e-9);
+    expect(Math.abs(last.pitch)).toBeLessThan(1e-9);
   });
 
-  it('presses every plate from its hover into the sheet, gathering speed to contact', () => {
-    const press = beat('press');
+  it('hangs the plates at their depths, C nearest and K furthest, breathing gently', () => {
+    const order: PlateId[] = ['c', 'm', 'y', 'k'];
+    for (const t of times(0, PERIOD, 0.05)) {
+      const z = order.map((id) => platePoseAt(t, plate(id)).z);
+      for (let i = 1; i < z.length; i++) expect(z[i - 1] ?? NaN).toBeGreaterThan(z[i] ?? NaN);
+      for (const p of layout.plates) {
+        expect(platePoseAt(t, p).z).toBe(depthAt(p, t));
+        expect(Math.abs(depthAt(p, t) - PLATES[p.id].depth)).toBeLessThanOrEqual(14 + 1e-9);
+      }
+    }
     for (const p of layout.plates) {
-      expect(platePoseAt(press.start, p).z).toBeCloseTo(SHEET.hover, 6);
-      let previousZ = Infinity;
-      for (const t of times(press.start, PERIOD - 1e-3, 0.01)) {
-        const pose = platePoseAt(t, p);
-        expect(pose.x).toBeCloseTo(p.markX, 9);
-        expect(pose.y).toBeCloseTo(p.markY, 9);
-        expect(pose.rz).toBeCloseTo(0, 9);
-        expect(pose.z).toBeLessThanOrEqual(previousZ);
-        previousZ = pose.z;
-      }
-      expect(platePoseAt(PERIOD - 1e-6, p).z).toBeLessThan(-SHEET.dip + 0.1);
-      const first = platePoseAt(press.start, p).z - platePoseAt(press.start + 0.1, p).z;
-      const last = platePoseAt(PERIOD - 0.1, p).z - platePoseAt(PERIOD - 1e-6, p).z;
-      expect(last).toBeGreaterThan(first);
+      const z = times(0, PERIOD, 0.05).map((t) => depthAt(p, t));
+      expect(Math.max(...z) - Math.min(...z)).toBeGreaterThan(20);
     }
   });
 
-  it('answers the contact on the sheet: a ripple, a bloom and a sheen from left to right', () => {
-    // Ripple: from nothing at contact, spreading steadily, faded out after 2.4 s.
-    const contact = effectsAt(0);
-    expect(contact.ripple).toBe(0);
-    expect(contact.rippleAlpha).toBe(0);
-    let previous = contact;
-    for (const t of times(0, 2.39, 0.01)) {
-      const e = effectsAt(t);
-      expect(e.ripple).toBeGreaterThanOrEqual(previous.ripple);
-      expect(e.ripple).toBeLessThanOrEqual(1);
-      expect(e.rippleAlpha).toBeGreaterThanOrEqual(0);
-      expect(e.rippleAlpha).toBeLessThanOrEqual(1);
-      previous = e;
+  it('keeps the plates in register sideways and turns them slightly only while away', () => {
+    let strongest = 0;
+    for (const t of times(0, PERIOD, 0.02)) {
+      const name = beatAt(t);
+      for (const p of layout.plates) {
+        const pose = platePoseAt(t, p);
+        expect(pose.x).toBe(p.markX);
+        expect(pose.y).toBe(p.markY);
+        expect(pose.rx).toBe(0);
+        expect(pose.scale).toBe(1);
+        expect(Math.abs(pose.rz)).toBeLessThanOrEqual(0.03);
+        if (name === 'hold' || name === 'settle') expect(pose.rz).toBe(0);
+        strongest = Math.max(strongest, Math.abs(pose.rz));
+      }
     }
-    const strongest = Math.max(...times(0, 2.39, 0.01).map((t) => effectsAt(t).rippleAlpha));
-    expect(strongest).toBeGreaterThan(0.5);
-    expect(effectsAt(2.39).rippleAlpha).toBeLessThan(0.01);
-    for (const t of times(2.4, PERIOD - 0.01, 0.05)) {
-      expect(effectsAt(t).ripple).toBe(0);
-      expect(effectsAt(t).rippleAlpha).toBe(0);
-    }
+    expect(strongest).toBeGreaterThan(0.01);
+  });
 
-    // Bloom: only in the first 1.1 s.
-    expect(contact.bloom).toBe(0);
-    for (const t of times(0.01, 1.09, 0.01)) {
-      expect(effectsAt(t).bloom).toBeGreaterThan(0);
-      expect(effectsAt(t).bloom).toBeLessThanOrEqual(1);
+  it('aligns a plate to the camera: seen from there it covers exactly its place at z = 0', () => {
+    const cameras: readonly Camera[] = [...CAMERAS, { x: 250, y: -120, distance: 3000 }];
+    for (const camera of cameras) {
+      for (const p of layout.plates) {
+        for (const z of [314, 300, 100, -100, -300, -314]) {
+          for (const extra of [
+            { rz: 0, scale: 1 },
+            { rz: 0.02, scale: 0.9 },
+          ]) {
+            const pose: PlatePose = { ...registerPose(p), ...extra, z };
+            const aligned = alignToView(pose, camera);
+            expect(aligned.z).toBe(z);
+            expect(aligned.rx).toBe(pose.rx);
+            expect(aligned.rz).toBe(pose.rz);
+            const flat: PlatePose = { ...pose, z: 0 };
+            for (const q of plateOutline) {
+              const point = placed(aligned, q);
+              const on = seenFrom(camera, point.x, point.y, aligned.z);
+              const want = placed(flat, q);
+              expect(on.x).toBeCloseTo(want.x, 6);
+              expect(on.y).toBeCloseTo(want.y, 6);
+            }
+          }
+        }
+        // On the plane z = 0 nothing changes.
+        const rest = registerPose(p);
+        const same = alignToView(rest, camera);
+        for (const field of fields) expect(same[field]).toBeCloseTo(rest[field], 9);
+      }
     }
-    for (const t of times(1.1, PERIOD - 0.01, 0.05)) expect(effectsAt(t).bloom).toBe(0);
+    // The nearer plates shrink, the further ones grow.
+    expect(alignToView({ ...registerPose(plate('c')), z: 300 }, DESKTOP).scale).toBeLessThan(1);
+    expect(alignToView({ ...registerPose(plate('k')), z: -300 }, DESKTOP).scale).toBeGreaterThan(1);
+  });
 
-    // Sheen: crosses the mark from left to right between 0.9 s and 2.5 s, nowhere else.
-    for (const t of [0, 0.5, 0.9, 2.5, 3, 6, PERIOD - 0.01]) {
+  it('runs the sheen just after the click, gathers the dust at it and tracks the alignment', () => {
+    const orbit = beat('orbit');
+    const midOrbit = (orbit.start + orbit.end) / 2;
+
+    // Sheen: crosses the mark from left to right between 0.1 s and 1.5 s after the click only.
+    for (const t of [0, 0.05, 0.1, 1.5, 2, 6, 12, PERIOD - 0.01]) {
       expect(effectsAt(t).sheen).toBe(0);
       expect(effectsAt(t).sheenAlpha).toBe(0);
     }
     let left = -Infinity;
-    for (const t of times(0.91, 2.49, 0.01)) {
+    for (const t of times(0.11, 1.49, 0.01)) {
       const e = effectsAt(t);
       expect(e.sheen).toBeGreaterThan(left);
       expect(e.sheenAlpha).toBeGreaterThan(0);
       left = e.sheen;
     }
-    expect(effectsAt(0.91).sheen).toBeLessThan(0.01);
-    expect(effectsAt(2.49).sheen).toBeGreaterThan(0.99);
-    expect(effectsAt(PERIOD + 1)).toEqual(effectsAt(1));
+    expect(effectsAt(0.11).sheen).toBeLessThan(0.01);
+    expect(effectsAt(1.49).sheen).toBeGreaterThan(0.99);
+    expect(effectsAt(0.8).sheenAlpha).toBeCloseTo(1, 6);
+
+    // Dust: all drawn in at the click, released after it, none mid-orbit, gathered on the way back.
+    for (const t of times(0, 0.25, 0.05)) expect(effectsAt(t).absorb).toBe(1);
+    let previous = 1;
+    for (const t of times(0.3, 2.5, 0.01)) {
+      const absorb = effectsAt(t).absorb;
+      expect(absorb).toBeLessThanOrEqual(previous);
+      previous = absorb;
+    }
+    for (const t of times(2.5, 12.1, 0.05)) expect(effectsAt(t).absorb).toBe(0);
+    expect(effectsAt(midOrbit).absorb).toBe(0);
+    previous = 0;
+    for (const t of times(12.2, PERIOD - 0.01, 0.01)) {
+      const absorb = effectsAt(t).absorb;
+      expect(absorb).toBeGreaterThanOrEqual(previous);
+      previous = absorb;
+    }
+    expect(effectsAt(PERIOD - 1e-6).absorb).toBeCloseTo(1, 6);
+    expect(Math.max(...times(0, PERIOD, 0.01).map((t) => effectsAt(t).absorb))).toBe(1);
+
+    // Alignment: 1 in the hold, 0 with the camera away.
+    expect(effectsAt(1).align).toBe(1);
+    expect(effectsAt(orbit.start).align).toBe(0);
+    expect(effectsAt(midOrbit).align).toBe(0);
+    expect(effectsAt(orbit.end).align).toBe(0);
   });
 
-  it('leaves each plate’s print on the sheet as it lifts off, fading before the press', () => {
-    const t = beat('release').start + STAGGER.release / 2;
-    expect(printAlpha(t, plate('k'))).toBeGreaterThan(0);
-    expect(printAlpha(t, plate('c'))).toBe(0);
-    expect(printAlpha(t, plate('m'))).toBe(0);
-    expect(printAlpha(t, plate('y'))).toBe(0);
-    for (const p of layout.plates) {
-      const start = releaseStart(p);
-      for (const s of times(0, start - 0.01, 0.05)) expect(printAlpha(s, p)).toBe(0);
-      expect(printAlpha(start - 0.01, p)).toBe(0);
-      let previous = 0;
-      for (const s of times(start, 4.9, 0.02)) {
-        const alpha = printAlpha(s, p);
-        expect(alpha).toBeGreaterThanOrEqual(previous);
-        expect(alpha).toBeLessThanOrEqual(PRINT.alpha);
-        previous = alpha;
-      }
-      expect(printAlpha(start + 0.5, p)).toBeGreaterThan(0);
-      expect(printAlpha(start + 0.8, p)).toBeCloseTo(PRINT.alpha, 9);
-      for (const s of times(4.9, 6, 0.02)) {
-        expect(printAlpha(s, p)).toBeLessThanOrEqual(PRINT.alpha);
-      }
-      for (const s of times(6, PERIOD - 0.01, 0.05)) expect(printAlpha(s, p)).toBe(0);
-    }
-  });
+  it('keeps every plate inside the art box on screen, from a desktop and a phone camera', () => {
+    // The logo itself, flat in register.
+    const flat = poseBounds(layout.plates.map(registerPose), plateOutline);
+    expect(flat.minX).toBeGreaterThanOrEqual(-ART.width / 2);
+    expect(flat.maxX).toBeLessThanOrEqual(ART.width / 2);
+    expect(flat.minY).toBeGreaterThanOrEqual(-ART.height / 2);
+    expect(flat.maxY).toBeLessThanOrEqual(ART.height / 2);
 
-  it('casts no shadow from a plate on the sheet, and a further, softer one higher up', () => {
-    for (const z of [-SHEET.dip, -1, 0]) expect(plateShadow(z).alpha).toBe(0);
-    let previous = plateShadow(0);
-    for (const z of [2, SHEET.hover, 85, 190, 300, 420, 600]) {
-      const shadow = plateShadow(z);
-      expect(shadow.alpha).toBeGreaterThan(0);
-      expect(shadow.alpha).toBeLessThanOrEqual(1);
-      // Light from the upper left: the shadow falls down and to the right.
-      expect(shadow.x).toBeGreaterThan(previous.x);
-      expect(shadow.y).toBeLessThan(previous.y);
-      expect(shadow.softness).toBeGreaterThan(previous.softness);
-      previous = shadow;
+    // In 3D: the front and back faces of every plate, aligned to the camera and turned by the
+    // view, where the camera sees them on the plane of the art box (z = 0). Measured through the
+    // camera's perspective, not straight on: alignToView enlarges the far plates by design (K by
+    // up to 1.13) so that perspective shrinks them back onto the logo, so straight on they would
+    // overhang the art box even in the hold, while on screen they never do.
+    for (const camera of CAMERAS) {
+      const seen = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+      for (const t of times(0, PERIOD, 1 / 30)) {
+        const view = viewAt(t);
+        for (const p of layout.plates) {
+          const pose = alignToView(platePoseAt(t, p), camera);
+          for (const face of [-1, 1]) {
+            const z = pose.z + face * HALF_THICKNESS * pose.scale;
+            for (const q of plateOutline) {
+              const point = placed(pose, q);
+              const turned = turn(view, point.x, point.y, z);
+              const on = seenFrom(camera, turned.x, turned.y, turned.z);
+              seen.minX = Math.min(seen.minX, on.x);
+              seen.minY = Math.min(seen.minY, on.y);
+              seen.maxX = Math.max(seen.maxX, on.x);
+              seen.maxY = Math.max(seen.maxY, on.y);
+            }
+          }
+        }
+      }
+      expect(seen.minX).toBeGreaterThanOrEqual(-ART.width / 2);
+      expect(seen.maxX).toBeLessThanOrEqual(ART.width / 2);
+      expect(seen.minY).toBeGreaterThanOrEqual(-ART.height / 2);
+      expect(seen.maxY).toBeLessThanOrEqual(ART.height / 2);
     }
-    expect(plateShadow(420).alpha).toBeLessThan(plateShadow(SHEET.hover).alpha);
   });
 
   it('hands off: to the hold, collapse, then shrink and fade while the header prints in', () => {
@@ -751,10 +762,10 @@ describe('choreography (the press run)', () => {
       previous = now;
     }
     // Whatever the loop shows, a full blend lands on the hold pose.
-    for (const t of [0.1, 4, 7, 9.5, 11.7]) {
+    for (const t of [0.5, 4, 8, 11.7, 13.5]) {
       for (const p of layout.plates) {
-        const out = blendPose(platePoseAt(t, p), holdPose(p), blended.toMark);
-        const rest = holdPose(p);
+        const rest = holdPose(p, t);
+        const out = blendPose(platePoseAt(t, p), rest, blended.toMark);
         for (const field of fields) expect(out[field]).toBeCloseTo(rest[field], 9);
       }
     }

@@ -18,12 +18,12 @@
  *   gutter. Below 64rem: above the copy, capped by the screen height.
  * - The stage (decorative, aria-hidden) fills the hero; src/scripts/hero.ts inserts the scene's
  *   canvas there after first paint (src/scripts/hero-scene/). Its first frame draws the arches
- *   exactly where the SVG has them, then it fades in over it and the press run starts: the
- *   plates float above a sheet of paper that spans the hero (its fine details kept faint under
- *   the copy and the header), register in press order, press onto it and lift off again. On
- *   scroll the plates fade out in the art column while the header logo's arches pulse in
- *   register (the rules are below); the site-wide ink lines of the living background stay
- *   behind the page throughout.
+ *   exactly where the SVG has them, then it fades in over it and registration in depth starts:
+ *   the plates hang at different depths in a field of ink dust that spans the hero (kept faint
+ *   under the copy and the header), the view orbits so they part in parallax, then returns to
+ *   the one viewpoint where they line up into the logo. On scroll the plates fade out in the
+ *   art column while the header logo's arches pulse in register (the rules are below); the
+ *   site-wide ink lines of the living background stay behind the page throughout.
  * - Dark theme: the scene screens light inks on black (hero-scene/theme.ts); the SVG mark, the
  *   ghosts and the rules follow the tokens, and overprint uses `--blend-ink` (screen in dark).
  * - The sheet's crop-marked trim recedes slightly on scroll (`data-parallax`). There is no foot

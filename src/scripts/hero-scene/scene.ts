@@ -1,28 +1,31 @@
 /**
- * Home hero scene: a press run. The four arches of the logo are extruded ink plates (OGL / WebGL)
- * above a sheet of paper, running the seamless loop of choreography.ts.
+ * Home hero scene: registration in depth. The four arches of the logo are extruded ink plates
+ * (OGL / WebGL) hanging at different depths in a field of fine ink dust, running the seamless loop
+ * of choreography.ts.
  *
- * - The loop (t = 0 is contact): the plates press onto the sheet, a ring of cyan and magenta
- *   halftone dots runs out across it from the mark with a short soft bloom, the plates hold as
- *   the crisp logo while one sheen of light crosses their faces, then lift off in reverse press
- *   order, leaving the logo printed on the sheet in halftone dots that fades. They float apart in
- *   depth, glide back into register one by one in press order (Y, M, C, K) and press again.
- *   Overlaps multiply like overprinting (see shaders.ts).
- * - The sheet (sheet.ts) lies in the plates' frame just under a plate at rest, so the group's tilt
- *   (choreography.ts tiltAt: the sheet's frame plus a slow camera drift) puts it in soft
- *   perspective; it spans the hero and bleeds off its right side. It carries a hairline edge,
- *   crop marks outside its corners, a small colour strip and, in light, a soft drop shadow; it
- *   fades out towards the copy on its left, and its fine details stay faint under the copy and the
- *   header band so the text reads. Each plate casts a soft arch-shaped shadow on it,
- *   offset further and softer the higher the plate floats (choreography.ts plateShadow).
- * - The group follows the pointer with damped rotation on fine pointers (and a depth parallax per
- *   plate) and drifts on its own on touch screens.
+ * - The loop (t = 0 is the click): the plates hang one behind another, each moved along the
+ *   camera's line of sight so that from the one viewpoint at the start of the loop they line up
+ *   exactly into the logo (choreography.ts alignToView). The view (the group turning about the
+ *   mark's centre, the pivot) holds there while a sheen of light crosses the plates' faces, then
+ *   drifts away and orbits slowly, so the plates part in parallax and show their depth, and glides
+ *   back, overshooting a touch, to click into register again. Overlaps multiply like overprinting
+ *   (see shaders.ts).
+ * - The ink dust (dust.ts): fine cyan, magenta and yellow specks at many depths fill the whole
+ *   hero and turn with the same view, so their parallax shows the space (the field reaches past
+ *   the edges far enough that a turned view is still filled); a few large, soft bokeh specks
+ *   float in front of the plates, and those far behind are small and fainter. Around the click
+ *   the specks near the mark are drawn into the plates, fading as they go, and released again.
+ *   They stay faint under the copy and the header band so the text reads. Nothing else is drawn
+ *   behind the plates: no sheet, no shadow, no panel.
+ * - The view follows the pointer with damped rotation on fine pointers and drifts on its own on
+ *   touch screens; both fade out completely while the plates are in register, so the click is
+ *   exact, and come back as the view departs.
  * - Every pose fits the art box the hero lays out for it (choreography.ts ART, Hero.astro
- *   `.hero-art`), so no plate is cropped or reaches the copy; only the sheet spans the hero.
+ *   `.hero-art`), so no plate is cropped or reaches the copy; only the dust spans the hero.
  * - Hand-off to the header logo as the hero scrolls out (scrubbed, nothing pinned; choreography.ts
- *   handoff): the plates first blend to the hold pose in register on the sheet from whatever pose
- *   they are in (the loop slows to a stop and its effects fade), collapse and flatten while the
- *   sheet fades, then shrink a little and fade out in the art column. Meanwhile the header logo's
+ *   handoff): the plates first blend to the hold pose and the view to the rest view from wherever
+ *   they are (the loop slows to a stop and its effects fade), collapse and flatten while the dust
+ *   fades, then shrink a little and fade out in the art column. Meanwhile the header logo's
  *   arches (always shown) pulse out of register and snap back (`--dock` 0–1 and `--dock-reg` on
  *   [data-header], styled in Hero.astro); `data-docked` is set once the plates are gone. The
  *   plates scroll with the page, held below the header band and, when the copy sits below the
@@ -30,20 +33,20 @@
  *   those limits meet (handoffDistance). Scrolling back reverses it, and the loop resumes once
  *   the hero is back at the top.
  * - Hand-over from the static SVG mark: the first frame draws the plates flat and in register at
- *   the SVG's exact position and size, without the sheet; the canvas fades in over it, then the
- *   group tilts into the sheet's frame as the sheet fades in, and the loop starts at contact.
- *   With the intro, the plates arrive from depth instead (print order Y, M, C, K) and land on the
- *   sheet; the loop starts at contact as they land, so the ripple runs out from their landing.
+ *   the SVG's exact position and size, without the dust; the canvas fades in over it, then the
+ *   plates move back and forth along the lines of sight into their depths (still exactly the logo
+ *   from this viewpoint) and gain their thickness while the dust fades in, and the loop starts at
+ *   the click. With the intro, the plates arrive from depth instead (print order Y, M, C, K) and
+ *   land in register; the loop starts at the click as they land.
  *
  * Start-up runs in short steps that yield to the main thread (startup.ts): createHeroScene is
  * async, and the canvas is only shown (and faded in) by start(), after the first real frame.
  *
- * - Themes (theme.ts, sheet.ts sheetLook): in light the plates multiply on a white canvas
- *   composited with `mix-blend-mode: multiply`; in dark they screen on a black canvas composited
- *   with `mix-blend-mode: screen`, and the key plate, the sheet's lines and the plates' shadows (a
- *   faint glow in dark) take the light key colour. `dt:themechange` switches the blend state, the
- *   uniforms and the canvas's blend mode together and redraws at once, in the same task, without
- *   rebuilding anything.
+ * - Themes (theme.ts, dust.ts dustLook): in light the inks multiply on a white canvas composited
+ *   with `mix-blend-mode: multiply`; in dark they screen on a black canvas composited with
+ *   `mix-blend-mode: screen`, and the key plate takes the light key colour. `dt:themechange`
+ *   switches the blend state, the uniforms and the canvas's blend mode together and redraws at
+ *   once, in the same task, without rebuilding anything.
  * - Hand-over to the site-wide floating plates (handoff-signal.ts): every frame in which the
  *   hand-off progress, the art box or the plates' place changed, the scene publishes them
  *   (`dt:hero-handoff` on document, and latestHeroHandoff()).
@@ -55,26 +58,40 @@
 import { Camera, Geometry, Mesh, Program, Renderer, Transform } from 'ogl';
 import { ARCH, ARCH_PLATES } from '~/components/logo-paths';
 import {
+  PERIOD,
   PLATES,
+  alignToView,
   archMetrics,
   blendPose,
-  blendTilt,
   buildLayout,
   effectsAt,
   handoff,
   holdPose,
+  loopTime,
   platePoseAt,
-  plateShadow,
   poseBounds,
-  printAlpha,
   registerPose,
   registrationPulse,
-  restTilt,
-  tiltAt,
+  restView,
+  viewAt,
+  type Camera as ViewPoint,
   type PlateId,
   type PlateLayout,
   type PlatePose,
 } from './choreography';
+import {
+  DUST,
+  DUST_MASK,
+  DUST_SEED,
+  absorbReach,
+  createDustBuffers,
+  deviceRect,
+  dustLook,
+  dustPlan,
+  layDust,
+  type DustLook,
+  type Footprint,
+} from './dust';
 import { extrude, sampleOutline, toLocal } from './geometry';
 import {
   clamp,
@@ -86,29 +103,14 @@ import {
   easeOutCubic,
   guardY,
   handoffDistance,
+  lerp,
   placeInBox,
   type Box,
   type Placement,
   type ViewBox,
 } from './math';
-import {
-  depthFragment,
-  plateFragment,
-  plateShadowFragment,
-  plateVertex,
-  sheetFragment,
-  sheetVertex,
-} from './shaders';
+import { depthFragment, dustFragment, dustVertex, plateFragment, plateVertex } from './shaders';
 import { latestHeroHandoff, publishHeroHandoff } from './handoff-signal';
-import {
-  SHEET_MASK,
-  SHEET_RIPPLE,
-  deviceRect,
-  sheetLayout,
-  sheetLook,
-  type SheetLayout,
-  type SheetLook,
-} from './sheet';
 import { precompile, yieldToMain } from './startup';
 import { inkModel, keyInkFor, sceneThemeOf, type SceneTheme } from './theme';
 
@@ -123,12 +125,12 @@ export interface SceneElements {
   /** The art box (`[data-hero-art]`), published for the hand-over (handoff-signal.ts). */
   art: HTMLElement | null;
   /**
-   * Hero copy (headline, lead and actions): the sheet stays faint over its box; when it sits below
+   * Hero copy (headline, lead and actions): the dust stays faint over its box; when it sits below
    * the art, the plates never reach it while they fade.
    */
   copy: HTMLElement | null;
   /**
-   * Receives `--dock`, `--dock-reg`, `data-scene` and `data-docked`. Fixed: the sheet stays faint
+   * Receives `--dock`, `--dock-reg`, `data-scene` and `data-docked`. Fixed: the dust stays faint
    * under its band.
    */
   header: HTMLElement | null;
@@ -146,7 +148,7 @@ export interface HeroScene {
 }
 
 // ------------------------------------------------------------------------------------------------
-// Tuning (the poses and the loop itself are tuned in choreography.ts)
+// Tuning (poses, view and loop are tuned in choreography.ts, the dust in dust.ts)
 // ------------------------------------------------------------------------------------------------
 
 /** Vertical field of view in degrees. Narrow, so the plates keep the logo's proportions. */
@@ -155,13 +157,12 @@ const FOV = 30;
 const THICKNESS = 34;
 /** Extra group rotation at full pointer deflection (radians, about 4° and 6°). */
 const POINTER_TILT = { x: 0.07, y: 0.1 };
-/** Per-plate shift with the pointer, per raster unit of the plate's depth (depth parallax). */
-const PARALLAX = { x: 0.12, y: 0.08 };
 /** Canvas fade-in over the SVG mark, seconds. */
 const FADE_IN = 0.6;
 /**
- * Without the intro: delay and duration of the step from flat register (the SVG) into the press
- * run's frame: the group tilts into the sheet's perspective and the sheet fades in.
+ * Without the intro: delay and duration of the step from flat register (the SVG) into depth: the
+ * plates move along the lines of sight into their depths and gain their thickness, and the dust
+ * fades in.
  */
 const ALIVE = { delay: 0.2, duration: 1.8 };
 /** Intro: stagger between plates, duration per plate, start depth (raster units). */
@@ -174,45 +175,14 @@ const INTRO_FROM: Record<PlateId, { x: number; y: number; rz: number }> = {
   y: { x: -120, y: -110, rz: 0.14 },
   k: { x: 160, y: -80, rz: -0.16 },
 };
-/** The sheet's plane: just under the back face of a plate whose pose z is 0 (raster units). */
-const SHEET_Z = -(THICKNESS / 2) - 1;
-/** Plate shadows and prints lie this far above the sheet (raster units), prints over shadows. */
-const SHADOW_LIFT = 0.5;
-const PRINT_LIFT = 1;
-/** Depth scale of a plate flattened onto the sheet (a shadow or a print): flat, yet invertible. */
+/** Depth scale of a plate flattened in register (hand-over and collapse): flat, yet invertible. */
 const FLAT = 0.001;
 /**
- * Plate shadows are softened by drawing this many copies, each at 1/SOFT_TAPS of the strength,
- * spread evenly over a disc of radius choreography.ts plateShadow().softness: golden-angle steps
- * at radius √((i + ½) / n), so the copies blend into one soft edge instead of showing as rings.
+ * Sheen after the click: half-width of the band as a share of the mark's on-screen width, its
+ * slant (horizontal shift per pixel of height; negative leans it like "/") and its strength (the
+ * same in both themes).
  */
-const SOFT_TAPS = 8;
-const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
-const SOFT_DISC: readonly (readonly [number, number])[] = Array.from(
-  { length: SOFT_TAPS },
-  (_, i) => {
-    const radius = Math.sqrt((i + 0.5) / SOFT_TAPS);
-    const angle = i * GOLDEN_ANGLE;
-    return [radius * Math.cos(angle), radius * Math.sin(angle)] as const;
-  },
-);
-/**
- * Halftone print left on the sheet: dot pitch (CSS px; times the drawing DPR) and each plate's
- * screen angle (radians; the classic angles, so the four screens form rosettes, not moiré).
- */
-const PRINT_PITCH = 5;
-const SCREEN_ANGLE: Record<PlateId, number> = {
-  c: (15 * Math.PI) / 180,
-  m: (75 * Math.PI) / 180,
-  y: 0,
-  k: (45 * Math.PI) / 180,
-};
-/**
- * Sheen during the hold: half-width of the band as a share of the mark's on-screen width, and
- * its slant (horizontal shift per pixel of height; negative leans it like "/"). Its strength per
- * theme is sheet.ts `sheen`.
- */
-const SHEEN = { width: 0.16, slant: -0.45 };
+const SHEEN = { width: 0.16, slant: -0.45, strength: 0.35 };
 /** Below this, a layer is not drawn at all. */
 const MIN_ALPHA = 0.002;
 /**
@@ -227,6 +197,8 @@ const EXTENT_SLACK = 1.04;
 /** Upper bound for drawing-buffer pixels (keeps 2560 px wide screens cheap). */
 const MAX_PIXELS = 6_000_000;
 const RESIZE_DEBOUNCE = 150;
+/** The loop's base angular frequency: the dust's drift uses whole multiples of it. */
+const BEAT = (Math.PI * 2) / PERIOD;
 
 const hexToRgb = (hex: string): Float32Array => {
   const n = Number.parseInt(hex.replace('#', ''), 16);
@@ -256,16 +228,16 @@ interface Metrics {
   rest: Placement;
   /** The art box in hero coordinates (the mark's box if there is none). */
   art: Box;
-  /** The header in viewport coordinates (it is fixed; the sheet stays faint under it). */
+  /** The header in viewport coordinates (it is fixed; the dust stays faint under it). */
   headerBox: Box | null;
-  /** Where the sheet lies (sheet.ts). */
-  sheet: SheetLayout;
   /** Lowest edge the plates keep below (header bottom + gap), viewport px (the header is fixed). */
   bandBottom: number;
   /** Highest edge the plates keep above (copy top − gap) in hero coordinates; null beside it. */
   copyTop: number | null;
   /** Scroll distance of the hand-off. */
   distance: number;
+  /** Camera distance from the pivot's plane, CSS px (1 world unit on that plane is 1 CSS px). */
+  cameraDistance: number;
 }
 
 /** Longest wait for the background shader links before building the programs anyway (ms). */
@@ -295,6 +267,8 @@ export const createHeroScene = async (
   const metrics = archMetrics(archOutline);
   const layout = buildLayout(metrics, ARCH_PLATES, { x: centerX, y: centerY });
   const plateOutline = toLocal(archOutline, metrics.anchor.x, metrics.anchor.y);
+  /** Footprint of the plates flat and in register (group units): the logo, as the SVG shows it. */
+  const settledBounds = poseBounds(layout.plates.map(registerPose), plateOutline);
 
   await yieldToMain();
   // Plates: one extruded arch (triangulated), shared by the four meshes.
@@ -316,14 +290,13 @@ export const createHeroScene = async (
   const camera = new Camera(gl, { fov: FOV, near: 1, far: 10_000 });
 
   // Shaders: linked in the background where the browser can, then one OGL program per task.
-  // Every program's sources are here (the plates and the prints share theirs).
+  // Every program's sources are here.
   await precompile(
     gl,
     [
       { vertex: plateVertex, fragment: plateFragment },
       { vertex: plateVertex, fragment: depthFragment },
-      { vertex: plateVertex, fragment: plateShadowFragment },
-      { vertex: sheetVertex, fragment: sheetFragment },
+      { vertex: dustVertex, fragment: dustFragment },
     ],
     PRECOMPILE_TIMEOUT,
   );
@@ -341,13 +314,12 @@ export const createHeroScene = async (
   // colour pass; set with the blend state by applyTheme.
   const paper = { value: new Float32Array(3) };
   // The plates print solid; the sheen (x: centre along the slant, y: slant, z: half-width, all
-  // device px; w: strength) is set per frame during the hold.
+  // device px; w: strength) is set per frame after the click.
   const sheen = new Float32Array([0, SHEEN.slant, 1, 0]);
   const plateUniforms = {
     uInk: { value: new Float32Array(3) },
     uPaper: paper,
     uAlpha: { value: 1 },
-    uHalftone: { value: new Float32Array(2) },
     uSheen: { value: sheen },
   };
   const colorProgram = linked(
@@ -373,71 +345,32 @@ export const createHeroScene = async (
   );
 
   await yieldToMain();
-  // Key ink of the sheet's lines, the plates' shadows and the key plate: set by applyTheme.
-  const keyInk = new Float32Array(3);
-  const cyanInk = hexToRgb(hexOf('c'));
-  // The sheet: geometry from sheet.ts (measure), strengths from the theme (applyTheme) and the
-  // frame (tick, render). See shaders.ts sheetFragment for each uniform.
-  const sheetUniforms = {
-    uQuad: { value: new Float32Array(2) },
-    uPaper: paper,
-    uCyan: { value: cyanInk },
+  // The dust: layout uniforms from measure(), motion from tick(), strengths from the theme
+  // (applyTheme) and the frame (render). See shaders.ts dustVertex and dustFragment.
+  const pointRange = gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE) as Float32Array | null;
+  const dustUniforms = {
+    uCyan: { value: hexToRgb(hexOf('c')) },
     uMagenta: { value: hexToRgb(hexOf('m')) },
     uYellow: { value: hexToRgb(hexOf('y')) },
-    uKey: { value: keyInk },
-    uBloomInk: { value: new Float32Array(3) },
-    uGeom: { value: new Float32Array(4) },
-    uLines: { value: new Float32Array(4) },
-    uShadow: { value: new Float32Array(4) },
-    uStrip: { value: new Float32Array(4) },
-    uWave: { value: new Float32Array(4) },
-    uLook: { value: new Float32Array(4) },
-    uMix: { value: new Float32Array(4) },
+    uMotion: { value: new Float32Array([0, BEAT, 0, 1]) },
+    uLens: { value: new Float32Array([1, 1, 1]) },
+    uPoint: {
+      value: new Float32Array([Math.min(DUST.maxPoint, pointRange?.[1] ?? 1), DUST.minPoint, 1, 1]),
+    },
+    uAlpha: { value: 0 },
+    uPaper: paper,
     uCopyRect: { value: deviceRect(null, 0, 1) },
     uBandRect: { value: deviceRect(null, 0, 1) },
+    uFeather: { value: DUST_MASK.feather as number },
   };
-  const sheetProgram = linked(
+  const dustProgram = linked(
     new Program(gl, {
-      vertex: sheetVertex,
-      fragment: sheetFragment,
-      uniforms: sheetUniforms,
+      vertex: dustVertex,
+      fragment: dustFragment,
+      uniforms: dustUniforms,
       depthTest: false,
       depthWrite: false,
       cullFace: false,
-    }),
-  );
-
-  await yieldToMain();
-  // The plates' shadows: each plate flattened onto the sheet in key ink.
-  const shadowUniforms = { uInk: { value: keyInk }, uPaper: paper, uAlpha: { value: 0 } };
-  const shadowProgram = linked(
-    new Program(gl, {
-      vertex: plateVertex,
-      fragment: plateShadowFragment,
-      uniforms: shadowUniforms,
-      depthTest: false,
-      depthWrite: false,
-      cullFace: gl.BACK,
-    }),
-  );
-
-  await yieldToMain();
-  // The halftone prints: each plate flattened in register on the sheet, in dots of its ink.
-  const printUniforms = {
-    uInk: { value: new Float32Array(3) },
-    uPaper: paper,
-    uAlpha: { value: 0 },
-    uHalftone: { value: new Float32Array(2) },
-    uSheen: { value: new Float32Array(4) },
-  };
-  const printProgram = linked(
-    new Program(gl, {
-      vertex: plateVertex,
-      fragment: plateFragment,
-      uniforms: printUniforms,
-      depthTest: false,
-      depthWrite: false,
-      cullFace: gl.BACK,
     }),
   );
 
@@ -462,44 +395,40 @@ export const createHeroScene = async (
       layout: plateLayout,
       ink: hexToRgb(hexOf(plateLayout.id)),
       mesh,
-      /** In register on the sheet: where its print lies. */
-      home: registerPose(plateLayout),
       /** Ink of the plate (intro and hand-off). */
       alpha: 1,
-      /** Strength of the halftone print it leaves on the sheet (choreography.ts printAlpha). */
-      print: 0,
     };
   });
 
-  // One more plate mesh, drawn flattened onto the sheet for every shadow and print.
-  const flat = new Mesh(gl, {
-    geometry: plateGeometry,
-    program: shadowProgram,
+  // The dust: buffers sized for the most specks a hero gets, filled by measure() (layDust) and
+  // uploaded on the next draw; the draw range is the hero's count. Its own frame sits at the
+  // pivot and turns with the group, without the group's scale (CSS px).
+  const dustBuffers = createDustBuffers(DUST.count.field);
+  const dustGeometry = new Geometry(gl, {
+    position: { size: 3, data: dustBuffers.position },
+    home: { size: 2, data: dustBuffers.home },
+    look: { size: 4, data: dustBuffers.look },
+    blur: { size: 1, data: dustBuffers.blur },
+  });
+  dustGeometry.setDrawRange(0, 0);
+  const dustRoot = new Transform();
+  const dust = new Mesh(gl, {
+    geometry: dustGeometry,
+    program: dustProgram,
+    mode: gl.POINTS,
     frustumCulled: false,
   });
-  flat.setParent(group);
-
-  // The sheet: one quad (−0.5 to 0.5), placed and scaled by measure().
-  const quadGeometry = new Geometry(gl, {
-    position: { size: 2, data: new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5]) },
-    index: { data: new Uint16Array([0, 1, 2, 0, 2, 3]) },
-  });
-  const sheet = new Mesh(gl, {
-    geometry: quadGeometry,
-    program: sheetProgram,
-    frustumCulled: false,
-  });
-  sheet.setParent(group);
+  dust.setParent(dustRoot);
 
   // ---------------------------------------------------------------------------------------------
   // Theme (theme.ts): blend state, neutral colour, key ink and the canvas's CSS blend mode.
   // ---------------------------------------------------------------------------------------------
 
   const keyPlate = plates.find((p) => p.layout.id === 'k');
-  const colorPasses = [colorProgram, sheetProgram, shadowProgram, printProgram];
+  const colorPasses = [colorProgram, dustProgram];
   let theme: SceneTheme = sceneThemeOf(root.dataset['theme']);
-  /** Strengths of the sheet, the plates' shadows and the sheen in the current theme. */
-  let look: SheetLook = sheetLook(theme);
+  /** Strengths of the dust in the current theme. */
+  let look: DustLook = dustLook(theme);
 
   const applyTheme = (next: SceneTheme): void => {
     theme = next;
@@ -514,18 +443,12 @@ export const createHeroScene = async (
       next,
       next === 'dark' ? getComputedStyle(root).getPropertyValue('--color-key') : null,
     );
-    keyInk.set(key);
     keyPlate?.ink.set(key);
-    // The sheet's theme strengths. Those that multiply a per-frame value (the bloom, the plates'
-    // shadows, the sheen) are combined in render(), so a redraw right after a switch is right.
-    look = sheetLook(next);
-    const strengths = sheetUniforms.uLook.value;
-    strengths[0] = look.face;
-    strengths[1] = look.shadow;
-    strengths[2] = look.lines;
-    strengths[3] = look.strip;
-    sheetUniforms.uMix.value[3] = look.dots;
-    sheetUniforms.uBloomInk.value.set(look.bloomInk === 'cyan' ? cyanInk : keyInk);
+    // The dust's theme strengths. Its overall strength multiplies the frame's fade in render(), so
+    // a redraw right after a switch is right.
+    look = dustLook(next);
+    dustUniforms.uPoint.value[2] = look.bokeh;
+    dustUniforms.uPoint.value[3] = look.far;
     canvas.style.mixBlendMode = model.cssBlend;
   };
   applyTheme(theme);
@@ -536,34 +459,49 @@ export const createHeroScene = async (
 
   let m: Metrics | null = null;
 
+  /** What the dust was last laid out for: it is laid out again only when one of these changes. */
+  const dustKey = { width: 0, height: 0, pivotX: 0, pivotY: 0, distance: 0, scale: 0 };
+  const footprint: Footprint = { minX: 0, maxX: 0, minY: 0, maxY: 0 };
+
   /**
-   * Places the sheet's quad (group units) and sets the sheet's geometry uniforms (on every
-   * measure). The shader's lengths are in sheet units, group units divided by `place.unit`, so
-   * they stay near 1 (shaders.ts sheetVertex).
+   * Lays out the dust for the hero (dust.ts dustPlan, layDust) when its size, the pivot or the
+   * camera changed, and marks its buffers for upload (same seed: the same field for the same hero).
    */
-  const placeSheet = (place: SheetLayout): void => {
-    const { marks } = place;
-    const quadWidth = place.width + place.margin * 2;
-    const quadHeight = place.height + place.margin * 2;
-    sheet.position.set(place.x, place.y, SHEET_Z);
-    sheet.scale.set(quadWidth, quadHeight, 1);
-    const k = 1 / place.unit;
-    const u = sheetUniforms;
-    u.uQuad.value[0] = quadWidth * k;
-    u.uQuad.value[1] = quadHeight * k;
-    // The mark (the group's origin) relative to the sheet's centre.
-    u.uGeom.value.set([(place.width / 2) * k, (place.height / 2) * k, -place.x * k, -place.y * k]);
-    u.uLines.value.set([marks.line * k, marks.aa * k, marks.cropLength * k, marks.cropGap * k]);
-    // Shadow offset down and to the right (y up in group space).
-    u.uShadow.value.set([
-      marks.shadowX * k,
-      -marks.shadowY * k,
-      marks.shadowBlur * k,
-      marks.pitch * k,
-    ]);
-    u.uStrip.value.set([place.stripX * k, place.stripY * k, marks.patch * k, marks.patchGap * k]);
-    u.uWave.value[1] = place.ringWidth * k;
-    u.uWave.value[3] = SHEET_RIPPLE.bloomRadius * k;
+  const placeDust = (width: number, height: number, rest: Placement, distance: number): void => {
+    const k = dustKey;
+    if (
+      k.width === width &&
+      k.height === height &&
+      k.pivotX === rest.x &&
+      k.pivotY === rest.y &&
+      k.distance === distance &&
+      k.scale === rest.scale
+    ) {
+      return;
+    }
+    Object.assign(k, {
+      width,
+      height,
+      pivotX: rest.x,
+      pivotY: rest.y,
+      distance,
+      scale: rest.scale,
+    });
+    // The logo's footprint around the pivot in CSS px (y up): where absorbed specks gather.
+    footprint.minX = settledBounds.minX * rest.scale;
+    footprint.maxX = settledBounds.maxX * rest.scale;
+    footprint.minY = settledBounds.minY * rest.scale;
+    footprint.maxY = settledBounds.maxY * rest.scale;
+    const frame = { width, height, pivotX: rest.x, pivotY: rest.y, distance, footprint };
+    const plan = dustPlan(frame);
+    layDust(frame, plan, DUST_SEED, dustBuffers);
+    const attributes = dustGeometry.attributes;
+    for (const name of ['position', 'home', 'look', 'blur'] as const) {
+      const attribute = attributes[name];
+      if (attribute) attribute.needsUpdate = true;
+    }
+    dustGeometry.setDrawRange(0, plan.count);
+    dustUniforms.uMotion.value[3] = absorbReach(footprint);
   };
 
   const measure = (): Metrics => {
@@ -617,9 +555,13 @@ export const createHeroScene = async (
     }
 
     // Camera distance at which 1 world unit on z = 0 is exactly 1 CSS px.
-    const distance = height / 2 / Math.tan((FOV * Math.PI) / 360);
-    camera.perspective({ aspect: width / height, near: distance * 0.05, far: distance * 6 });
-    camera.position.set(0, 0, distance);
+    const cameraDistance = height / 2 / Math.tan((FOV * Math.PI) / 360);
+    camera.perspective({
+      aspect: width / height,
+      near: cameraDistance * 0.05,
+      far: cameraDistance * 6,
+    });
+    camera.position.set(0, 0, cameraDistance);
 
     const artBox = artRect && artRect.width > 0 ? artRect : markRect;
     const artInHero: Box = {
@@ -637,12 +579,19 @@ export const createHeroScene = async (
             height: copyRect.height,
           }
         : null;
-    const sheetPlace = sheetLayout(artInHero, { width, height }, rest);
-    placeSheet(sheetPlace);
-    // Readability mask: the copy scrolls with the canvas, so its rectangle only changes here; the
-    // header band follows the scroll (tick).
-    deviceRect(copyBox, height, dpr, sheetUniforms.uCopyRect.value);
-    sheetUniforms.uMix.value[2] = SHEET_MASK.feather * dpr;
+
+    // The dust: its field, its lens (focus and depth of field) and its readability mask. The copy
+    // scrolls with the canvas, so its rectangle only changes here; the header band follows the
+    // scroll (tick).
+    placeDust(width, height, rest, cameraDistance);
+    const lens = dustUniforms.uLens.value;
+    lens[0] = cameraDistance;
+    lens[1] = DUST.depth.far * cameraDistance;
+    lens[2] = dpr;
+    dustUniforms.uPoint.value[1] = DUST.minPoint * dpr;
+    deviceRect(copyBox, height, dpr, dustUniforms.uCopyRect.value);
+    dustUniforms.uFeather.value = DUST_MASK.feather * dpr;
+
     return {
       width,
       height,
@@ -659,7 +608,6 @@ export const createHeroScene = async (
               height: headerRect.height,
             }
           : null,
-      sheet: sheetPlace,
       bandBottom,
       copyTop,
       // Hero coordinates are viewport coordinates with the hero at the top.
@@ -670,6 +618,7 @@ export const createHeroScene = async (
         copyTop,
         viewportHeight: window.innerHeight,
       }),
+      cameraDistance,
     };
   };
 
@@ -688,76 +637,32 @@ export const createHeroScene = async (
 
   /**
    * What tick() worked out for the frame and render() combines with the theme's strengths (so a
-   * redraw after a theme switch is right without a new tick): the overall alpha of the sheet and
-   * everything on it, and the bloom and sheen of the loop (already faded by the hand-off).
+   * redraw after a theme switch is right without a new tick): the dust's overall fade and the
+   * sheen of the loop (already faded by the hand-off).
    */
-  const frameState = { alpha: 0, bloom: 0, sheen: 0 };
-
-  /** Draws the flat mesh as it is placed: a plate flattened onto the sheet. */
-  const drawFlat = (x: number, y: number, z: number, rz: number, scale: number): void => {
-    flat.position.set(x, y, z);
-    flat.rotation.set(0, 0, rz);
-    flat.scale.set(scale, scale, FLAT);
-    flat.updateMatrixWorld();
-    flat.draw({ camera });
-  };
+  const frameState = { dust: 0, sheen: 0 };
 
   const render = (): void => {
     renderer.bindFramebuffer();
     renderer.setViewport(renderer.width * renderer.dpr, renderer.height * renderer.dpr);
     camera.updateMatrixWorld();
     group.updateMatrixWorld();
+    dustRoot.updateMatrixWorld();
 
     gl.colorMask(true, true, true, true);
     renderer.setDepthMask(true);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    const alpha = frameState.alpha;
-    if (alpha > MIN_ALPHA) {
-      // 1. The sheet, under everything.
-      sheetUniforms.uMix.value[0] = alpha;
-      sheetUniforms.uMix.value[1] = frameState.bloom * look.bloom;
-      sheet.draw({ camera });
-
-      // 2. Each plate's shadow: the plate flattened onto the sheet, offset away from the light
-      //    and softened by jittered copies, further and softer the higher it floats.
-      if (look.plateShadow > 0) {
-        flat.program = shadowProgram;
-        for (const p of plates) {
-          if (p.alpha <= MIN_ALPHA) continue;
-          const { position, rotation, scale } = p.mesh;
-          const cast = plateShadow(position.z);
-          const strength = look.plateShadow * cast.alpha * alpha;
-          if (strength <= MIN_ALPHA) continue;
-          shadowUniforms.uAlpha.value = strength / SOFT_TAPS;
-          for (const [jx, jy] of SOFT_DISC) {
-            drawFlat(
-              position.x + cast.x + jx * cast.softness,
-              position.y + cast.y + jy * cast.softness,
-              SHEET_Z + SHADOW_LIFT,
-              rotation.z,
-              scale.x,
-            );
-          }
-        }
-      }
-
-      // 3. The halftone prints the plates leave as they lift, in register on the sheet.
-      flat.program = printProgram;
-      printUniforms.uHalftone.value[0] = PRINT_PITCH * renderer.dpr;
-      for (const p of plates) {
-        const strength = p.print * alpha;
-        if (strength <= MIN_ALPHA) continue;
-        printUniforms.uInk.value.set(p.ink);
-        printUniforms.uAlpha.value = strength;
-        printUniforms.uHalftone.value[1] = SCREEN_ANGLE[p.layout.id];
-        drawFlat(p.home.x, p.home.y, SHEET_Z + PRINT_LIFT, p.home.rz, p.home.scale);
-      }
+    // 1. The ink dust, in one draw of points.
+    const dustAlpha = frameState.dust * look.alpha;
+    if (dustAlpha > MIN_ALPHA && dustGeometry.drawRange.count > 0) {
+      dustUniforms.uAlpha.value = dustAlpha;
+      dust.draw({ camera });
     }
 
-    // 4. The plates. Each prints once: its nearest surface only (own depth pass), multiplied onto
-    //    the rest. The sheen crosses their front faces during the hold.
-    sheen[3] = frameState.sheen * look.sheen;
+    // 2. The plates. Each prints once: its nearest surface only (own depth pass), multiplied onto
+    //    the rest. The sheen crosses their front faces after the click.
+    sheen[3] = frameState.sheen * SHEEN.strength;
     for (const p of plates) {
       if (p.alpha <= MIN_ALPHA) continue;
       renderer.setDepthMask(true);
@@ -792,7 +697,12 @@ export const createHeroScene = async (
   let resizeTimer = 0;
   const pointer = { x: 0, y: 0, amount: 0 };
   const cursor = { x: 0, y: 0, inside: false };
+  /** The view of the scroll hand-off: the one viewpoint where the plates are in register. */
+  const settledView = restView();
+  /** The plates' poses before alignment this frame: their footprint on screen in register. */
   const poses: PlatePose[] = [];
+  /** The camera in the group's unrotated frame (group units), for alignToView (reused). */
+  const eye: ViewPoint = { x: 0, y: 0, distance: 1 };
   /** The header's box in canvas coordinates this frame (reused). */
   const headerInHero: Box = { left: 0, top: 0, width: 0, height: 0 };
 
@@ -833,8 +743,6 @@ export const createHeroScene = async (
   // Hand-over to the floating plates (handoff-signal.ts)
   // ---------------------------------------------------------------------------------------------
 
-  /** Footprint of the plates once the hand-off is complete: flat and in register (group units). */
-  const settledBounds = poseBounds(layout.plates.map(registerPose), plateOutline);
   const settledShrink = handoff(1).scale;
 
   /**
@@ -906,9 +814,10 @@ export const createHeroScene = async (
     /** 1 while the loop runs; falls to 0 as it slows to a stop on scroll-out. */
     const running = 1 - toMark;
 
-    // The loop starts at contact once the plates have landed, and slows to a stop as they blend to
-    // the hold pose on scroll-out.
+    // The loop starts at the click once the plates have landed, and slows to a stop as they blend
+    // to the hold pose on scroll-out.
     if (introDone && alive >= 1) loopClock += dt * (1 - toMark);
+    const effects = effectsAt(loopClock);
 
     // Pointer (fine pointers) or a slow autonomous drift (touch), damped.
     const fine = finePointer.matches;
@@ -922,28 +831,61 @@ export const createHeroScene = async (
     pointer.y += (target.y - pointer.y) * follow;
     pointer.amount += ((fine && cursor.inside ? 1 : 0) - pointer.amount) * damp(2.5, dt);
 
+    // The view: the loop's orbit, settling to the rest view on scroll-out, plus the pointer's
+    // tilt (or the touch drift), none while the plates are in register. The dust turns with the
+    // plates.
     const scale = m.rest.scale * out.scale;
-    // The sheet's frame with the slow camera drift, settling to the frame at rest on scroll-out.
-    const tilt = blendTilt(tiltAt(loopClock), restTilt(), toMark);
+    const view = viewAt(loopClock);
+    // How close the drawn view is to register: the loop's, carried to 1 as the view settles to the
+    // rest view on scroll-out. The tilt and the drift fade out fully in register (the click is
+    // exact, identical to the SVG) and come back as the view departs.
+    const sway = 1 - lerp(effects.align, 1, toMark);
+    const pitch =
+      explode * (lerp(view.pitch, settledView.pitch, toMark) - pointer.y * POINTER_TILT.x * sway);
+    const yaw =
+      explode * (lerp(view.yaw, settledView.yaw, toMark) + pointer.x * POINTER_TILT.y * sway);
     group.scale.set(scale, scale, scale);
-    group.rotation.set(
-      explode * (tilt.x - pointer.y * POINTER_TILT.x),
-      explode * (tilt.y + pointer.x * POINTER_TILT.y),
-      explode * tilt.z,
-    );
+    group.rotation.set(pitch, yaw, 0);
+    dustRoot.rotation.set(pitch, yaw, 0);
 
-    // Plates: the loop pose, blended to the hold pose (in register on the sheet) on scroll-out,
-    // then towards flat register by `explode` (the hand-over at the start, the collapse during
-    // the hand-off).
+    // Plates: the loop pose, blended to the hold pose on scroll-out, then towards flat register by
+    // `explode` (the hand-over at the start, the collapse during the hand-off). Unaligned, each
+    // pose is where the plate shows on screen with the group unrotated.
     poses.length = 0;
     let inkSum = 0;
     for (const p of plates) {
-      const live = blendPose(platePoseAt(loopClock, p.layout), holdPose(p.layout), toMark);
-      const pose = blendPose(registerPose(p.layout), live, explode);
-      // Depth parallax with the pointer.
-      pose.x += pointer.x * pose.z * PARALLAX.x;
-      pose.y -= pointer.y * pose.z * PARALLAX.y;
-      poses.push(pose);
+      const live = blendPose(
+        platePoseAt(loopClock, p.layout),
+        holdPose(p.layout, loopClock),
+        toMark,
+      );
+      poses.push(blendPose(registerPose(p.layout), live, explode));
+    }
+
+    // Footprint of the plates on screen in register (group units, y up).
+    const b = poseBounds(poses, plateOutline);
+
+    // The plates scroll with the page, held below the header band and above the copy below them.
+    const y = guardY(
+      m.rest.y - scrolled,
+      b.maxY * scale * EXTENT_SLACK,
+      -b.minY * scale * EXTENT_SLACK,
+      m.bandBottom,
+      m.copyTop === null ? null : m.copyTop - scrolled,
+    );
+    group.position.set(m.rest.x - m.width / 2, m.height / 2 - (y + scrolled), 0);
+    dustRoot.position.copy(group.position);
+
+    // Each plate moves along the camera's line of sight to its depth, so that with the group
+    // unrotated it projects exactly where its unaligned pose shows (choreography.ts alignToView).
+    eye.x = -group.position.x / scale;
+    eye.y = -group.position.y / scale;
+    eye.distance = m.cameraDistance / scale;
+    for (let i = 0; i < plates.length; i++) {
+      const p = plates[i];
+      const pose = poses[i];
+      if (!p || !pose) continue;
+      const aligned = alignToView(pose, eye);
 
       // Intro: the plate comes forward from depth (no overshoot) while its register offset snaps
       // in with a small overshoot.
@@ -959,41 +901,25 @@ export const createHeroScene = async (
       const away = 1 - snap;
       const from = INTRO_FROM[p.layout.id];
       p.mesh.position.set(
-        pose.x + away * from.x,
-        pose.y + away * from.y,
-        pose.z - (1 - ahead) * INTRO.depth,
+        aligned.x + away * from.x,
+        aligned.y + away * from.y,
+        aligned.z - (1 - ahead) * INTRO.depth,
       );
-      p.mesh.rotation.set(pose.rx, 0, pose.rz + away * from.rz);
-      p.mesh.scale.set(pose.scale, pose.scale, pose.scale * Math.max(0.001, explode));
+      p.mesh.rotation.set(aligned.rx, 0, aligned.rz + away * from.rz);
+      p.mesh.scale.set(aligned.scale, aligned.scale, aligned.scale * Math.max(FLAT, explode));
       p.alpha = ink * out.ink;
-      // Faded with the loop on scroll-out: the plates settle back over their print otherwise.
-      p.print = printAlpha(loopClock, p.layout) * running;
       inkSum += ink;
     }
 
-    // Footprint of the plates (group units, y up).
-    const b = poseBounds(poses, plateOutline);
-
-    // The plates scroll with the page, held below the header band and above the copy below them.
-    const y = guardY(
-      m.rest.y - scrolled,
-      b.maxY * scale * EXTENT_SLACK,
-      -b.minY * scale * EXTENT_SLACK,
-      m.bandBottom,
-      m.copyTop === null ? null : m.copyTop - scrolled,
-    );
-    group.position.set(m.rest.x - m.width / 2, m.height / 2 - (y + scrolled), 0);
-
-    // The sheet and everything on it: in with the plates' frame and ink, out with the hand-off.
-    // The loop's effects fade as it slows to a stop on scroll-out, so none freezes mid-way.
+    // The dust: in with the plates' depth and ink, out with the hand-off. It drifts on the loop's
+    // clock (seamless where it wraps) and is drawn into the plates around the click; the loop's
+    // effects fade as it slows to a stop on scroll-out, so none freezes mid-way.
     const ink = inkSum / plates.length;
-    frameState.alpha = explode * fadeIn * ink * out.ink;
-    const effects = effectsAt(loopClock);
-    const wave = sheetUniforms.uWave.value;
-    wave[0] = (effects.ripple * m.sheet.reach) / m.sheet.unit;
-    wave[2] = effects.rippleAlpha * running;
-    frameState.bloom = effects.bloom * running;
+    frameState.dust = explode * fadeIn * ink * out.ink;
     frameState.sheen = effects.sheenAlpha * running;
+    const motion = dustUniforms.uMotion.value;
+    motion[0] = loopTime(loopClock);
+    motion[2] = effects.absorb * running;
 
     // The header is fixed: its band, in canvas coordinates, moves down the canvas as the page
     // scrolls (the canvas scrolls with the hero).
@@ -1005,7 +931,7 @@ export const createHeroScene = async (
       headerInHero.width = band.width;
       headerInHero.height = band.height;
     }
-    deviceRect(band ? headerInHero : null, m.height, dpr, sheetUniforms.uBandRect.value);
+    deviceRect(band ? headerInHero : null, m.height, dpr, dustUniforms.uBandRect.value);
 
     // Sheen: a slanted band crossing the mark's on-screen extent from left to right (device px,
     // gl_FragCoord space: y up from the canvas's bottom).
@@ -1166,19 +1092,17 @@ export const createHeroScene = async (
   /**
    * One draw of every mesh with every program it uses, colour writes off and the canvas not yet
    * shown: the driver's lazy first-draw work (vertex arrays, uploads, shader variants) happens
-   * here, in its own task, so the first visible frame is cheap.
+   * here, in its own task, so the first visible frame is cheap. The dust's first upload of its
+   * laid-out buffers happens here too.
    */
   const warmUp = (): void => {
     renderer.bindFramebuffer();
     renderer.setViewport(renderer.width * renderer.dpr, renderer.height * renderer.dpr);
     camera.updateMatrixWorld();
     group.updateMatrixWorld();
+    dustRoot.updateMatrixWorld();
     gl.colorMask(false, false, false, false);
-    sheet.draw({ camera });
-    flat.program = shadowProgram;
-    flat.draw({ camera });
-    flat.program = printProgram;
-    flat.draw({ camera });
+    dust.draw({ camera });
     for (const p of plates) {
       drawDepth(p.mesh);
       p.mesh.program = colorProgram;
