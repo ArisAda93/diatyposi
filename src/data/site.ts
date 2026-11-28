@@ -49,8 +49,6 @@ export interface PortfolioItem {
   image: string;
   /** Slug of the service this work belongs to (used by the filter). */
   service: Service['slug'];
-  /** `true` while the image is a stand-in; shows the “Ενδεικτική εικόνα” label. */
-  standIn: boolean;
   /** Show on the home page teaser. */
   featured?: boolean;
   text: Localized<{ title: string; alt: string }>;
@@ -493,14 +491,13 @@ export const serviceBySlug = (slug: string): Service | undefined =>
 
 // ---------------------------------------------------------------------------------------------
 // Portfolio — to add real work: put the image in src/assets/portfolio/ and add an entry here.
-// Stand-in images are credited in CREDITS.md; set `standIn: false` on real work.
+// Stand-in images are credited in CREDITS.md; remove their rows there when real work replaces them.
 // ---------------------------------------------------------------------------------------------
 
 export const portfolio: PortfolioItem[] = [
   {
     image: 'kartes-01.jpg',
     service: 'kartes-fylladia-entypa',
-    standIn: true,
     featured: true,
     text: {
       el: {
@@ -512,7 +509,6 @@ export const portfolio: PortfolioItem[] = [
   {
     image: 'banners-01.jpg',
     service: 'banners-afises-mousamades',
-    standIn: true,
     featured: true,
     text: {
       el: {
@@ -524,7 +520,6 @@ export const portfolio: PortfolioItem[] = [
   {
     image: 'rouxismos-01.jpg',
     service: 'mplouzakia-rouxismos',
-    standIn: true,
     featured: true,
     text: {
       el: {
@@ -536,7 +531,6 @@ export const portfolio: PortfolioItem[] = [
   {
     image: 'prosklitiria-01.jpg',
     service: 'prosklitiria-kartes',
-    standIn: true,
     featured: true,
     text: {
       el: {
@@ -548,7 +542,6 @@ export const portfolio: PortfolioItem[] = [
   {
     image: 'grafistiko-01.jpg',
     service: 'grafistikos-sxediasmos',
-    standIn: true,
     text: {
       el: {
         title: 'Σχεδιασμός ετικέτας',
@@ -559,7 +552,6 @@ export const portfolio: PortfolioItem[] = [
   {
     image: 'grafistiko-02.jpg',
     service: 'grafistikos-sxediasmos',
-    standIn: true,
     text: {
       el: {
         title: 'Προτάσεις λογοτύπου',
@@ -570,7 +562,6 @@ export const portfolio: PortfolioItem[] = [
   {
     image: 'ektyposeis-01.jpg',
     service: 'psifiakes-offset-ektyposeis',
-    standIn: true,
     text: {
       el: {
         title: 'Offset εκτύπωση',
@@ -581,7 +572,6 @@ export const portfolio: PortfolioItem[] = [
   {
     image: 'ektyposeis-03.jpg',
     service: 'psifiakes-offset-ektyposeis',
-    standIn: true,
     text: {
       el: {
         title: 'Ψηφιακή εκτύπωση φυλλαδίων',
@@ -592,7 +582,6 @@ export const portfolio: PortfolioItem[] = [
   {
     image: 'ektyposeis-02.jpg',
     service: 'psifiakes-offset-ektyposeis',
-    standIn: true,
     text: {
       el: {
         title: 'Εκτύπωση μεγάλου φορμά',
@@ -603,7 +592,6 @@ export const portfolio: PortfolioItem[] = [
   {
     image: 'kartes-02.jpg',
     service: 'kartes-fylladia-entypa',
-    standIn: true,
     text: {
       el: {
         title: 'Κατάλογοι ταβέρνας',
@@ -614,7 +602,6 @@ export const portfolio: PortfolioItem[] = [
   {
     image: 'entypa-01.jpg',
     service: 'kartes-fylladia-entypa',
-    standIn: true,
     text: {
       el: {
         title: 'Φυλλάδια',
@@ -625,7 +612,6 @@ export const portfolio: PortfolioItem[] = [
   {
     image: 'epigrafes-01.jpg',
     service: 'epigrafes-aftokollita-vitrines',
-    standIn: true,
     text: {
       el: {
         title: 'Επιγραφή και βιτρίνα',
@@ -636,7 +622,6 @@ export const portfolio: PortfolioItem[] = [
   {
     image: 'epigrafes-02.jpg',
     service: 'epigrafes-aftokollita-vitrines',
-    standIn: true,
     text: {
       el: {
         title: 'Αυτοκόλλητα οχήματος',
@@ -647,7 +632,6 @@ export const portfolio: PortfolioItem[] = [
   {
     image: 'aftokollita-01.jpg',
     service: 'epigrafes-aftokollita-vitrines',
-    standIn: true,
     text: {
       el: {
         title: 'Ετικέτες προϊόντων',
@@ -658,7 +642,6 @@ export const portfolio: PortfolioItem[] = [
   {
     image: 'banners-02.jpg',
     service: 'banners-afises-mousamades',
-    standIn: true,
     text: {
       el: {
         title: 'Roll-up banner',
@@ -669,7 +652,6 @@ export const portfolio: PortfolioItem[] = [
   {
     image: 'rouxismos-02.jpg',
     service: 'mplouzakia-rouxismos',
-    standIn: true,
     text: {
       el: {
         title: 'Μπλουζάκια ομάδας',
@@ -680,7 +662,6 @@ export const portfolio: PortfolioItem[] = [
   {
     image: 'prosklitiria-02.jpg',
     service: 'prosklitiria-kartes',
-    standIn: true,
     text: {
       el: {
         title: 'Καρτελάκια βάπτισης',
@@ -691,7 +672,6 @@ export const portfolio: PortfolioItem[] = [
   {
     image: 'dora-01.jpg',
     service: 'diafimistika-dora',
-    standIn: true,
     text: {
       el: {
         title: 'Διαφημιστικά δώρα φούρνου',
@@ -702,7 +682,6 @@ export const portfolio: PortfolioItem[] = [
   {
     image: 'dora-02.jpg',
     service: 'diafimistika-dora',
-    standIn: true,
     text: {
       el: {
         title: 'Προσωποποιημένη κούπα',
@@ -713,7 +692,6 @@ export const portfolio: PortfolioItem[] = [
   {
     image: 'social-01.jpg',
     service: 'social-media',
-    standIn: true,
     text: {
       el: {
         title: 'Υλικό για social media',
@@ -724,7 +702,6 @@ export const portfolio: PortfolioItem[] = [
   {
     image: 'social-02.jpg',
     service: 'social-media',
-    standIn: true,
     text: {
       el: {
         title: 'Αναρτήσεις και stories',
@@ -735,7 +712,6 @@ export const portfolio: PortfolioItem[] = [
   {
     image: '3d-ektyposeis-01.jpg',
     service: '3d-ektyposeis',
-    standIn: true,
     text: {
       el: {
         title: '3D εκτύπωση εξαρτήματος',
@@ -746,7 +722,6 @@ export const portfolio: PortfolioItem[] = [
   {
     image: '3d-ektyposeis-02.jpg',
     service: '3d-ektyposeis',
-    standIn: true,
     text: {
       el: {
         title: 'Αντικείμενα από 3D εκτυπωτή',

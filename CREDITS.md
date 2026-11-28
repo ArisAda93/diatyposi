@@ -4,8 +4,7 @@
 
 All 23 photographs in `src/assets/portfolio/` are AI-generated illustrative images, not
 photographs of work made by ΔΙΑΤΥΠΩΣΗ. They show what each service delivers, product-focused in
-everyday Greek settings and without people, with fictional logos and sample designs, and the site marks each one
-with the label “Ενδεικτική εικόνα”. They were generated on 2026-11-24 with ByteDance Seedream 5.5
+everyday Greek settings and without people, with fictional logos and sample designs. They were generated on 2026-11-24 with ByteDance Seedream 5.5
 (`bytedance-seed/seedream-5-5`, through OpenRouter) at its highest resolution (2K, 2048 × 1536).
 The prompt for each image is in `scripts/service-images.mjs`; to regenerate one, run
 `OPENROUTER_API_KEY=… node scripts/service-images.mjs --only <file>` (each image costs money).
@@ -48,7 +47,7 @@ To replace an AI-generated image with real work:
 
 1. Put the photo in `src/assets/portfolio/` (JPEG, landscape, about 2000 px wide).
 2. In `src/data/site.ts`, point the entry in `portfolio` (and, for a service photo, in
-   `services`) at the new file name, update the title and alt text, and set `standIn: false`.
+   `services`) at the new file name, update the title and alt text.
 3. Remove the row for the old file from the table above once it is no longer used.
 
 ## Journey product photographs
@@ -69,8 +68,7 @@ feathered clone from the plain glaze above it.
 `src/assets/about/workbench.jpg` (/etaireia/, section «Πώς δουλεύουμε») is an AI-generated
 illustrative image made with ByteDance Seedream 5.5 (`bytedance-seed/seedream-5-5`, through
 OpenRouter) on 2026-11-25 at 2K (2048 × 1536), resized to 2000 × 1500 (mozjpeg, quality 86). It
-shows a print studio's work table with fictional shape-only logos, not real work, and carries the
-label “Ενδεικτική εικόνα”. The tiny illegible text the model put on the cards, the invitation,
+shows a print studio's work table with fictional shape-only logos, not real work. The tiny illegible text the model put on the cards, the invitation,
 the proof and the colour chips was removed by a second Seedream pass with the first image as the
 reference (same composition, text removed); two colour-chip labels and the out-of-focus phone
 clock keep faint, unreadable traces. On 2026-11-25 a third Seedream pass with that photo as the reference replaced the

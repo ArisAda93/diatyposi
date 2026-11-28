@@ -15,7 +15,6 @@
  */
 import Icon from '../Icon.astro';
 import { workText } from '~/i18n/pages/work';
-import { t } from '~/i18n/ui';
 
 const text = workText.el;
 ---
@@ -32,11 +31,7 @@ const text = workText.el;
 
     <figure class="lightbox-figure">
       <div class="lightbox-stage" data-lb-stage>
-        <div class="lightbox-print" data-lb-print>
-          <span class="lightbox-standin" data-lb-standin hidden>
-            {t('standInLabel')}
-          </span>
-        </div>
+        <div class="lightbox-print" data-lb-print></div>
       </div>
       <figcaption class="lightbox-caption">
         <div>
@@ -186,8 +181,7 @@ const text = workText.el;
     .lightbox[data-zoomed] .lightbox-stage {
       touch-action: auto;
     }
-    /* The print: sized to the picture, so the stand-in chip sits on the picture's corner (as on
-       the gallery tiles) rather than at the edge of the stage. It is what a finger drags. */
+    /* The print: sized to the picture. It is what a finger drags. */
     .lightbox-print {
       position: relative;
       max-width: 100%;
@@ -205,20 +199,6 @@ const text = workText.el;
       max-height: calc(100dvh - var(--lb-pad-top) - var(--lb-pad-bottom) - 10rem);
       object-fit: contain;
       background-color: var(--color-ink-2);
-    }
-    .lightbox-standin {
-      position: absolute;
-      top: 0.75rem;
-      left: 0.75rem;
-      /* Above the picture, also while it prints in (its animation gives it a stacking context). */
-      z-index: 1;
-      padding: 0.3rem 0.55rem;
-      background-color: var(--color-yellow);
-      color: var(--ink-fixed);
-      font-family: var(--font-display);
-      font-size: 0.75rem;
-      font-weight: 720;
-      line-height: 1.2;
     }
     .lightbox-caption {
       display: flex;

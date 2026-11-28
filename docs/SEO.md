@@ -507,7 +507,7 @@ In order:
 2. **Owner values:** fill every `TODO(owner)` left (`grep -rn "TODO(owner)" src astro.config.mjs`). Phone, e-mail, Viber, WhatsApp, street, city, postcode, the map (`mapQuery`, `mapUrl`) and hours are real now. Still open: `geo` (at least 5 decimals, per [Google](https://developers.google.com/search/docs/appearance/structured-data/local-business)), `locative` and `areaServed` (step 3), Facebook and Instagram URLs, and real work photos.
 3. **Locality:** set `site.address.locative` (e.g. "στην Αθήνα", "στο Περιστέρι", "στη Θεσσαλονίκη"; see §3.1) and `site.address.areaServed` (the municipalities the shop really serves).
 4. **Structured data switch:** set `site.contactIsPlaceholder = false` only after steps 2–3 are real.
-5. **Copy:** the ten service pages approved by the owner (`npm run content-review`), no "TODO(owner)" left in visible text, stand-in labels still shown on any stand-in image.
+5. **Copy:** the ten service pages approved by the owner (`npm run content-review`), no "TODO(owner)" left in visible text.
 6. **Indexing switch:** done 2026-11-24: `public/_headers`, which sent `X-Robots-Tag: noindex` site-wide, is deleted. After any deploy, no page should send `X-Robots-Tag: noindex` or `<meta name="robots" content="noindex">` except the 404 page and hidden sections.
 7. **robots.txt and sitemap:** open `https://<domain>/robots.txt` (Allow all, Sitemap line on the real domain) and `https://<domain>/sitemap-index.xml` (all pages, including the ten `/ypiresies/<slug>/`, on the real domain, no 404).
 8. **Search Console + Bing:** §5.6 (verify, submit sitemap, request indexing).

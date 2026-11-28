@@ -279,12 +279,11 @@ export const initGallery = (root: HTMLElement): void => {
 
   const dialog = root.querySelector<HTMLDialogElement>('[data-lightbox]');
   const stage = dialog?.querySelector<HTMLElement>('[data-lb-stage]');
-  // The picture goes in the print, which sits on the stage and carries the stand-in chip.
+  // The picture goes in the print, which sits on the stage.
   const print = stage?.querySelector<HTMLElement>('[data-lb-print]');
   const titleEl = dialog?.querySelector<HTMLElement>('[data-lb-title]');
   const categoryEl = dialog?.querySelector<HTMLElement>('[data-lb-category]');
   const counterEl = dialog?.querySelector<HTMLElement>('[data-lb-counter]');
-  const standInEl = dialog?.querySelector<HTMLElement>('[data-lb-standin]');
   const statusEl = dialog?.querySelector<HTMLElement>('[data-lb-status]');
   const closeBtn = dialog?.querySelector<HTMLButtonElement>('[data-lb-close]');
   const prevBtn = dialog?.querySelector<HTMLButtonElement>('[data-lb-prev]');
@@ -297,7 +296,6 @@ export const initGallery = (root: HTMLElement): void => {
     !titleEl ||
     !categoryEl ||
     !counterEl ||
-    !standInEl ||
     !statusEl ||
     !closeBtn ||
     !prevBtn ||
@@ -369,7 +367,6 @@ export const initGallery = (root: HTMLElement): void => {
     titleEl.textContent = title;
     categoryEl.textContent = data.category ?? '';
     categoryEl.hidden = !data.category;
-    standInEl.hidden = data.standIn !== 'true';
     counterEl.textContent = fillTemplate(text.lightboxCounter, position);
 
     const single = visible.length < 2;

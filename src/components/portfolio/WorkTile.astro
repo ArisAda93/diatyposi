@@ -13,7 +13,6 @@
 import Icon from '../Icon.astro';
 import Photo from '../Photo.astro';
 import type { PortfolioItem } from '~/data/site';
-import { t } from '~/i18n/ui';
 import { tileSizes, type TileShape } from '~/lib/portfolio';
 
 interface Props {
@@ -49,7 +48,6 @@ const copy = item.text.el;
     data-title={copy.title}
     data-alt={copy.alt}
     data-category={category ?? ''}
-    data-stand-in={item.standIn ? 'true' : 'false'}
   >
     <span class="work-media media media-halftone">
       <Photo
@@ -60,7 +58,6 @@ const copy = item.text.el;
         fetchpriority={priority ? 'high' : 'auto'}
       />
     </span>
-    {item.standIn && <span class="work-standin">{t('standInLabel')}</span>}
     <span class="work-open" aria-hidden="true">
       <Icon name="expand" size={20} />
     </span>
@@ -98,21 +95,6 @@ const copy = item.text.el;
     .work-media :global(picture) {
       display: block;
       height: 100%;
-    }
-
-    /* Stand-in chip, printed on yellow like a proof sticker (ink on yellow in both themes). */
-    .work-standin {
-      position: absolute;
-      top: 0.75rem;
-      left: 0.75rem;
-      z-index: 1;
-      padding: 0.3rem 0.55rem;
-      background-color: var(--color-yellow);
-      color: var(--ink-fixed);
-      font-family: var(--font-display);
-      font-size: 0.75rem;
-      font-weight: 720;
-      line-height: 1.2;
     }
 
     /* Job ticket: a paper slip at the foot of the tile. */

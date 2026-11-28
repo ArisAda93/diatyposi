@@ -14,16 +14,14 @@
  * motion everything rests flat.
  *
  * Dark mode: the ink strengths are re-balanced for dark paper (there yellow is the loudest ink,
- * not the faintest), the photo frame gets a hairline edge and a deeper shadow, and the stand-in
- * chip keeps fixed ink on yellow.
+ * not the faintest) and the photo frame gets a hairline edge and a deeper shadow.
  */
 import Icon from '../Icon.astro';
 import PlateIcon from '../PlateIcon.astro';
 import Photo from '../Photo.astro';
-import { portfolio, quoteHref, serviceHref, type Service } from '~/data/site';
+import { quoteHref, serviceHref, type Service } from '~/data/site';
 import { serviceDetailText } from '~/i18n/pages/service-detail';
 import { servicesText } from '~/i18n/pages/services';
-import { t } from '~/i18n/ui';
 import { capsEl } from '~/lib/text';
 import type { PlateInk } from '~/scripts/services-page';
 
@@ -42,11 +40,6 @@ const text = servicesText.el;
 const copy = service.text.el;
 const titleId = `${service.slug}-title`;
 const num = String(number).padStart(2, '0');
-// Services carry no stand-in flag: take it from the portfolio entry that uses the same photo, so a
-// real photo marked `standIn: false` there drops the label here too. A photo with no portfolio
-// entry has no known provenance, so it stays labelled.
-const standIn = portfolio.find((p) => p.image === service.image)?.standIn ?? true;
-
 // Rendered photo width: full width less the crop-mark room on phones; 7 of 12 columns of the
 // chapter from 768px; inside the 9.6-of-12 main column from 1024px.
 const sizes = '(min-width: 1024px) min(35vw, 520px), (min-width: 768px) 46vw, calc(100vw - 5rem)';
@@ -82,7 +75,6 @@ const sizes = '(min-width: 1024px) min(35vw, 520px), (min-width: 768px) 46vw, ca
       <div class="svcp-frame crop-frame" data-svcp-frame>
         <div class="svcp-media media">
           <Photo image={service.image} alt={copy.imageAlt} sizes={sizes} />
-          {standIn && <span class="svcp-standin">{t('standInLabel')}</span>}
         </div>
       </div>
     </div>
@@ -318,21 +310,6 @@ const sizes = '(min-width: 1024px) min(35vw, 520px), (min-width: 768px) 46vw, ca
       display: block;
       height: 100%;
     }
-    /* Stand-in chip, as on /erga/: inside the image frame, so it never overflows. */
-    .svcp-standin {
-      position: absolute;
-      top: 0.75rem;
-      left: 0.75rem;
-      z-index: 1;
-      padding: 0.3rem 0.55rem;
-      background-color: var(--color-yellow);
-      color: var(--ink-fixed);
-      font-family: var(--font-display);
-      font-size: 0.75rem;
-      font-weight: 720;
-      line-height: 1.2;
-    }
-
     .svcp-body {
       grid-area: body;
       min-width: 0;

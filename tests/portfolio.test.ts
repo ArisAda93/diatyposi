@@ -18,7 +18,6 @@ import {
 const item = (service: string, title = service): PortfolioItem => ({
   image: `${title}.jpg`,
   service,
-  standIn: false,
   text: { el: { title, alt: title } },
 });
 

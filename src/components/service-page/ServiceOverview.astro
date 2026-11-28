@@ -7,17 +7,14 @@
  * (as on the /ypiresies/ chapters) and the quote button that pre-selects this service.
  *
  * The photo sits well below the fold (under the page header and the section head), so it loads
- * lazily and the h1 stays the page's largest first paint. It carries the “Ενδεικτική εικόνα” chip
- * while it is a stand-in (decided by the portfolio entry with the same photo, as on /ypiresies/).
- * `.media` lets the site-wide motion layer print the photo in. From 768px photo and text share a
+ * lazily and the h1 stays the page's largest first paint. `.media` lets the site-wide motion layer print the photo in. From 768px photo and text share a
  * row; on phones they stack and the button runs full width.
  */
 import Icon from '../Icon.astro';
 import Photo from '../Photo.astro';
-import { portfolio, quoteHref, type Service } from '~/data/site';
+import { quoteHref, type Service } from '~/data/site';
 import { serviceDetailText } from '~/i18n/pages/service-detail';
 import { servicesText } from '~/i18n/pages/services';
-import { t } from '~/i18n/ui';
 import { capsEl } from '~/lib/text';
 import type { PlateInk } from '~/scripts/services-page';
 
@@ -31,11 +28,6 @@ interface Props {
 const { service, ink, titleId } = Astro.props;
 const copy = service.text.el;
 const text = serviceDetailText.el;
-// Services carry no stand-in flag: take it from the portfolio entry that uses the same photo, so a
-// real photo marked `standIn: false` there drops the label here too. A photo with no portfolio
-// entry has no known provenance, so it stays labelled.
-const standIn = portfolio.find((p) => p.image === service.pageImage)?.standIn ?? true;
-
 // Rendered photo width: the full width less the crop-mark room on phones; 7 of 12 parts of the
 // content width from 768px, capped by the 1440px wrap.
 const sizes = '(min-width: 90rem) 720px, (min-width: 48rem) 50vw, calc(100vw - 5rem)';
@@ -47,7 +39,6 @@ const sizes = '(min-width: 90rem) 720px, (min-width: 48rem) 50vw, calc(100vw - 5
     <div class="sdo-frame crop-frame">
       <div class="sdo-media media">
         <Photo image={service.pageImage} alt={copy.pageImageAlt} sizes={sizes} />
-        {standIn && <span class="sdo-standin">{t('standInLabel')}</span>}
       </div>
     </div>
   </div>
@@ -146,21 +137,6 @@ const sizes = '(min-width: 90rem) 720px, (min-width: 48rem) 50vw, calc(100vw - 5
       display: block;
       height: 100%;
     }
-    /* Stand-in chip, as on /erga/ and /ypiresies/: inside the frame, fixed ink on yellow. */
-    .sdo-standin {
-      position: absolute;
-      top: 0.75rem;
-      left: 0.75rem;
-      z-index: 1;
-      padding: 0.3rem 0.55rem;
-      background-color: var(--color-yellow);
-      color: var(--ink-fixed);
-      font-family: var(--font-display);
-      font-size: 0.75rem;
-      font-weight: 720;
-      line-height: 1.2;
-    }
-
     .sdo-body {
       min-width: 0;
     }

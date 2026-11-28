@@ -19,8 +19,7 @@
  * site-wide living background (tinted by the shell's `data-bg-accent`) shows through.
  *
  * Dark mode: the plate card is a raised surface with a hairline edge and a deep, soft shadow; the
- * numerals' C, M and Y ghosts overprint with `var(--blend-ink)` (screen on dark); the stand-in
- * chips keep fixed ink on yellow.
+ * numerals' C, M and Y ghosts overprint with `var(--blend-ink)` (screen on dark).
  */
 import ColorBar from '~/components/ColorBar.astro';
 import Section from '~/components/Section.astro';
@@ -28,9 +27,8 @@ import Icon from '~/components/Icon.astro';
 import Photo from '~/components/Photo.astro';
 import PlateIcon from '~/components/PlateIcon.astro';
 import InkDrop from '~/components/InkDrop.astro';
-import { ownerCopy, portfolio, routes, serviceHref, services } from '~/data/site';
+import { ownerCopy, routes, serviceHref, services } from '~/data/site';
 import { homeText } from '~/i18n/pages/home';
-import { t } from '~/i18n/ui';
 import { plateInk } from '~/scripts/services-page';
 import { leadSentence } from '~/scripts/services-showcase';
 
@@ -45,9 +43,6 @@ const items = services.map((service, index) => ({
   ink: plateInk(index),
   href: serviceHref(service.slug),
   lead: leadSentence(service.text.el.description),
-  // Services carry no stand-in flag: take it from the portfolio entry that uses the same photo.
-  // A photo with no portfolio entry has no known provenance, so it stays labelled.
-  standIn: portfolio.find((p) => p.image === service.image)?.standIn ?? true,
 }));
 const first = items[0];
 
@@ -97,7 +92,6 @@ const thumbWidths = [160, 320, 480];
                       alt={first.service.text.el.imageAlt}
                       sizes={plateSizes}
                     />
-                    {first.standIn && <span class="svc-plate-chip">{t('standInLabel')}</span>}
                   </div>
                 </div>
                 <div class="svc-plate-leads">
@@ -136,11 +130,6 @@ const thumbWidths = [160, 320, 480];
               </h3>{' '}
               <span class="svc-row-thumb">
                 <Photo image={item.service.image} alt="" sizes={thumbSizes} widths={thumbWidths} />
-                {item.standIn && (
-                  <span class="svc-row-chip" aria-hidden="true">
-                    {t('standInLabel')}
-                  </span>
-                )}
               </span>{' '}
               <span class="svc-row-desc">{item.lead}</span>
               <span class="svc-row-arrow" aria-hidden="true">
@@ -160,7 +149,6 @@ const thumbWidths = [160, 320, 480];
             alt={item.service.text.el.imageAlt}
             sizes={plateSizes}
           />
-          {item.standIn && <span class="svc-plate-chip">{t('standInLabel')}</span>}
         </div>
         <PlateIcon name={item.service.icon} size={44} />
       </template>
@@ -334,24 +322,6 @@ const thumbWidths = [160, 320, 480];
       object-fit: cover;
       transition: transform var(--dur-slow) var(--ease-out);
     }
-    /* Stand-in label. Phones: a strip along the thumbnail's foot, at a legible 12 px (on the
-       narrowest thumbnails it breaks into two balanced lines). */
-    .svc-row-chip {
-      position: absolute;
-      right: 0;
-      bottom: 0;
-      left: 0;
-      padding: 0.1875rem 0.25rem;
-      background-color: var(--color-yellow);
-      color: var(--ink-fixed);
-      font-family: var(--font-display);
-      font-size: 0.75rem;
-      font-weight: 720;
-      line-height: 1.15;
-      text-align: center;
-      text-wrap: balance;
-    }
-
     .svc-row-desc {
       grid-area: desc;
       align-self: center;
@@ -497,16 +467,6 @@ const thumbWidths = [160, 320, 480];
       }
       .svc-row-arrow {
         align-self: center;
-      }
-      /* The wider thumbnail holds the label as a corner chip. */
-      .svc-row-chip {
-        right: auto;
-        bottom: 0.25rem;
-        left: 0.25rem;
-        max-width: calc(100% - 0.5rem);
-        padding: 0.15rem 0.3rem;
-        line-height: 1.2;
-        text-align: start;
       }
     }
 
@@ -724,19 +684,6 @@ const thumbWidths = [160, 320, 480];
         width: 100%;
         height: 100%;
         object-fit: cover;
-      }
-      .svc-plate-media :global(.svc-plate-chip) {
-        position: absolute;
-        top: 0.75rem;
-        left: 0.75rem;
-        z-index: 1;
-        padding: 0.3rem 0.55rem;
-        background-color: var(--color-yellow);
-        color: var(--ink-fixed);
-        font-family: var(--font-display);
-        font-size: 0.75rem;
-        font-weight: 720;
-        line-height: 1.2;
       }
       /* Separations: each is the photo in grey, screened over one ink (a duotone of that ink),
          and the three multiply together on paper, so in register they read as the plain photo.

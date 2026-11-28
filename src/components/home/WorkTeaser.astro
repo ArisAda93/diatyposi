@@ -2,8 +2,8 @@
 /**
  * Home work teaser (section 03, a `plain` Section: index, label, heading and the “see all” link
  * in the shared head): the featured portfolio items in an editorial, staggered layout of
- * different sizes on the 12-column grid. Each tile links to /erga/; stand-in images carry a
- * visible label (ink on yellow in both themes). Phones also close the set with a full-width link.
+ * different sizes on the 12-column grid. Each tile links to /erga/. Phones also close the set with
+ * a full-width link.
  *
  * Depth: every tile sits on its own parallax layer (`data-parallax`, motion.ts) with a different
  * speed, so the set separates into planes while scrolling. The speeds stay small (neighbours
@@ -16,7 +16,6 @@ import Photo from '~/components/Photo.astro';
 import Section from '~/components/Section.astro';
 import { portfolio, routes, serviceBySlug } from '~/data/site';
 import { homeText } from '~/i18n/pages/home';
-import { t } from '~/i18n/ui';
 import { capsEl } from '~/lib/text';
 
 const copy = homeText.el.work;
@@ -51,7 +50,6 @@ const speeds = ['0', '-0.06', '0.02', '-0.05'];
             <a href={routes.work} class="work-link" data-tilt>
               <div class="media media-halftone work-media">
                 <Photo image={item.image} alt={item.text.el.alt} sizes={sizes[i % 4] ?? '92vw'} />
-                {item.standIn && <span class="work-chip">{t('standInLabel')}</span>}
               </div>
               <div class="work-cap">
                 <p class="work-meta">
@@ -103,20 +101,6 @@ const speeds = ['0', '-0.06', '0.02', '-0.05'];
       position: absolute;
       inset: 0;
     }
-    .work-chip {
-      position: absolute;
-      top: 0.75rem;
-      left: 0.75rem;
-      z-index: 1;
-      padding: 0.3rem 0.6rem;
-      background-color: var(--color-yellow);
-      color: var(--ink-fixed);
-      font-family: var(--font-display);
-      font-size: 0.75rem;
-      font-weight: 720;
-      line-height: 1.3;
-    }
-
     .work-cap {
       display: flex;
       flex-direction: column;

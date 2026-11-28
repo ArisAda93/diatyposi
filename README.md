@@ -65,7 +65,6 @@ The site is open to search engines since 2026-11-24: no page sends `X-Robots-Tag
    {
      image: 'kartes-kafe-anatoli.jpg',          // file name in src/assets/portfolio/
      service: 'kartes-fylladia-entypa',          // a service slug (drives the filter)
-     standIn: false,                             // real work: hides the “Ενδεικτική εικόνα” label
      featured: true,                             // optional: show on the home page (keep 4)
      text: { el: { title: 'Κάρτες για καφέ', alt: 'Τι φαίνεται στη φωτογραφία' } },
    },

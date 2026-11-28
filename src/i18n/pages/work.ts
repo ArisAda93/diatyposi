@@ -12,9 +12,6 @@ export const workText = {
     headerTitle: 'Τι μπορούμε να φτιάξουμε για εσάς',
     headerIntro:
       'Μια ματιά στα είδη εργασιών που αναλαμβάνουμε, από την κάρτα μέχρι την επιγραφή. Πατήστε σε μια εικόνα για να τη δείτε μεγαλύτερη.',
-    /** Shown under the intro only while at least one image is a stand-in. */
-    standInNote:
-      'Όπου βλέπετε την ένδειξη «Ενδεικτική εικόνα», η φωτογραφία δείχνει το είδος της εργασίας και όχι κάποια δική μας δουλειά.',
     /** Accessible name of the filter button group. */
     filterGroupLabel: 'Φιλτράρισμα έργων ανά κατηγορία',
     filterAll: 'Όλα',

@@ -8,11 +8,10 @@
 import BaseLayout from '~/layouts/BaseLayout.astro';
 import PageHeader from '~/components/PageHeader.astro';
 import WorkGallery from '~/components/portfolio/WorkGallery.astro';
-import { hiddenSections, portfolio } from '~/data/site';
+import { hiddenSections } from '~/data/site';
 import { workText } from '~/i18n/pages/work';
 
 const text = workText.el;
-const hasStandIns = portfolio.some((item) => item.standIn);
 ---
 
 <BaseLayout title={text.metaTitle} description={text.metaDescription} noindex={hiddenSections.work}>
@@ -21,9 +20,7 @@ const hasStandIns = portfolio.some((item) => item.standIn);
     title={text.headerTitle}
     intro={text.headerIntro}
     accent="magenta"
-  >
-    {hasStandIns && <p class="muted mt-5 max-w-[58ch] text-small">{text.standInNote}</p>}
-  </PageHeader>
+  />
 
   <section class="wrap work-section" aria-labelledby="work-heading" data-bg-accent="cyan">
     <h2 id="work-heading" class="sr-only">

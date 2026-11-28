@@ -15,8 +15,7 @@
  * by the script; their places on the photo, `--wb-x0` / `--wb-y0`, apply otherwise and in print).
  * Without JS, with reduced motion or without WebGL, the plain photo and the markers stay.
  *
- * The photograph is AI-generated (CREDITS.md) and carries the “Ενδεικτική εικόνα” chip, as the
- * service photos do. Its frame is 4 / 3, the photo's own ratio, so the markers' percentages
+ * The photograph is AI-generated (CREDITS.md). Its frame is 4 / 3, the photo's own ratio, so the markers' percentages
  * always sit on the same objects; its depth map (workbench-depth.png) comes from
  * scripts/workbench-depth.mjs.
  */
@@ -24,7 +23,6 @@ import { Picture } from 'astro:assets';
 import workbench from '~/assets/about/workbench.jpg';
 import workbenchDepth from '~/assets/about/workbench-depth.png';
 import { aboutText } from '~/i18n/pages/about';
-import { t } from '~/i18n/ui';
 
 const text = aboutText.el.workbench;
 /**
@@ -58,7 +56,6 @@ const sizes =
       />
       <div class="wb-scene" data-wb-scene></div>
       <span class="wb-glare" aria-hidden="true"></span>
-      <span class="wb-standin">{t('standInLabel')}</span>
       <ol class="wb-markers" role="list" aria-hidden="true">
         {markers.map((m, i) => (
           <li
@@ -116,20 +113,6 @@ const sizes =
     /* No hover zoom (global .media): the markers must stay on their objects. */
     .wb-media:hover :global(img) {
       transform: none;
-    }
-    /* Stand-in chip, as on the service photos: inside the frame. */
-    .wb-standin {
-      position: absolute;
-      top: 0.75rem;
-      left: 0.75rem;
-      z-index: 2;
-      padding: 0.3rem 0.55rem;
-      background-color: var(--color-yellow);
-      color: var(--ink-fixed);
-      font-family: var(--font-display);
-      font-size: 0.75rem;
-      font-weight: 720;
-      line-height: 1.2;
     }
     .wb-markers {
       position: absolute;
