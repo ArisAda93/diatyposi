@@ -93,7 +93,7 @@ When the original AI/PDF/SVG arrives:
 - **Vercel:** import the repository → framework preset “Astro” (detected automatically).
 - **Cloudflare Pages:** framework preset “Astro”, build `npm run build`, output `dist`.
 
-The 404 page is `dist/404.html`; Netlify, Vercel and Cloudflare Pages serve it automatically, and `wrangler.toml` (`not_found_handling: "404-page"`) makes the Worker serve it too.
+The 404 page is `dist/404.html`; Netlify, Vercel and Cloudflare Pages serve it automatically, and `wrangler.toml` (`not_found_handling = "404-page"`) makes the Worker serve it too.
 
 ### Security
 
