@@ -7,8 +7,9 @@
  * Mobile call bar: <body> is padded by `--float-bar-h` (global.css), the bar's height with the
  * safe area below 48rem and 0 elsewhere, so the end of the page never hides under it.
  *
- * Theme: the inline head script sets `html[data-theme]` and both theme metas before first paint
- * (stored choice, else the system); the module script wires every theme toggle (theme.ts).
+ * Theme: the inline head script (THEME_BOOT_SCRIPT in src/scripts/theme-boot.ts) sets
+ * `html[data-theme]` and both theme metas before first paint (stored choice, else the system);
+ * the module script wires every theme toggle (theme.ts).
  * Without JS the metas and the page stay light.
  */
 import '~/styles/global.css';
@@ -28,7 +29,8 @@ import {
   type Crumb,
   type Json,
 } from '~/lib/seo';
-import { THEME_COLORS, THEME_STORAGE_KEY } from '~/scripts/theme';
+import { THEME_COLORS } from '~/scripts/theme';
+import { THEME_BOOT_SCRIPT } from '~/scripts/theme-boot';
 
 interface Props {
   /** Page title without the brand suffix. Omit on the home page. */
@@ -110,49 +112,7 @@ const graphJson =
     <meta name="color-scheme" content="light" />
     <meta name="theme-color" content={THEME_COLORS.light} />
 
-    <script is:inline define:vars={{ themeKey: THEME_STORAGE_KEY, themeColors: THEME_COLORS }}>
-      // Runs before first paint. Marks JS support, sets the theme and decides whether the hero
-      // intro plays (once per session, never with reduced motion).
-      (function () {
-        const d = document.documentElement;
-        d.classList.remove('no-js');
-
-        // Theme: a valid stored choice, else the system. Keep in sync with resolveTheme() in
-        // src/scripts/theme.ts (tests/theme.test.ts covers that decision).
-        let stored = null;
-        try {
-          stored = localStorage.getItem(themeKey);
-        } catch {
-          /* storage blocked: follow the system */
-        }
-        const theme =
-          stored === 'light' || stored === 'dark'
-            ? stored
-            : matchMedia('(prefers-color-scheme: dark)').matches
-              ? 'dark'
-              : 'light';
-        d.setAttribute('data-theme', theme);
-        const themeColor = document.querySelector('meta[name="theme-color"]');
-        if (themeColor) themeColor.setAttribute('content', themeColors[theme]);
-        const colorScheme = document.querySelector('meta[name="color-scheme"]');
-        if (colorScheme) colorScheme.setAttribute('content', theme);
-
-        try {
-          if (
-            !sessionStorage.getItem('dt-hero-played') &&
-            !matchMedia('(prefers-reduced-motion: reduce)').matches
-          ) {
-            d.classList.add('hero-intro');
-            // Safety net: never leave the hero in its pre-intro state if scripts fail.
-            setTimeout(function () {
-              d.classList.remove('hero-intro');
-            }, 4000);
-          }
-        } catch {
-          /* storage blocked: show the composed hero */
-        }
-      })();
-    </script>
+    <script is:inline set:html={THEME_BOOT_SCRIPT} />
 
     <link
       rel="preload"

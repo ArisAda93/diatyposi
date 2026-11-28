@@ -1,9 +1,11 @@
 // @ts-check
+import { createHash } from 'node:crypto';
 import { rm } from 'node:fs/promises';
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 import { hiddenSections } from './src/data/site.ts';
+import { THEME_BOOT_SCRIPT } from './src/scripts/theme-boot.ts';
 
 // The live domain (Cloudflare Worker `diatyposi`): canonical links, sitemap, structured data.
 const SITE_URL = 'https://diatyposi.com';
@@ -37,8 +39,9 @@ export default defineConfig({
     defaultLocale: 'el',
   },
   security: {
-    // Content-Security-Policy, as a <meta> tag on every page. Astro adds the hash of every inline
-    // <script> and <style> it renders, so only the site's own code runs. Style attributes
+    // Content-Security-Policy, as a <meta> tag on every page. Astro adds the hash of the scripts
+    // and styles it bundles; the one `is:inline` script is hashed below. Only the site's own code
+    // runs. Style attributes
     // (style="--logo-bg: …") stay allowed; inline event handlers (onclick=…) do not. The headers
     // a <meta> policy cannot carry (frame-ancestors) are in public/_headers.
     csp: {
@@ -57,6 +60,10 @@ export default defineConfig({
         "form-action 'self'",
         'upgrade-insecure-requests',
       ],
+      scriptDirective: {
+        // BaseLayout's pre-paint theme script, which Astro does not hash itself.
+        hashes: [`sha256-${createHash('sha256').update(THEME_BOOT_SCRIPT).digest('base64')}`],
+      },
       styleDirective: {
         resources: ["'self'", { resource: "'unsafe-inline'", kind: 'attribute' }],
       },

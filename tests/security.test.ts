@@ -1,7 +1,9 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import config from '../astro.config.mjs';
 import { buildSecurityTxt, SECURITY_TXT_VALID_DAYS } from '../src/lib/security-txt';
+import { THEME_BOOT_SCRIPT } from '../src/scripts/theme-boot';
 
 /** public/_headers as { path pattern: { header (lower case): [values] } }; `!` lines are skipped. */
 const parseHeaders = (text: string): Record<string, Record<string, string[]>> => {
@@ -24,8 +26,15 @@ const parseHeaders = (text: string): Record<string, Record<string, string[]>> =>
 
 const headers = parseHeaders(readFileSync(new URL('../public/_headers', import.meta.url), 'utf8'));
 
+/** The headers of one path pattern; fails the test when the pattern is missing. */
+const rule = (pattern: string): Record<string, string[]> => {
+  const found = headers[pattern];
+  if (!found) throw new Error(`public/_headers has no ${pattern} rule`);
+  return found;
+};
+
 describe('public/_headers', () => {
-  const all = headers['/*'];
+  const all = rule('/*');
 
   it('sends the security headers on every response', () => {
     expect(all['strict-transport-security']).toEqual(['max-age=63072000; includeSubDomains']);
@@ -49,11 +58,11 @@ describe('public/_headers', () => {
   });
 
   it('caches fingerprinted build files for a year', () => {
-    expect(headers['/_astro/*']['cache-control']).toEqual(['public, max-age=31536000, immutable']);
+    expect(rule('/_astro/*')['cache-control']).toEqual(['public, max-age=31536000, immutable']);
   });
 
   it('lets other sites show the share image', () => {
-    expect(headers['/og.jpg']['cross-origin-resource-policy']).toEqual(['cross-origin']);
+    expect(rule('/og.jpg')['cross-origin-resource-policy']).toEqual(['cross-origin']);
   });
 });
 
@@ -76,6 +85,11 @@ describe('Content-Security-Policy (security.csp in astro.config.mjs)', () => {
     );
     expect(inline).toEqual([{ resource: "'unsafe-inline'", kind: 'attribute' }]);
     expect(JSON.stringify(csp.scriptDirective ?? {})).not.toContain('unsafe');
+  });
+
+  it('carries the hash of the inline pre-paint theme script', () => {
+    const hash = `sha256-${createHash('sha256').update(THEME_BOOT_SCRIPT).digest('base64')}`;
+    expect(csp.scriptDirective?.hashes).toContain(hash);
   });
 });
 

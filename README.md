@@ -93,12 +93,12 @@ When the original AI/PDF/SVG arrives:
 - **Vercel:** import the repository → framework preset “Astro” (detected automatically).
 - **Cloudflare Pages:** framework preset “Astro”, build `npm run build`, output `dist`.
 
-The 404 page is `dist/404.html`; Netlify, Vercel and Cloudflare Pages serve it automatically, and `wrangler.jsonc` (`not_found_handling: "404-page"`) makes the Worker serve it too.
+The 404 page is `dist/404.html`; Netlify, Vercel and Cloudflare Pages serve it automatically, and `wrangler.toml` (`not_found_handling: "404-page"`) makes the Worker serve it too.
 
 ### Security
 
 - **Headers:** `public/_headers` sends HSTS (two years, subdomains included), `X-Frame-Options: DENY` with `frame-ancestors 'none'`, `nosniff`, `Referrer-Policy`, a `Permissions-Policy` that turns off unused browser features, and `Cross-Origin-Opener-Policy` / `Cross-Origin-Resource-Policy` (the share image `og.jpg` stays embeddable). It also caches `/_astro/*` for a year.
-- **Content-Security-Policy:** `security.csp` in `astro.config.mjs`. Astro writes it as a `<meta>` tag on every page with the hash of every inline script and style. Everything loads from the site itself; frames only from Google Maps. Style attributes are allowed; inline event handlers (`onclick="…"`) are not, so wire events in a `<script>`. A new third party (analytics, fonts, video) needs its host added there, or the browser blocks it. `astro dev` does not apply the policy: check changes with `npm run build` and `npx astro preview`.
+- **Content-Security-Policy:** `security.csp` in `astro.config.mjs`. Astro writes it as a `<meta>` tag on every page with the hash of every inline script and style it bundles; the `is:inline` theme script (`src/scripts/theme-boot.ts`) is hashed in the config, so a new `is:inline` script needs the same treatment. Everything loads from the site itself; frames only from Google Maps. Style attributes are allowed; inline event handlers (`onclick="…"`) are not, so wire events in a `<script>`. A new third party (analytics, fonts, video) needs its host added there, or the browser blocks it. `astro dev` does not apply the policy: check changes with `npm run build` and `npx astro preview`.
 - **security.txt:** `/.well-known/security.txt` (RFC 9116) names the shop's e-mail for security reports. Its `Expires` is the build date plus 360 days, so the site must be rebuilt at least once a year.
 - **Dependencies:** `.github/dependabot.yml` opens weekly update pull requests. Turn on "Dependabot alerts" and "Dependabot security updates" under the repository's Settings → Code security.
 - **Cloudflare (dashboard):** Always Use HTTPS on, Automatic HTTPS Rewrites on, minimum TLS 1.2. Leave the dashboard's HSTS off: the header comes from `public/_headers`. Set `SITE_URL` in `astro.config.mjs` first so canonical URLs, the sitemap (`/sitemap-index.xml`) and `robots.txt` point to the real domain.
