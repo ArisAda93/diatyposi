@@ -47,7 +47,7 @@ When every contact value is real, set **`site.contactIsPlaceholder = false`**. T
 
 ### Search engines
 
-The site is open to search engines since 2026-11-24: no page sends `X-Robots-Tag: noindex` (the pre-launch `public/_headers` that did is gone), `robots.txt` allows everything and lists the sitemap, and only the 404 page and hidden sections carry `<meta name="robots" content="noindex">`. Do not add a `noindex` header back. The rest of the launch checklist (Search Console, Google Business Profile, sitemap submission and more) is in [docs/SEO.md](docs/SEO.md).
+The site is open to search engines since 2026-11-24: no page sends `X-Robots-Tag: noindex` (`public/_headers` carries only the security headers; tests/security.test.ts fails on a `noindex` there), `robots.txt` allows everything and lists the sitemap, and only the 404 page and hidden sections carry `<meta name="robots" content="noindex">`. Do not add a `noindex` header back. The rest of the launch checklist (Search Console, Google Business Profile, sitemap submission and more) is in [docs/SEO.md](docs/SEO.md).
 
 ## Editing content
 
@@ -93,7 +93,15 @@ When the original AI/PDF/SVG arrives:
 - **Vercel:** import the repository → framework preset “Astro” (detected automatically).
 - **Cloudflare Pages:** framework preset “Astro”, build `npm run build`, output `dist`.
 
-The 404 page is `dist/404.html`; Netlify, Vercel and Cloudflare Pages serve it automatically. Set `SITE_URL` in `astro.config.mjs` first so canonical URLs, the sitemap (`/sitemap-index.xml`) and `robots.txt` point to the real domain.
+The 404 page is `dist/404.html`; Netlify, Vercel and Cloudflare Pages serve it automatically, and `wrangler.jsonc` (`not_found_handling: "404-page"`) makes the Worker serve it too.
+
+### Security
+
+- **Headers:** `public/_headers` sends HSTS (two years, subdomains included), `X-Frame-Options: DENY` with `frame-ancestors 'none'`, `nosniff`, `Referrer-Policy`, a `Permissions-Policy` that turns off unused browser features, and `Cross-Origin-Opener-Policy` / `Cross-Origin-Resource-Policy` (the share image `og.jpg` stays embeddable). It also caches `/_astro/*` for a year.
+- **Content-Security-Policy:** `security.csp` in `astro.config.mjs`. Astro writes it as a `<meta>` tag on every page with the hash of every inline script and style. Everything loads from the site itself; frames only from Google Maps. Style attributes are allowed; inline event handlers (`onclick="…"`) are not, so wire events in a `<script>`. A new third party (analytics, fonts, video) needs its host added there, or the browser blocks it. `astro dev` does not apply the policy: check changes with `npm run build` and `npx astro preview`.
+- **security.txt:** `/.well-known/security.txt` (RFC 9116) names the shop's e-mail for security reports. Its `Expires` is the build date plus 360 days, so the site must be rebuilt at least once a year.
+- **Dependencies:** `.github/dependabot.yml` opens weekly update pull requests. Turn on "Dependabot alerts" and "Dependabot security updates" under the repository's Settings → Code security.
+- **Cloudflare (dashboard):** Always Use HTTPS on, Automatic HTTPS Rewrites on, minimum TLS 1.2. Leave the dashboard's HSTS off: the header comes from `public/_headers`. Set `SITE_URL` in `astro.config.mjs` first so canonical URLs, the sitemap (`/sitemap-index.xml`) and `robots.txt` point to the real domain.
 
 ## How it is built
 

@@ -1,0 +1,11 @@
+// Cloudflare Worker `diatyposi`: the static site in ./dist. The Git build runs
+// `npx wrangler deploy --assets ./dist --name diatyposi`, which reads this file too.
+{
+  "name": "diatyposi",
+  "compatibility_date": "2026-11-28",
+  "assets": {
+    "directory": "./dist",
+    // Unknown addresses get the site's own 404 page (dist/404.html) with status 404.
+    "not_found_handling": "404-page"
+  }
+}

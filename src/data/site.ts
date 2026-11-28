@@ -184,9 +184,9 @@ export const site = {
 // ---------------------------------------------------------------------------------------------
 
 /**
- * Sections still under development: hidden from the menus and the home page and marked noindex,
- * but still built. To turn one back on, set its flag to false and remove its sitemap filter in
- * astro.config.mjs.
+ * Sections still under development: hidden from the menus and the home page, marked noindex, left
+ * out of the sitemap and deleted from the build (astro.config.mjs), so only `astro dev` serves
+ * them. To turn one back on, set its flag to false.
  */
 export const hiddenSections = {
   /** /erga/ (portfolio page) and the home page's work teaser. */

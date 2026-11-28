@@ -2,8 +2,8 @@
 /**
  * Έργα: page header, then the filterable gallery with its lightbox (WorkGallery). The section
  * paints no background; it tints the living background through `data-bg-accent`.
- * Under development: while `hiddenSections.work` is set the page is still built but unlinked,
- * noindex and left out of the sitemap.
+ * Under development: while `hiddenSections.work` is set the page is unlinked, noindex, left out of
+ * the sitemap and deleted from the build (astro.config.mjs), so only `astro dev` serves it.
  */
 import BaseLayout from '~/layouts/BaseLayout.astro';
 import PageHeader from '~/components/PageHeader.astro';

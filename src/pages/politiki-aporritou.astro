@@ -169,7 +169,7 @@ const dataAuthority = 'https://www.dpa.gr/';
         <p>{text.map.body}</p>
         <p>
           {`${text.map.policyBefore} `}
-          <a href={googlePrivacy} class="link" target="_blank" rel="noopener">
+          <a href={googlePrivacy} class="link" target="_blank" rel="noopener noreferrer">
             {text.map.policyLink}
             <span class="sr-only">{` ${t('newTab')}`}</span>
           </a>
@@ -200,7 +200,7 @@ const dataAuthority = 'https://www.dpa.gr/';
         <p>{text.rights.automated}</p>
         <p>
           {`${text.rights.authorityBefore} `}
-          <a href={dataAuthority} class="link" target="_blank" rel="noopener">
+          <a href={dataAuthority} class="link" target="_blank" rel="noopener noreferrer">
             {text.rights.authorityLink}
             <span class="sr-only">{` ${t('newTab')}`}</span>
           </a>

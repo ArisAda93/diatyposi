@@ -10,10 +10,14 @@
  * plates into register.
  *
  * Loading: until the iframe reports `load`, a halftone screen covers the map (`data-loading`),
- * sweeping unless reduced motion is asked for. The iframe's own `onload` lifts it, so a map that
- * loads before the page's scripts run is never kept hidden; a fallback lifts it LOADING_MAX_MS
- * after the box comes into view, so a blocked or slow map shows whatever it has. Without JS the
- * screen never shows.
+ * sweeping unless reduced motion is asked for. The page script lifts it on the iframe's `load`
+ * (no inline `onload`: the Content-Security-Policy allows no inline event handlers); a fallback
+ * lifts it LOADING_MAX_MS after the box comes into view, so a blocked or slow map, or one that
+ * loaded before the script ran, shows whatever it has. Without JS the screen never shows.
+ *
+ * Privacy and isolation: Google gets only the site's origin as referrer, never the page address,
+ * and the frame is sandboxed to what the embed needs (its own scripts and storage); it is inert
+ * anyway, so it opens nothing.
  */
 import Icon from '~/components/Icon.astro';
 import { site } from '~/data/site';
@@ -42,13 +46,13 @@ const fullAddress = `${street}, ${postalCode} ${city}`;
       src={embedSrc}
       title={text.iframeTitle}
       loading="lazy"
-      referrerpolicy="no-referrer-when-downgrade"
+      referrerpolicy="strict-origin-when-cross-origin"
+      sandbox="allow-scripts allow-same-origin"
       tabindex="-1"
       aria-hidden="true"
       inert
-      onload="this.parentElement.removeAttribute('data-loading')"
     ></iframe>
-    <a href={mapUrl} class="map-link" target="_blank" rel="noopener">
+    <a href={mapUrl} class="map-link" target="_blank" rel="noopener noreferrer">
       <span class="map-chip">
         <Icon name="external" size={20} />
         <span>
@@ -65,6 +69,11 @@ const fullAddress = `${street}, ${postalCode} ${city}`;
   const LOADING_MAX_MS = 6000;
 
   const boxes = document.querySelectorAll<HTMLElement>('[data-map][data-loading]');
+  boxes.forEach((box) => {
+    box
+      .querySelector('iframe')
+      ?.addEventListener('load', () => box.removeAttribute('data-loading'), { once: true });
+  });
   if (boxes.length > 0 && 'IntersectionObserver' in window) {
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {

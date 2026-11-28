@@ -1,0 +1,14 @@
+# Weekly pull requests for npm dependency updates, grouped to keep the noise down. Security fixes
+# also arrive on their own when "Dependabot security updates" is on in the repository settings.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      production:
+        dependency-type: production
+      development:
+        dependency-type: development
